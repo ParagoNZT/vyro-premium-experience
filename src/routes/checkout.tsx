@@ -33,7 +33,7 @@ function CheckoutPage() {
   const { user, activateLicense } = useAuth();
   const [planId, setPlanId] = useState(search.plan && getPlan(search.plan) ? search.plan : "12m");
   const [busy, setBusy] = useState(false);
-  const plan = getPlan(planId!) ?? PLANS[2];
+  const plan = getPlan(planId ?? "12m") ?? PLANS[PLANS.length - 1]!;
 
   async function pay() {
     setBusy(true);

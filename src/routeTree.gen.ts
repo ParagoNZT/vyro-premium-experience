@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AppareilsRouteImport } from './routes/appareils'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FonctionnalitesRouteImport } from './routes/fonctionnalites'
@@ -18,15 +20,28 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TarifsRouteImport } from './routes/tarifs'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as AccountAbonnementRouteImport } from './routes/account.abonnement'
+import { Route as AccountAppareilsRouteImport } from './routes/account.appareils'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppareilsRoute = AppareilsRouteImport.update({
   id: '/appareils',
   path: '/appareils',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadRoute = DownloadRouteImport.update({
@@ -64,10 +79,27 @@ const TarifsRoute = TarifsRouteImport.update({
   path: '/tarifs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountAbonnementRoute = AccountAbonnementRouteImport.update({
+  id: '/abonnement',
+  path: '/abonnement',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountAppareilsRoute = AccountAppareilsRouteImport.update({
+  id: '/appareils',
+  path: '/appareils',
+  getParentRoute: () => AccountRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -75,10 +107,14 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -86,11 +122,16 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -98,12 +139,17 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -111,10 +157,14 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -122,10 +172,15 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account'
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -133,11 +188,16 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRouteWithChildren
   AppareilsRoute: typeof AppareilsRoute
+  CheckoutRoute: typeof CheckoutRoute
   DownloadRoute: typeof DownloadRoute
   FaqRoute: typeof FaqRoute
   FonctionnalitesRoute: typeof FonctionnalitesRoute
@@ -156,11 +216,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/appareils': {
       id: '/appareils'
       path: '/appareils'
       fullPath: '/appareils'
       preLoaderRoute: typeof AppareilsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/download': {
@@ -212,12 +286,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TarifsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/abonnement': {
+      id: '/account/abonnement'
+      path: '/abonnement'
+      fullPath: '/account/abonnement'
+      preLoaderRoute: typeof AccountAbonnementRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/appareils': {
+      id: '/account/appareils'
+      path: '/appareils'
+      fullPath: '/account/appareils'
+      preLoaderRoute: typeof AccountAppareilsRouteImport
+      parentRoute: typeof AccountRoute
+    }
   }
 }
 
+interface AccountRouteChildren {
+  AccountAbonnementRoute: typeof AccountAbonnementRoute
+  AccountAppareilsRoute: typeof AccountAppareilsRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountAbonnementRoute: AccountAbonnementRoute,
+  AccountAppareilsRoute: AccountAppareilsRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRouteWithChildren,
   AppareilsRoute: AppareilsRoute,
+  CheckoutRoute: CheckoutRoute,
   DownloadRoute: DownloadRoute,
   FaqRoute: FaqRoute,
   FonctionnalitesRoute: FonctionnalitesRoute,
