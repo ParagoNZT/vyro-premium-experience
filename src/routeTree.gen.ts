@@ -10,7 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppareilsRouteImport } from './routes/appareils'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FonctionnalitesRouteImport } from './routes/fonctionnalites'
@@ -18,15 +21,41 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TarifsRouteImport } from './routes/tarifs'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as AccountAbonnementRouteImport } from './routes/account.abonnement'
+import { Route as AccountAppareilsRouteImport } from './routes/account.appareils'
+import { Route as AccountGuidesRouteImport } from './routes/account.guides'
+import { Route as AccountProfilRouteImport } from './routes/account.profil'
+import { Route as AccountSupportRouteImport } from './routes/account.support'
+import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
+import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
+import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
+import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
+import { Route as LegalRemboursementRouteImport } from './routes/legal.remboursement'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppareilsRoute = AppareilsRouteImport.update({
   id: '/appareils',
   path: '/appareils',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadRoute = DownloadRouteImport.update({
@@ -64,10 +93,68 @@ const TarifsRoute = TarifsRouteImport.update({
   path: '/tarifs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountAbonnementRoute = AccountAbonnementRouteImport.update({
+  id: '/abonnement',
+  path: '/abonnement',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountAppareilsRoute = AccountAppareilsRouteImport.update({
+  id: '/appareils',
+  path: '/appareils',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountGuidesRoute = AccountGuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountProfilRoute = AccountProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountSupportRoute = AccountSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountTelechargementRoute = AccountTelechargementRouteImport.update({
+  id: '/telechargement',
+  path: '/telechargement',
+  getParentRoute: () => AccountRoute,
+} as any)
+const LegalConditionsRoute = LegalConditionsRouteImport.update({
+  id: '/legal/conditions',
+  path: '/legal/conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalConfidentialiteRoute = LegalConfidentialiteRouteImport.update({
+  id: '/legal/confidentialite',
+  path: '/legal/confidentialite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalMentionsRoute = LegalMentionsRouteImport.update({
+  id: '/legal/mentions',
+  path: '/legal/mentions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalRemboursementRoute = LegalRemboursementRouteImport.update({
+  id: '/legal/remboursement',
+  path: '/legal/remboursement',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
+  '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -75,10 +162,23 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
+  '/legal/conditions': typeof LegalConditionsRoute
+  '/legal/confidentialite': typeof LegalConfidentialiteRoute
+  '/legal/mentions': typeof LegalMentionsRoute
+  '/legal/remboursement': typeof LegalRemboursementRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -86,11 +186,25 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
+  '/legal/conditions': typeof LegalConditionsRoute
+  '/legal/confidentialite': typeof LegalConfidentialiteRoute
+  '/legal/mentions': typeof LegalMentionsRoute
+  '/legal/remboursement': typeof LegalRemboursementRoute
+  '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
+  '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
   '/fonctionnalites': typeof FonctionnalitesRoute
@@ -98,12 +212,26 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
+  '/account/abonnement': typeof AccountAbonnementRoute
+  '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
+  '/legal/conditions': typeof LegalConditionsRoute
+  '/legal/confidentialite': typeof LegalConfidentialiteRoute
+  '/legal/mentions': typeof LegalMentionsRoute
+  '/legal/remboursement': typeof LegalRemboursementRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
+    | '/admin'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -111,10 +239,23 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
+    | '/legal/conditions'
+    | '/legal/confidentialite'
+    | '/legal/mentions'
+    | '/legal/remboursement'
+    | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -122,10 +263,24 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
+    | '/legal/conditions'
+    | '/legal/confidentialite'
+    | '/legal/mentions'
+    | '/legal/remboursement'
+    | '/account'
   id:
     | '__root__'
     | '/'
+    | '/account'
+    | '/admin'
     | '/appareils'
+    | '/checkout'
     | '/download'
     | '/faq'
     | '/fonctionnalites'
@@ -133,11 +288,25 @@ export interface FileRouteTypes {
     | '/register'
     | '/support'
     | '/tarifs'
+    | '/account/abonnement'
+    | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
+    | '/legal/conditions'
+    | '/legal/confidentialite'
+    | '/legal/mentions'
+    | '/legal/remboursement'
+    | '/account/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRouteWithChildren
+  AdminRoute: typeof AdminRoute
   AppareilsRoute: typeof AppareilsRoute
+  CheckoutRoute: typeof CheckoutRoute
   DownloadRoute: typeof DownloadRoute
   FaqRoute: typeof FaqRoute
   FonctionnalitesRoute: typeof FonctionnalitesRoute
@@ -145,6 +314,10 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SupportRoute: typeof SupportRoute
   TarifsRoute: typeof TarifsRoute
+  LegalConditionsRoute: typeof LegalConditionsRoute
+  LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
+  LegalMentionsRoute: typeof LegalMentionsRoute
+  LegalRemboursementRoute: typeof LegalRemboursementRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -156,11 +329,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/appareils': {
       id: '/appareils'
       path: '/appareils'
       fullPath: '/appareils'
       preLoaderRoute: typeof AppareilsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/download': {
@@ -212,12 +406,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TarifsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/abonnement': {
+      id: '/account/abonnement'
+      path: '/abonnement'
+      fullPath: '/account/abonnement'
+      preLoaderRoute: typeof AccountAbonnementRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/appareils': {
+      id: '/account/appareils'
+      path: '/appareils'
+      fullPath: '/account/appareils'
+      preLoaderRoute: typeof AccountAppareilsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/guides': {
+      id: '/account/guides'
+      path: '/guides'
+      fullPath: '/account/guides'
+      preLoaderRoute: typeof AccountGuidesRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/profil': {
+      id: '/account/profil'
+      path: '/profil'
+      fullPath: '/account/profil'
+      preLoaderRoute: typeof AccountProfilRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/support': {
+      id: '/account/support'
+      path: '/support'
+      fullPath: '/account/support'
+      preLoaderRoute: typeof AccountSupportRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/telechargement': {
+      id: '/account/telechargement'
+      path: '/telechargement'
+      fullPath: '/account/telechargement'
+      preLoaderRoute: typeof AccountTelechargementRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/legal/conditions': {
+      id: '/legal/conditions'
+      path: '/legal/conditions'
+      fullPath: '/legal/conditions'
+      preLoaderRoute: typeof LegalConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/confidentialite': {
+      id: '/legal/confidentialite'
+      path: '/legal/confidentialite'
+      fullPath: '/legal/confidentialite'
+      preLoaderRoute: typeof LegalConfidentialiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/mentions': {
+      id: '/legal/mentions'
+      path: '/legal/mentions'
+      fullPath: '/legal/mentions'
+      preLoaderRoute: typeof LegalMentionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/remboursement': {
+      id: '/legal/remboursement'
+      path: '/legal/remboursement'
+      fullPath: '/legal/remboursement'
+      preLoaderRoute: typeof LegalRemboursementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AccountRouteChildren {
+  AccountAbonnementRoute: typeof AccountAbonnementRoute
+  AccountAppareilsRoute: typeof AccountAppareilsRoute
+  AccountGuidesRoute: typeof AccountGuidesRoute
+  AccountProfilRoute: typeof AccountProfilRoute
+  AccountSupportRoute: typeof AccountSupportRoute
+  AccountTelechargementRoute: typeof AccountTelechargementRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountAbonnementRoute: AccountAbonnementRoute,
+  AccountAppareilsRoute: AccountAppareilsRoute,
+  AccountGuidesRoute: AccountGuidesRoute,
+  AccountProfilRoute: AccountProfilRoute,
+  AccountSupportRoute: AccountSupportRoute,
+  AccountTelechargementRoute: AccountTelechargementRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRouteWithChildren,
+  AdminRoute: AdminRoute,
   AppareilsRoute: AppareilsRoute,
+  CheckoutRoute: CheckoutRoute,
   DownloadRoute: DownloadRoute,
   FaqRoute: FaqRoute,
   FonctionnalitesRoute: FonctionnalitesRoute,
@@ -225,6 +522,10 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SupportRoute: SupportRoute,
   TarifsRoute: TarifsRoute,
+  LegalConditionsRoute: LegalConditionsRoute,
+  LegalConfidentialiteRoute: LegalConfidentialiteRoute,
+  LegalMentionsRoute: LegalMentionsRoute,
+  LegalRemboursementRoute: LegalRemboursementRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
