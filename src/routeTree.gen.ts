@@ -23,6 +23,10 @@ import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as AccountAbonnementRouteImport } from './routes/account.abonnement'
 import { Route as AccountAppareilsRouteImport } from './routes/account.appareils'
+import { Route as AccountGuidesRouteImport } from './routes/account.guides'
+import { Route as AccountProfilRouteImport } from './routes/account.profil'
+import { Route as AccountSupportRouteImport } from './routes/account.support'
+import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +98,26 @@ const AccountAppareilsRoute = AccountAppareilsRouteImport.update({
   path: '/appareils',
   getParentRoute: () => AccountRoute,
 } as any)
+const AccountGuidesRoute = AccountGuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountProfilRoute = AccountProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountSupportRoute = AccountSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountTelechargementRoute = AccountTelechargementRouteImport.update({
+  id: '/telechargement',
+  path: '/telechargement',
+  getParentRoute: () => AccountRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -109,6 +133,10 @@ export interface FileRoutesByFullPath {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
@@ -124,6 +152,10 @@ export interface FileRoutesByTo {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
   '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
@@ -141,6 +173,10 @@ export interface FileRoutesById {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/guides': typeof AccountGuidesRoute
+  '/account/profil': typeof AccountProfilRoute
+  '/account/support': typeof AccountSupportRoute
+  '/account/telechargement': typeof AccountTelechargementRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
@@ -159,6 +195,10 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
     | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -174,6 +214,10 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
     | '/account'
   id:
     | '__root__'
@@ -190,6 +234,10 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/guides'
+    | '/account/profil'
+    | '/account/support'
+    | '/account/telechargement'
     | '/account/'
   fileRoutesById: FileRoutesById
 }
@@ -307,18 +355,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountAppareilsRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/account/guides': {
+      id: '/account/guides'
+      path: '/guides'
+      fullPath: '/account/guides'
+      preLoaderRoute: typeof AccountGuidesRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/profil': {
+      id: '/account/profil'
+      path: '/profil'
+      fullPath: '/account/profil'
+      preLoaderRoute: typeof AccountProfilRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/support': {
+      id: '/account/support'
+      path: '/support'
+      fullPath: '/account/support'
+      preLoaderRoute: typeof AccountSupportRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/telechargement': {
+      id: '/account/telechargement'
+      path: '/telechargement'
+      fullPath: '/account/telechargement'
+      preLoaderRoute: typeof AccountTelechargementRouteImport
+      parentRoute: typeof AccountRoute
+    }
   }
 }
 
 interface AccountRouteChildren {
   AccountAbonnementRoute: typeof AccountAbonnementRoute
   AccountAppareilsRoute: typeof AccountAppareilsRoute
+  AccountGuidesRoute: typeof AccountGuidesRoute
+  AccountProfilRoute: typeof AccountProfilRoute
+  AccountSupportRoute: typeof AccountSupportRoute
+  AccountTelechargementRoute: typeof AccountTelechargementRoute
   AccountIndexRoute: typeof AccountIndexRoute
 }
 
 const AccountRouteChildren: AccountRouteChildren = {
   AccountAbonnementRoute: AccountAbonnementRoute,
   AccountAppareilsRoute: AccountAppareilsRoute,
+  AccountGuidesRoute: AccountGuidesRoute,
+  AccountProfilRoute: AccountProfilRoute,
+  AccountSupportRoute: AccountSupportRoute,
+  AccountTelechargementRoute: AccountTelechargementRoute,
   AccountIndexRoute: AccountIndexRoute,
 }
 
