@@ -148,7 +148,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {bare ? null : <Header />}
-        <main className={bare ? "" : "pt-[60px]"}>
+        <main className={bare ? "" : "pt-[88px]"}>
           {/* Required: nested routes render here. */}
           <Outlet />
         </main>
