@@ -86,14 +86,14 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="h-[calc(100dvh-60px)] overflow-y-auto border-b border-border bg-background/95 px-5 pb-10 pt-4 backdrop-blur-xl md:hidden">
+        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/15 bg-primary/10 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl md:hidden">
           <nav className="flex flex-col">
             {NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="border-b border-border/60 py-4 text-lg text-foreground"
+                className="border-b border-white/6 py-3.5 text-base text-foreground transition-colors duration-150 hover:text-primary"
               >
                 {item.label}
               </Link>
@@ -101,7 +101,7 @@ export function Header() {
             <Link
               to={user ? "/account" : "/login"}
               onClick={() => setOpen(false)}
-              className="border-b border-border/60 py-4 text-lg text-foreground"
+              className="border-b border-white/6 py-3.5 text-base text-foreground transition-colors duration-150 hover:text-primary"
             >
               {user ? "Mon compte" : "Se connecter"}
             </Link>
@@ -109,7 +109,7 @@ export function Header() {
           <Link
             to="/tarifs"
             onClick={() => setOpen(false)}
-            className="mt-6 flex items-center justify-center rounded-[10px] bg-primary px-5 py-3 font-medium text-primary-foreground"
+            className="mt-4 flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115"
           >
             Obtenir VYRO Premium
           </Link>
