@@ -93,7 +93,7 @@ export function Header() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="border-b border-white/6 py-3.5 text-base text-foreground transition-colors duration-150 hover:text-primary"
+                className="rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
               >
                 {item.label}
               </Link>
@@ -101,7 +101,7 @@ export function Header() {
             <Link
               to={user ? "/account" : "/login"}
               onClick={() => setOpen(false)}
-              className="border-b border-white/6 py-3.5 text-base text-foreground transition-colors duration-150 hover:text-primary"
+              className="rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
             >
               {user ? "Mon compte" : "Se connecter"}
             </Link>
