@@ -67,12 +67,29 @@ export function Button({
     );
 
     if (to) {
-      return search ? (
-        <Link to={to} search={search} activeOptions={activeOptions} className={classes}>
-          {content}
-        </Link>
-      ) : (
-        <Link to={to} activeOptions={activeOptions} className={classes}>
+      if (search && activeOptions) {
+        return (
+          <Link to={to} search={search} activeOptions={activeOptions} className={classes}>
+            {content}
+          </Link>
+        );
+      }
+      if (search) {
+        return (
+          <Link to={to} search={search} className={classes}>
+            {content}
+          </Link>
+        );
+      }
+      if (activeOptions) {
+        return (
+          <Link to={to} activeOptions={activeOptions} className={classes}>
+            {content}
+          </Link>
+        );
+      }
+      return (
+        <Link to={to} className={classes}>
           {content}
         </Link>
       );
