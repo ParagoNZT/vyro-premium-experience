@@ -67,11 +67,11 @@ export function Button({
 
     if (to) {
       return search ? (
-        <Link to={to} search={search} className={classes}>
+        <Link to={to} search={search} activeOptions={activeOptions} className={classes}>
           {content}
         </Link>
       ) : (
-        <Link to={to} className={classes}>
+        <Link to={to} activeOptions={activeOptions} className={classes}>
           {content}
         </Link>
       );
