@@ -306,18 +306,12 @@ export function FinalCta() {
             pour votre télévision.
           </Lead>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              to="/tarifs"
-              className="inline-flex w-full items-center justify-center rounded-[10px] bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_36px_-8px_var(--primary)] sm:w-auto"
-            >
+            <Button to="/tarifs" variant="primary" size="md" className="w-full sm:w-auto">
               Obtenir VYRO Premium
-            </Link>
-            <Link
-              to="/appareils"
-              className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
-            >
+            </Button>
+            <Button to="/appareils" variant="ghost" size="md" className="w-full sm:w-auto">
               Voir les appareils compatibles
-            </Link>
+            </Button>
           </div>
         </Reveal>
       </div>
