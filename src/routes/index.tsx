@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   DevicesSection,
   DisclaimerSection,
@@ -12,6 +12,7 @@ import {
   Section,
   Shot,
 } from "@/components/site/sections";
+import { Button } from "@/components/site/Button";
 import { Reveal } from "@/components/site/Reveal";
 import uiHome from "@/assets/ui-home.jpg";
 import uiLive from "@/assets/ui-livetv.jpg";
