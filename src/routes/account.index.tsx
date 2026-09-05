@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,

@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Download, Tv, Flame } from "lucide-react";
 import { Heading, Lead, Section } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
+import { Button } from "@/components/site/Button";
 import { DOWNLOADS } from "@/config/site";
 
 export const Route = createFileRoute("/download")({

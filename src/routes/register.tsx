@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 import { AuthShell, Field } from "@/components/site/AuthShell";
 
 const searchSchema = z.object({
