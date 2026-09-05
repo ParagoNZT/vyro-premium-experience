@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { Check, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 import { PLANS, PLAN_INCLUDED, formatPrice, getPlan } from "@/config/site";
 import { cn } from "@/lib/utils";
 
