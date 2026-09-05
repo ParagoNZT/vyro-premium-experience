@@ -48,6 +48,7 @@ export function Button({
   type = "button",
   to,
   search,
+  activeOptions,
 }: ButtonProps) {
   const isNav = variant === "nav";
 
