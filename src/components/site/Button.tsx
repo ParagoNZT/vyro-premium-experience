@@ -18,11 +18,13 @@ interface ButtonBaseProps {
 interface ButtonAsButtonProps extends ButtonBaseProps {
   to?: never;
   search?: never;
+  activeOptions?: never;
 }
 
 interface ButtonAsLinkProps extends ButtonBaseProps {
   to: string;
   search?: Record<string, string | undefined>;
+  activeOptions?: { exact?: boolean };
 }
 
 type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
