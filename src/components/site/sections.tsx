@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
 import { Check, Tv, MonitorPlay, Flame } from "lucide-react";
 import { Reveal } from "./Reveal";
+import { Button } from "./Button";
 import { cn } from "@/lib/utils";
 import {
   DISCLAIMER,
