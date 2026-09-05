@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { Button } from "./Button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
@@ -46,33 +47,36 @@ export function Header() {
           <Logo />
         </div>
 
-        <nav className="hidden items-center gap-0.5 md:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
-            <Link
+            <Button
               key={item.to}
               to={item.to}
+              variant="nav"
               activeOptions={{ exact: item.to === "/" }}
-              className="relative rounded-full px-3 py-1.5 text-[13px] text-muted-foreground transition-all duration-200 hover:-translate-y-px hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_20px_-12px_var(--color-primary)]"
-              activeProps={{ className: "bg-primary/15 text-foreground" }}
             >
               {item.label}
-            </Link>
+            </Button>
           ))}
         </nav>
 
         <div className="flex items-center justify-end gap-2">
-          <Link
+          <Button
             to={user ? "/account" : "/login"}
-            className="hidden rounded-full px-3 py-1.5 text-[13px] text-muted-foreground transition-all duration-200 hover:-translate-y-px hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_20px_-12px_var(--color-primary)] md:inline-flex"
+            variant="ghost"
+            size="sm"
+            className="hidden md:inline-flex"
           >
             {user ? "Mon compte" : "Se connecter"}
-          </Link>
-          <Link
+          </Button>
+          <Button
             to="/tarifs"
-            className="hidden rounded-full bg-primary px-4 py-1.5 text-[13px] font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-10px_var(--primary)] md:inline-flex"
+            variant="primary"
+            size="sm"
+            className="hidden md:inline-flex"
           >
             Obtenir VYRO Premium
-          </Link>
+          </Button>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -93,26 +97,30 @@ export function Header() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
+                className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
               >
                 {item.label}
+                <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
               </Link>
             ))}
             <Link
               to={user ? "/account" : "/login"}
               onClick={() => setOpen(false)}
-              className="rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
+              className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
             >
               {user ? "Mon compte" : "Se connecter"}
+              <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
             </Link>
           </nav>
-          <Link
+          <Button
             to="/tarifs"
+            variant="primary"
+            size="md"
             onClick={() => setOpen(false)}
-            className="mt-4 flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115"
+            className="mt-4 w-full"
           >
             Obtenir VYRO Premium
-          </Link>
+          </Button>
         </div>
       ) : null}
     </header>
