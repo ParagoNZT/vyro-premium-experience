@@ -68,13 +68,10 @@ function DownloadPage() {
               </dl>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  to="/account"
-                  className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)]"
-                >
+                <Button to="/account" variant="primary" size="sm">
                   <Download className="h-4 w-4" aria-hidden />
                   Télécharger
-                </Link>
+                </Button>
                 <span className="text-xs text-muted-foreground">{target.file}</span>
               </div>
 
