@@ -244,18 +244,15 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
             <p className="mt-2 text-sm text-muted-foreground">
               soit {monthlyEquivalent(plan)} / mois · accès {plan.months} mois
             </p>
-            <Link
+            <Button
               to="/checkout"
               search={{ plan: plan.id }}
-              className={cn(
-                "mt-8 inline-flex items-center justify-center rounded-[10px] px-4 py-2.5 text-sm font-medium transition-all duration-200",
-                plan.highlight
-                  ? "bg-primary text-primary-foreground hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)]"
-                  : "bg-surface-2 text-foreground hover:bg-accent",
-              )}
+              variant={plan.highlight ? "primary" : "secondary"}
+              size="md"
+              className="mt-8 w-full"
             >
               {plan.cta}
-            </Link>
+            </Button>
           </Reveal>
         ))}
       </div>
