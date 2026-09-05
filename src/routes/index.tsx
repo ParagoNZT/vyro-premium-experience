@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   DevicesSection,
   DisclaimerSection,
@@ -12,6 +12,7 @@ import {
   Section,
   Shot,
 } from "@/components/site/sections";
+import { Button } from "@/components/site/Button";
 import { Reveal } from "@/components/site/Reveal";
 import uiHome from "@/assets/ui-home.jpg";
 import uiLive from "@/assets/ui-livetv.jpg";
@@ -62,18 +63,12 @@ function Hero() {
         </Reveal>
         <Reveal delay={160}>
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to="/tarifs"
-              className="inline-flex w-full items-center justify-center rounded-[10px] bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_36px_-8px_var(--primary)] sm:w-auto"
-            >
+            <Button to="/tarifs" variant="primary" size="md" className="w-full sm:w-auto">
               Obtenir VYRO Premium
-            </Link>
-            <Link
-              to="/fonctionnalites"
-              className="inline-flex w-full items-center justify-center rounded-[10px] bg-surface-2 px-6 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-accent sm:w-auto"
-            >
+            </Button>
+            <Button to="/fonctionnalites" variant="secondary" size="md" className="w-full sm:w-auto">
               Découvrir l'application
-            </Link>
+            </Button>
           </div>
           <p className="mt-6 text-[13px] text-muted-foreground">Android TV · Google TV · Fire TV</p>
         </Reveal>

@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,
@@ -40,20 +41,14 @@ function Dashboard() {
       </div>
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <Link
-          to="/account/telechargement"
-          className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)]"
-        >
+        <Button to="/account/telechargement" variant="primary" size="sm">
           <Download className="h-4 w-4" aria-hidden />
           Télécharger VYRO Premium
-        </Link>
+        </Button>
         {!sub ? (
-          <Link
-            to="/tarifs"
-            className="rounded-[10px] bg-surface-2 px-5 py-2.5 text-sm transition-colors hover:bg-accent"
-          >
+          <Button to="/tarifs" variant="secondary" size="sm">
             Obtenir un accès
-          </Link>
+          </Button>
         ) : null}
       </div>
     </div>

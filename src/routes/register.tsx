@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 import { AuthShell, Field } from "@/components/site/AuthShell";
 
 const searchSchema = z.object({
@@ -82,13 +83,9 @@ function RegisterPage() {
           autoComplete="new-password"
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-2 w-full rounded-[10px] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={busy} variant="primary" size="md" className="mt-2 w-full">
           {busy ? "Création…" : "Créer mon compte"}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   );

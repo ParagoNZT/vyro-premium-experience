@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { Check, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/site/Button";
 import { PLANS, PLAN_INCLUDED, formatPrice, getPlan } from "@/config/site";
 import { cn } from "@/lib/utils";
 
@@ -87,20 +88,12 @@ function CheckoutPage() {
               </p>
             ) : (
               <div className="mt-3 flex flex-wrap gap-3">
-                <Link
-                  to="/register"
-                  search={{ plan: plan.id }}
-                  className="rounded-[10px] bg-surface-2 px-4 py-2.5 text-sm transition-colors hover:bg-accent"
-                >
+                <Button to="/register" search={{ plan: plan.id }} variant="secondary" size="sm">
                   Créer un compte
-                </Link>
-                <Link
-                  to="/login"
-                  search={{ plan: plan.id }}
-                  className="rounded-[10px] bg-surface-2 px-4 py-2.5 text-sm transition-colors hover:bg-accent"
-                >
+                </Button>
+                <Button to="/login" search={{ plan: plan.id }} variant="secondary" size="sm">
                   Se connecter
-                </Link>
+                </Button>
               </div>
             )}
 
@@ -109,14 +102,16 @@ function CheckoutPage() {
               <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
               Paiement sécurisé. Activation immédiate de la licence.
             </p>
-            <button
+            <Button
               type="button"
               onClick={pay}
               disabled={!user || busy}
-              className="mt-5 w-full rounded-[10px] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)] disabled:opacity-50"
+              variant="primary"
+              size="md"
+              className="mt-5 w-full"
             >
               {busy ? "Activation…" : `Payer ${formatPrice(plan.price)}`}
-            </button>
+            </Button>
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
                 Connectez-vous ou créez un compte pour finaliser la commande.
