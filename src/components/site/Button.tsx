@@ -64,8 +64,12 @@ export function Button({
     );
 
     if (to) {
-      return (
+      return search ? (
         <Link to={to} search={search} className={classes}>
+          {content}
+        </Link>
+      ) : (
+        <Link to={to} className={classes}>
           {content}
         </Link>
       );
