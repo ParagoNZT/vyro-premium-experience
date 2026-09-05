@@ -88,20 +88,12 @@ function CheckoutPage() {
               </p>
             ) : (
               <div className="mt-3 flex flex-wrap gap-3">
-                <Link
-                  to="/register"
-                  search={{ plan: plan.id }}
-                  className="rounded-[10px] bg-surface-2 px-4 py-2.5 text-sm transition-colors hover:bg-accent"
-                >
+                <Button to="/register" search={{ plan: plan.id }} variant="secondary" size="sm">
                   Créer un compte
-                </Link>
-                <Link
-                  to="/login"
-                  search={{ plan: plan.id }}
-                  className="rounded-[10px] bg-surface-2 px-4 py-2.5 text-sm transition-colors hover:bg-accent"
-                >
+                </Button>
+                <Button to="/login" search={{ plan: plan.id }} variant="secondary" size="sm">
                   Se connecter
-                </Link>
+                </Button>
               </div>
             )}
 
