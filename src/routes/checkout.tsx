@@ -102,14 +102,16 @@ function CheckoutPage() {
               <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
               Paiement sécurisé. Activation immédiate de la licence.
             </p>
-            <button
+            <Button
               type="button"
               onClick={pay}
               disabled={!user || busy}
-              className="mt-5 w-full rounded-[10px] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)] disabled:opacity-50"
+              variant="primary"
+              size="md"
+              className="mt-5 w-full"
             >
               {busy ? "Activation…" : `Payer ${formatPrice(plan.price)}`}
-            </button>
+            </Button>
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
                 Connectez-vous ou créez un compte pour finaliser la commande.
