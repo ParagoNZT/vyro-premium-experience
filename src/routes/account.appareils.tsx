@@ -8,12 +8,12 @@ export const Route = createFileRoute("/account/appareils")({
   component: DevicesPage,
 });
 
-const PLATFORMS = ["Android TV", "Google TV", "Amazon Fire TV"];
+const PLATFORMS = ["Android TV", "Google TV", "Amazon Fire TV"] as const;
 
 function DevicesPage() {
   const { user, isActive, addDevice, removeDevice } = useAuth();
   const [name, setName] = useState("");
-  const [platform, setPlatform] = useState(PLATFORMS[0]);
+  const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
   const devices = user?.devices ?? [];
 
   function onSubmit(e: FormEvent) {
