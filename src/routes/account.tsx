@@ -44,7 +44,7 @@ const NAV = [
 ] as const;
 
 function AccountLayout() {
-  const { user, ready, signOut } = useAuth();
+  const { user, ready, isActive, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -59,6 +59,8 @@ function AccountLayout() {
       </div>
     );
   }
+
+  const initials = user.firstName.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
