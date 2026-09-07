@@ -44,7 +44,7 @@ const NAV = [
 ] as const;
 
 function AccountLayout() {
-  const { user, ready, signOut } = useAuth();
+  const { user, ready, isActive, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -59,6 +59,8 @@ function AccountLayout() {
       </div>
     );
   }
+
+  const initials = user.firstName.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
@@ -77,6 +79,27 @@ function AccountLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
+        </div>
+        <div className={cn("px-5 pb-5 lg:block", open ? "block" : "hidden")}>
+          <div className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-2 px-3 py-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{user.firstName}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+          <p
+            className={cn(
+              "mt-2 inline-block rounded-[6px] px-2 py-0.5 text-xs",
+              isActive
+                ? "border border-primary/30 bg-primary/10 text-primary"
+                : "border border-border text-muted-foreground",
+            )}
+          >
+            {isActive ? "Accès actif" : "Aucun accès actif"}
+          </p>
         </div>
         <nav className={cn("px-3 pb-5 lg:block", open ? "block" : "hidden")}>
           {NAV.map(({ to, label, icon: Icon, ...rest }) => (
