@@ -14,6 +14,8 @@ export const Route = createFileRoute("/register")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Créer un compte – VYRO Premium" },
       {
         name: "description",

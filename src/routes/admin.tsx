@@ -8,7 +8,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
  */
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [{ title: "Administration – VYRO Premium" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ name: "description", content: "Administration VYRO Premium." }, { property: "og:title", content: "Administration – VYRO Premium" }, { property: "og:description", content: "Administration VYRO Premium." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }, { title: "Administration – VYRO Premium" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminLayout,
 });

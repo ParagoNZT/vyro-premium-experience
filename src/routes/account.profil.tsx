@@ -5,6 +5,15 @@ import { Button } from "@/components/site/Button";
 import { Field } from "@/components/site/AuthShell";
 
 export const Route = createFileRoute("/account/profil")({
+  head: () => ({ meta: [
+    { title: "Mon profil – VYRO Premium" },
+    { name: "description", content: "Vos informations de compte VYRO Premium." },
+    { property: "og:title", content: "Mon profil – VYRO Premium" },
+    { property: "og:description", content: "Vos informations de compte VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: ProfilePage,
 });
 

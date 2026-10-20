@@ -5,6 +5,8 @@ import { DISCLAIMER } from "@/config/site";
 export const Route = createFileRoute("/legal/conditions")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Conditions d'utilisation – VYRO Premium" },
       {
         name: "description",

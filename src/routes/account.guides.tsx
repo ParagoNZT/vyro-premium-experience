@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/account/guides")({
+  head: () => ({ meta: [
+    { title: "Guides client – VYRO Premium" },
+    { name: "description", content: "Guides de configuration VYRO Premium." },
+    { property: "og:title", content: "Guides client – VYRO Premium" },
+    { property: "og:description", content: "Guides de configuration VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: GuidesPage,
 });
 

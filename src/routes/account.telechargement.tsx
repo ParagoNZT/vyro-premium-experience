@@ -5,6 +5,15 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/telechargement")({
+  head: () => ({ meta: [
+    { title: "Téléchargements client – VYRO Premium" },
+    { name: "description", content: "Vos téléchargements VYRO Premium." },
+    { property: "og:title", content: "Téléchargements client – VYRO Premium" },
+    { property: "og:description", content: "Vos téléchargements VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: AccountDownloadPage,
 });
 

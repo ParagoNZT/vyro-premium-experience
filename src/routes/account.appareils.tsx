@@ -5,6 +5,15 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/appareils")({
+  head: () => ({ meta: [
+    { title: "Mes appareils – VYRO Premium" },
+    { name: "description", content: "Gérez vos appareils VYRO Premium." },
+    { property: "og:title", content: "Mes appareils – VYRO Premium" },
+    { property: "og:description", content: "Gérez vos appareils VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: DevicesPage,
 });
 

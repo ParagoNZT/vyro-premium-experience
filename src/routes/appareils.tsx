@@ -7,6 +7,8 @@ import uiHome from "@/assets/ui-home.jpg";
 export const Route = createFileRoute("/appareils")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Appareils compatibles – VYRO Premium" },
       {
         name: "description",

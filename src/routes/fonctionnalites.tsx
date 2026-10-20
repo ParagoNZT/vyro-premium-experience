@@ -17,6 +17,8 @@ import uiContinue from "@/assets/ui-continue.jpg";
 export const Route = createFileRoute("/fonctionnalites")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Fonctionnalités – VYRO Premium" },
       {
         name: "description",
