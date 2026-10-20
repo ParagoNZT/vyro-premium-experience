@@ -26,6 +26,7 @@ import { Route as AccountAbonnementRouteImport } from './routes/account.abonneme
 import { Route as AccountAppareilsRouteImport } from './routes/account.appareils'
 import { Route as AccountGuidesRouteImport } from './routes/account.guides'
 import { Route as AccountProfilRouteImport } from './routes/account.profil'
+import { Route as AccountResellerRouteImport } from './routes/account.reseller'
 import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
@@ -118,6 +119,11 @@ const AccountProfilRoute = AccountProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => AccountRoute,
 } as any)
+const AccountResellerRoute = AccountResellerRouteImport.update({
+  id: '/reseller',
+  path: '/reseller',
+  getParentRoute: () => AccountRoute,
+} as any)
 const AccountSupportRoute = AccountSupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/account/appareils': typeof AccountAppareilsRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
+  '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/account/appareils': typeof AccountAppareilsRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
+  '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/account/appareils': typeof AccountAppareilsRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
+  '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/account/appareils'
     | '/account/guides'
     | '/account/profil'
+    | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
     | '/legal/conditions'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/account/appareils'
     | '/account/guides'
     | '/account/profil'
+    | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
     | '/legal/conditions'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/account/appareils'
     | '/account/guides'
     | '/account/profil'
+    | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
     | '/legal/conditions'
@@ -441,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountProfilRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/account/reseller': {
+      id: '/account/reseller'
+      path: '/reseller'
+      fullPath: '/account/reseller'
+      preLoaderRoute: typeof AccountResellerRouteImport
+      parentRoute: typeof AccountRoute
+    }
     '/account/support': {
       id: '/account/support'
       path: '/support'
@@ -491,6 +510,7 @@ interface AccountRouteChildren {
   AccountAppareilsRoute: typeof AccountAppareilsRoute
   AccountGuidesRoute: typeof AccountGuidesRoute
   AccountProfilRoute: typeof AccountProfilRoute
+  AccountResellerRoute: typeof AccountResellerRoute
   AccountSupportRoute: typeof AccountSupportRoute
   AccountTelechargementRoute: typeof AccountTelechargementRoute
   AccountIndexRoute: typeof AccountIndexRoute
@@ -501,6 +521,7 @@ const AccountRouteChildren: AccountRouteChildren = {
   AccountAppareilsRoute: AccountAppareilsRoute,
   AccountGuidesRoute: AccountGuidesRoute,
   AccountProfilRoute: AccountProfilRoute,
+  AccountResellerRoute: AccountResellerRoute,
   AccountSupportRoute: AccountSupportRoute,
   AccountTelechargementRoute: AccountTelechargementRoute,
   AccountIndexRoute: AccountIndexRoute,
