@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -48,13 +48,14 @@ const NAV = [
 function AccountLayout() {
   const { user, ready, isActive, signOut } = useAuth();
   const navigate = useNavigate();
+  const reseller = useRouterState({ select: s => s.location.pathname === "/account/reseller" });
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (ready && !user) navigate({ to: "/login" });
-  }, [ready, user, navigate]);
+    if (ready && !user && !reseller) navigate({ to: "/login" });
+  }, [ready, user, reseller, navigate]);
 
-  if (!ready || !user) {
+  if (!ready || (!user && !reseller)) {
     return (
       <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
         Chargement…
@@ -62,7 +63,7 @@ function AccountLayout() {
     );
   }
 
-  const initials = user.firstName.slice(0, 2).toUpperCase();
+  const initials = user?.firstName.slice(0, 2).toUpperCase() ?? "RV";
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
@@ -88,8 +89,8 @@ function AccountLayout() {
               {initials}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{user.firstName}</p>
-              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              <p className="truncate text-sm font-medium">{user?.firstName ?? "Revendeur"}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.email ?? "VYRO Partenaires"}</p>
             </div>
           </div>
           <p
