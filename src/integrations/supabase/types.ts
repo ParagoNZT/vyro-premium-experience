@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      reseller_apps: {
+        Row: {
+          id: string
+          logo_path: string | null
+          name: string
+          package_name: string
+          servers: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          logo_path?: string | null
+          name: string
+          package_name: string
+          servers?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          id?: string
+          logo_path?: string | null
+          name?: string
+          package_name?: string
+          servers?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
