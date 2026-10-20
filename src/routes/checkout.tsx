@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 import { PLANS, PLAN_INCLUDED, formatPrice, getPlan } from "@/config/site";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const searchSchema = z.object({ plan: z.string().optional() });
 
@@ -34,7 +35,23 @@ function CheckoutPage() {
   const search = Route.useSearch();
   const { user } = useAuth();
   const [planId, setPlanId] = useState(search.plan && getPlan(search.plan) ? search.plan : "12m");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const plan = getPlan(planId ?? "12m") ?? PLANS[PLANS.length - 1]!;
+
+  async function pay() {
+    setBusy(true); setError("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error("Connectez-vous avant de payer.");
+      const response = await fetch("/api/checkout", { method: "POST", headers: { Authorization: "Bearer " + data.session.access_token, "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, requestKey }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Paiement indisponible.");
+      if (typeof result.url !== "string" || !result.url.startsWith("https://checkout.stripe.com/")) throw new Error("Page de paiement invalide.");
+      window.location.assign(result.url);
+    } catch (issue) { setError(issue instanceof Error ? issue.message : "Paiement indisponible."); setBusy(false); }
+  }
 
   return (
     <section className="relative overflow-hidden">
@@ -53,7 +70,8 @@ function CheckoutPage() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setPlanId(p.id)}
+                  onClick={() => { setPlanId(p.id); setRequestKey(crypto.randomUUID()); setError(""); }}
+                  disabled={busy}
                   className={cn(
                     "flex w-full items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-left transition-colors duration-150",
                     p.id === plan.id
@@ -91,17 +109,19 @@ function CheckoutPage() {
             <h2 className="mt-9 text-sm font-medium">3. Paiement</h2>
             <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-              Le paiement en ligne sera disponible prochainement. Aucune somme n’est prélevée.
+              Paiement sur la page sécurisée Stripe. Accès activé après confirmation du règlement. Aucun renouvellement automatique.
             </p>
             <Button
               type="button"
-              disabled
+              onClick={pay}
+              disabled={!user || busy}
               variant="primary"
               size="md"
               className="mt-5 w-full"
             >
-              Paiement bientôt disponible
+              {busy ? "Ouverture de Stripe…" : `Payer ${formatPrice(plan.price)}`}
             </Button>
+            {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
                 Connectez-vous ou créez un compte pour finaliser la commande.

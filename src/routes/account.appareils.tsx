@@ -23,13 +23,17 @@ function DevicesPage() {
   const { user, isActive, addDevice, removeDevice } = useAuth();
   const [name, setName] = useState("");
   const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const devices = user?.devices ?? [];
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    addDevice({ name: name.trim(), platform });
-    setName("");
+    setBusy(true); setError("");
+    try { await addDevice({ name: name.trim(), platform }); setName(""); }
+    catch (issue) { setError(issue instanceof Error ? issue.message : "Ajout impossible."); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -59,7 +63,8 @@ function DevicesPage() {
               </div>
               <button
                 type="button"
-                onClick={() => removeDevice(device.id)}
+                disabled={busy}
+                onClick={async () => { setBusy(true); setError(""); try { await removeDevice(device.id); } catch (issue) { setError(issue instanceof Error ? issue.message : "Retrait impossible."); } finally { setBusy(false); } }}
                 aria-label={`Retirer ${device.name}`}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] text-muted-foreground transition-colors hover:bg-surface-2 hover:text-destructive"
               >
@@ -102,11 +107,12 @@ function DevicesPage() {
           </select>
         </div>
         <div className="flex items-end">
-          <Button type="submit" variant="primary" size="sm" disabled={!isActive}>
+          <Button type="submit" variant="primary" size="sm" disabled={!isActive || busy}>
             Ajouter
           </Button>
         </div>
       </form>
+      {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
 
       <p className="mt-6 text-xs text-muted-foreground">
         {isActive

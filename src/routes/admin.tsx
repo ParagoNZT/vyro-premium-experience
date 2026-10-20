@@ -4,6 +4,7 @@ import { ShieldCheck, LockKeyhole, LogOut, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
+import { ManagementPanel } from "@/components/admin/ManagementPanel";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Administration – VYRO Premium" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -84,7 +85,7 @@ function AdminPage() {
         <Link to="/account/profil" className="panel flex items-center justify-between gap-4 p-7 hover:border-primary/40"><span>Gérer mon profil</span><ArrowRight className="h-4 w-4 text-primary" /></Link>
         <Link to="/account/reseller" className="panel flex items-center justify-between gap-4 p-7 hover:border-primary/40"><span>Configuration revendeur</span><ArrowRight className="h-4 w-4 text-primary" /></Link>
       </div>
-      <div className="panel p-7 text-sm text-muted-foreground">La connexion et l’accès administrateur sont actifs. La gestion des utilisateurs, licences, paiements et contenus sera disponible après raccordement de ces modules.</div>
+      <ManagementPanel />
       <Button variant="secondary" onClick={async () => {
         setAccount(null); setStatus("loading"); setError("");
         try { await signOut(); setStatus("signed-out"); }

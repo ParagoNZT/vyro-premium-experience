@@ -29,7 +29,11 @@ import { Route as AccountProfilRouteImport } from './routes/account.profil'
 import { Route as AccountResellerRouteImport } from './routes/account.reseller'
 import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
+import { Route as ApiAccountRouteImport } from './routes/api.account'
 import { Route as ApiAdminRouteImport } from './routes/api.admin'
+import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
+import { Route as ApiManageRouteImport } from './routes/api.manage'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
@@ -135,9 +139,29 @@ const AccountTelechargementRoute = AccountTelechargementRouteImport.update({
   path: '/telechargement',
   getParentRoute: () => AccountRoute,
 } as any)
+const ApiAccountRoute = ApiAccountRouteImport.update({
+  id: '/api/account',
+  path: '/api/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminRoute = ApiAdminRouteImport.update({
   id: '/api/admin',
   path: '/api/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
+  id: '/api/checkout',
+  path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiManageRoute = ApiManageRouteImport.update({
+  id: '/api/manage',
+  path: '/api/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe-webhook',
+  path: '/api/stripe-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalConditionsRoute = LegalConditionsRouteImport.update({
@@ -181,7 +205,11 @@ export interface FileRoutesByFullPath {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/manage': typeof ApiManageRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -207,7 +235,11 @@ export interface FileRoutesByTo {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/manage': typeof ApiManageRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -235,7 +267,11 @@ export interface FileRoutesById {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/manage': typeof ApiManageRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -264,7 +300,11 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/account'
     | '/api/admin'
+    | '/api/checkout'
+    | '/api/manage'
+    | '/api/stripe-webhook'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -290,7 +330,11 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/account'
     | '/api/admin'
+    | '/api/checkout'
+    | '/api/manage'
+    | '/api/stripe-webhook'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -317,7 +361,11 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/account'
     | '/api/admin'
+    | '/api/checkout'
+    | '/api/manage'
+    | '/api/stripe-webhook'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -338,7 +386,11 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SupportRoute: typeof SupportRoute
   TarifsRoute: typeof TarifsRoute
+  ApiAccountRoute: typeof ApiAccountRoute
   ApiAdminRoute: typeof ApiAdminRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiManageRoute: typeof ApiManageRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
   LegalMentionsRoute: typeof LegalMentionsRoute
@@ -487,11 +539,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountTelechargementRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/api/account': {
+      id: '/api/account'
+      path: '/api/account'
+      fullPath: '/api/account'
+      preLoaderRoute: typeof ApiAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin': {
       id: '/api/admin'
       path: '/api/admin'
       fullPath: '/api/admin'
       preLoaderRoute: typeof ApiAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout': {
+      id: '/api/checkout'
+      path: '/api/checkout'
+      fullPath: '/api/checkout'
+      preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/manage': {
+      id: '/api/manage'
+      path: '/api/manage'
+      fullPath: '/api/manage'
+      preLoaderRoute: typeof ApiManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe-webhook': {
+      id: '/api/stripe-webhook'
+      path: '/api/stripe-webhook'
+      fullPath: '/api/stripe-webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal/conditions': {
@@ -563,7 +643,11 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SupportRoute: SupportRoute,
   TarifsRoute: TarifsRoute,
+  ApiAccountRoute: ApiAccountRoute,
   ApiAdminRoute: ApiAdminRoute,
+  ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiManageRoute: ApiManageRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,
   LegalMentionsRoute: LegalMentionsRoute,

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, Copy, Check, ShieldCheck, MonitorSmartphone, CalendarClock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
@@ -40,6 +40,8 @@ function Stat({
 function Dashboard() {
   const { user, isActive, daysLeft } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [payment, setPayment] = useState("");
+  useEffect(() => { setPayment(new URLSearchParams(window.location.search).get("payment") ?? ""); }, []);
   const sub = user?.subscription ?? null;
 
   const total = sub
@@ -62,6 +64,8 @@ function Dashboard() {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="font-display text-3xl font-semibold">Bonjour, {user?.firstName}</h1>
+      {payment === "processing" && <p role="status" className="panel mt-5 p-4 text-sm text-primary">Retour de Stripe. Votre accès se met à jour après confirmation du paiement.</p>}
+      {payment === "test" && <p role="status" className="panel mt-5 p-4 text-sm text-primary">Paiement de test terminé. Aucune somme réelle n’a été prélevée et aucune licence réelle n’est attribuée.</p>}
       <p className="mt-2 text-sm text-muted-foreground">
         Voici l'état de votre accès VYRO Premium.
       </p>
