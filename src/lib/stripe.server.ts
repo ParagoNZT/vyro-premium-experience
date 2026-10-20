@@ -4,6 +4,8 @@ import { checkoutSchema } from "./management-validation";
 import { verifyStripeSignature } from "./stripe-signature";
 import { getPlan } from "@/config/site";
 import type { PaymentRow } from "./management-types";
+import { isAdminIdentity } from "./admin-policy";
+class StripeFailure extends ApiError { constructor(public details: string) { super(502,"Stripe n’a pas pu traiter la demande. Aucun accès n’a été activé."); } }
 type StripeSession = { id:string; url:string|null; payment_status:string; status:string; amount_total:number; currency:string; livemode:boolean; client_reference_id:string|null; payment_intent:string|null; metadata:Record<string,string> };
 export async function stripeCall<T>(path: string, form?: URLSearchParams, idempotency?: string): Promise<T> {
  const secret=process.env['STRIPE_SECRET_KEY'];
@@ -11,7 +13,11 @@ export async function stripeCall<T>(path: string, form?: URLSearchParams, idempo
  const response=await fetch("https://api.stripe.com/v1/"+path,{method:form?"POST":"GET",headers:{
  Authorization:"Bearer "+secret,...(form?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(idempotency?{"Idempotency-Key":idempotency}:{})
  },...(form?{body:form}:{})});
- if (!response.ok) throw new ApiError(502,"Stripe n’a pas pu traiter la demande. Aucun accès n’a été activé.");
+ if (!response.ok) {
+ const issue=await response.json() as {error?:{message?:string}};
+ const details=(issue.error?.message||"Erreur Stripe HTTP "+response.status).replace(/(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+/g,"[clé masquée]");
+ throw new StripeFailure(details);
+ }
  return await response.json() as T;
 }
 export const checkoutRequest=api(async request=>{
@@ -44,7 +50,9 @@ export const checkoutRequest=api(async request=>{
  "line_items[0][quantity]":"1","metadata[order_id]":order.id,"metadata[plan_id]":plan.id,
  "metadata[client_id]":client.id,"payment_intent_data[metadata][order_id]":order.id,
  });
- const session=await stripeCall<StripeSession>("checkout/sessions",form,"checkout-"+order.id);
+ let session:StripeSession;
+ try { session=await stripeCall<StripeSession>("checkout/sessions",form,"checkout-"+order.id); }
+ catch(issue){ if(issue instanceof StripeFailure && isAdminIdentity(user,process.env['VYRO_ADMIN_EMAIL'])) return json({error:"Configuration Stripe : "+issue.details},502); throw issue; }
  if(!session.url || !session.url.startsWith("https://checkout.stripe.com/")) throw new ApiError(502,"Page de paiement indisponible.");
  await db.prepare("UPDATE payments SET stripe_session_id=? WHERE id=? AND stripe_session_id IS NULL").bind(session.id,order.id).run();
  return json({url:session.url});

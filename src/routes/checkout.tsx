@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Check, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -38,6 +38,8 @@ function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const [billing, setBilling] = useState<{enabled:boolean;live:boolean}|null>(null);
+  useEffect(() => { let live=true; fetch("/api/checkout",{cache:"no-store"}).then(r=>r.json()).then(data=>{if(live)setBilling(data);}).catch(()=>{if(live)setBilling({enabled:false,live:false});}); return()=>{live=false;}; },[]);
   const plan = getPlan(planId ?? "12m") ?? PLANS[PLANS.length - 1]!;
 
   async function pay() {
@@ -114,13 +116,14 @@ function CheckoutPage() {
             <Button
               type="button"
               onClick={pay}
-              disabled={!user || busy}
+              disabled={!user || busy || !billing?.enabled}
               variant="primary"
               size="md"
               className="mt-5 w-full"
             >
-              {busy ? "Ouverture de Stripe…" : `Payer ${formatPrice(plan.price)}`}
+              {busy ? "Ouverture de Stripe…" : billing?.enabled ? (billing.live ? `Payer ${formatPrice(plan.price)}` : "Essayer le paiement de test") : "Paiement bientôt disponible"}
             </Button>
+            {billing?.enabled && !billing.live && <p className="mt-3 text-xs text-primary">Mode test : aucun prélèvement réel et aucune licence réelle attribuée.</p>}
             {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
