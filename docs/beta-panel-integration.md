@@ -17,3 +17,10 @@ The original panel's UI can be renamed to VYRO Studio and linked to the website 
 Validation: run `node --test src/lib/admin-policy.test.ts src/lib/management.test.ts`, build, and type-check. After deployment, create a disposable manual licence, enrol a test device through the existing TV API, check quota and ownership, revoke that licence, and verify denial. Never enrol against a real tester's key for this check.
 
 Rollback: restore the website's previous deployment and database binding. The beta worker's API source is unchanged. The additive tables and triggers can remain while reviewing the issue; do not restore a stale beta export over new tester activity. Reconcile new VYRO writes before switching databases back.
+
+## Administration key visibility
+The TV access list returns a recovery flag, never plaintext keys. The administrator explicitly requests `/api/beta-key` to reveal one key. Website licence keys are read from the linked licence; legacy encrypted keys are read through the `VYRO_BETA` service binding. The beta worker validates the same verified Supabase administrator identity before decrypting locally with its existing secret. No administration or encryption secret is exported to the website.
+
+The key panel supports showing, hiding and copying; it clears on blur, page/search changes, and after 60 seconds. Responses are private/no-store, and audit entries do not contain key values. When the initial key was not retained, creating a sharing alias is an explicit confirmed UI action and preserves the original bindings and key.
+
+To add the beta-side endpoint to a known active source, use `integrations/beta-panel/apply-key-bridge.mjs`. Preserve an active-source backup, verify the deployment version first, and retain the existing beta worker settings and secrets. Test the bridge with `node --test integrations/beta-panel/key-bridge.test.mjs`.

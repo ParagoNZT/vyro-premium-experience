@@ -10,7 +10,7 @@ type Tab = "beta" | "clients" | "licenses" | "payments" | "audit";
 type Action = Record<string, unknown> & {action:string};
 const inputClass="mt-1.5 w-full rounded-[10px] border border-border bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-primary";
 const date=(value:string|null)=>value?new Date(value).toLocaleString("fr-FR"):"—";
-const actionLabels:Record<string,string>={"beta-access-change-requested":"Modification d’accès TV demandée","client-created":"Fiche client créée","license-granted":"Licence attribuée / prolongée","license-revoked":"Licence révoquée","client-suspended":"Client suspendu","client-active":"Client réactivé","payment-paid":"Paiement confirmé","test-payment-paid":"Paiement de test confirmé","payment-refunded":"Paiement remboursé"};
+const actionLabels:Record<string,string>={"access-key-viewed":"Clé consultée","access-key-shared":"Clé de partage demandée","beta-access-change-requested":"Modification d’accès TV demandée","client-created":"Fiche client créée","license-granted":"Licence attribuée / prolongée","license-revoked":"Licence révoquée","client-suspended":"Client suspendu","client-active":"Client réactivé","payment-paid":"Paiement confirmé","test-payment-paid":"Paiement de test confirmé","payment-refunded":"Paiement remboursé"};
 
 async function request(path:string, action?:Action) {
  const {data}=await supabase.auth.getSession();

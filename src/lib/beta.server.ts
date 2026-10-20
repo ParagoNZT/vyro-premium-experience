@@ -27,6 +27,8 @@ export const betaRequest=api(async request=>{
  const [codes,stats]=await Promise.all([
   db.prepare(`SELECT c.id,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
    r.name AS resellerName,u.email AS clientEmail,
+   CASE WHEN l.license_key IS NOT NULL OR c.encrypted_code IS NOT NULL OR EXISTS
+   (SELECT 1 FROM code_aliases a WHERE a.code_hash=c.code_hash) THEN 1 ELSE 0 END AS hasRecoverableKey,
    (SELECT count(*) FROM bindings WHERE code_hash=c.code_hash) AS deviceCount,
    (SELECT max(last_seen) FROM device_profiles WHERE code_hash=c.code_hash) AS lastSeen
    FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash
