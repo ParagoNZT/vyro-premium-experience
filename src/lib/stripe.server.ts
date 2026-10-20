@@ -43,7 +43,7 @@ export const checkoutRequest=api(async request=>{
  }
  const origin=new URL(request.url).origin;
  const form=new URLSearchParams({
- mode:"payment","managed_payments[enabled]":"false",client_reference_id:order.id,customer_email:user.email!,
+ mode:"payment","managed_payments[enabled]":"false","adaptive_pricing[enabled]":"false",client_reference_id:order.id,customer_email:user.email!,
  success_url:origin+"/account?payment="+(live?"processing":"test"),cancel_url:origin+"/checkout?plan="+plan.id,
  "line_items[0][price_data][currency]":"eur","line_items[0][price_data][unit_amount]":String(order.amount_cents),
  "line_items[0][price_data][product_data][name]":"VYRO Premium – accès "+plan.name,
