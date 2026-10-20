@@ -27,10 +27,13 @@ export async function trackClient(db: ManagementDB, user: User) {
 export const logStatement = (db: ManagementDB, actor: string, action: string, target: string, note: string) =>
  db.prepare("INSERT INTO audit_log(id,actor_id,action,target_id,note,created_at) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),actor,action,target,note,new Date().toISOString());
 
-export function grantStatement(db: ManagementDB, clientId: string, planId: string, deviceLimit: number, paymentId: string | null) {
+export async function grantStatement(db: ManagementDB, clientId: string, planId: string, deviceLimit: number, paymentId: string | null) {
  const plan = getPlan(planId)!;
  const now = new Date().toISOString();
- return db.prepare(licenseUpsertSql).bind(crypto.randomUUID(),clientId,"VYRO-"+crypto.randomUUID().replaceAll("-","").toUpperCase(),planId,now,now,plan.months,deviceLimit,paymentId,now,clientId,paymentId,paymentId,plan.months);
+ const key="VYRO-"+crypto.randomUUID().replaceAll("-","").slice(0,24).toUpperCase();
+ const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(key))),b=>b.toString(16).padStart(2,"0")).join("");
+ const linked=await db.prepare("SELECT count(*) AS count FROM bindings WHERE code_hash=(SELECT beta_code_hash FROM licenses WHERE client_id=?)").bind(clientId).first<{count:number}>();
+ return db.prepare(licenseUpsertSql).bind(crypto.randomUUID(),clientId,key,planId,now,now,plan.months,Math.max(deviceLimit,linked?.count??0),paymentId,now,hash,clientId,paymentId,paymentId,plan.months);
 }
 export const manageRequest = api(async request => {
  const user = await identity(request,true);
@@ -64,7 +67,7 @@ export const manageRequest = api(async request => {
  } else if (data.action==="grant-license") {
  const client=await db.prepare("SELECT * FROM clients WHERE id=?").bind(data.clientId).first<ClientRow>();
  if (!client || client.status!=="active") throw new ApiError(409,"Client absent ou suspendu.");
- await db.batch([grantStatement(db,data.clientId,data.planId,data.deviceLimit,null),logStatement(db,user.id,"license-granted",data.clientId,data.note)]);
+ await db.batch([await grantStatement(db,data.clientId,data.planId,data.deviceLimit,null),logStatement(db,user.id,"license-granted",data.clientId,data.note)]);
  } else if (data.action==="revoke-license") {
  const license=await db.prepare("SELECT id FROM licenses WHERE id=?").bind(data.licenseId).first();
  if (!license) throw new ApiError(404,"Licence introuvable.");
@@ -81,7 +84,10 @@ export const manageRequest = api(async request => {
 export async function accountData(db: ManagementDB, client: ClientRow, user: User) {
  const [license,devices,orders] = await Promise.all([
  db.prepare("SELECT * FROM licenses WHERE client_id=?").bind(client.id).first<LicenseRow>(),
- db.prepare("SELECT id,name,platform,last_seen_at as lastSeen FROM devices WHERE client_id=? ORDER BY last_seen_at DESC").bind(client.id).all(),
+ db.prepare(`SELECT b.device_hash AS id,coalesce(nullif(trim(coalesce(p.manufacturer,'')||' '||coalesce(p.model,'')),''),'Appareil TV') AS name,
+ 'Android / TV' AS platform,coalesce(p.last_seen,b.created_at) AS lastSeen FROM bindings b
+ JOIN licenses l ON l.beta_code_hash=b.code_hash LEFT JOIN device_profiles p ON p.code_hash=b.code_hash AND p.device_hash=b.device_hash
+ WHERE l.client_id=? ORDER BY lastSeen DESC`).bind(client.id).all(),
  db.prepare("SELECT * FROM payments WHERE client_id=? AND status='paid' AND livemode=1 ORDER BY paid_at DESC LIMIT 100").bind(client.id).all<PaymentRow>(),
  ]);
  const active=client.status==="active" && license?.status==="active" && license.expires_at>new Date().toISOString();
@@ -100,14 +106,9 @@ export const accountRequest=api(async request=>{
  if (!parsed.success) throw new ApiError(400,"Vérifiez les informations de l’appareil.");
  const d=parsed.data;
  if (d.action==="remove") {
- await db.prepare("DELETE FROM devices WHERE id=? AND client_id=?").bind(d.id,client.id).run();
+ await db.prepare("DELETE FROM bindings WHERE device_hash=? AND code_hash=(SELECT beta_code_hash FROM licenses WHERE client_id=?)").bind(d.id,client.id).run();
  } else {
- const result=await db.prepare(`INSERT INTO devices(id,client_id,name,platform,last_seen_at)
- SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM licenses l JOIN clients c ON c.id=l.client_id
- WHERE l.client_id=? AND l.status='active' AND c.status='active' AND l.expires_at>?
- AND (SELECT count(*) FROM devices WHERE client_id=?)<l.device_limit)
- ON CONFLICT(client_id,name) DO NOTHING`).bind(crypto.randomUUID(),client.id,d.name,d.platform,new Date().toISOString(),client.id,new Date().toISOString(),client.id).run();
- if (!result.meta.changes) throw new ApiError(409,"Licence inactive, appareil déjà enregistré ou limite d’appareils atteinte.");
+ throw new ApiError(400,"Saisissez votre clé dans l’application TV : l’appareil apparaîtra automatiquement ici.");
  }
  }
  return json(await accountData(db,client,user));

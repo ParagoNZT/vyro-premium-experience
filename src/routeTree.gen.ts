@@ -31,6 +31,7 @@ import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 import { Route as ApiAccountRouteImport } from './routes/api.account'
 import { Route as ApiAdminRouteImport } from './routes/api.admin'
+import { Route as ApiBetaRouteImport } from './routes/api.beta'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiManageRouteImport } from './routes/api.manage'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
@@ -149,6 +150,11 @@ const ApiAdminRoute = ApiAdminRouteImport.update({
   path: '/api/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBetaRoute = ApiBetaRouteImport.update({
+  id: '/api/beta',
+  path: '/api/beta',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/beta': typeof ApiBetaRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/manage': typeof ApiManageRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/beta': typeof ApiBetaRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/manage': typeof ApiManageRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/beta': typeof ApiBetaRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/manage': typeof ApiManageRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/beta'
     | '/api/checkout'
     | '/api/manage'
     | '/api/stripe-webhook'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/beta'
     | '/api/checkout'
     | '/api/manage'
     | '/api/stripe-webhook'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/beta'
     | '/api/checkout'
     | '/api/manage'
     | '/api/stripe-webhook'
@@ -388,6 +400,7 @@ export interface RootRouteChildren {
   TarifsRoute: typeof TarifsRoute
   ApiAccountRoute: typeof ApiAccountRoute
   ApiAdminRoute: typeof ApiAdminRoute
+  ApiBetaRoute: typeof ApiBetaRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiManageRoute: typeof ApiManageRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
@@ -553,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/beta': {
+      id: '/api/beta'
+      path: '/api/beta'
+      fullPath: '/api/beta'
+      preLoaderRoute: typeof ApiBetaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/checkout': {
       id: '/api/checkout'
       path: '/api/checkout'
@@ -645,6 +665,7 @@ const rootRouteChildren: RootRouteChildren = {
   TarifsRoute: TarifsRoute,
   ApiAccountRoute: ApiAccountRoute,
   ApiAdminRoute: ApiAdminRoute,
+  ApiBetaRoute: ApiBetaRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiManageRoute: ApiManageRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,

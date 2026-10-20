@@ -3,9 +3,10 @@ import { Plus, RefreshCw, Users, KeyRound, CreditCard, ScrollText, X, ShieldChec
 import { supabase } from "@/integrations/supabase/client";
 import type { AdminOverview } from "@/lib/management-types";
 import { Button } from "@/components/site/Button";
+import { BetaPanel } from "./BetaPanel";
 import { PLANS, formatPrice, getPlan } from "@/config/site";
 
-type Tab = "clients" | "licenses" | "payments" | "audit";
+type Tab = "beta" | "clients" | "licenses" | "payments" | "audit";
 type Action = Record<string, unknown> & {action:string};
 const inputClass="mt-1.5 w-full rounded-[10px] border border-border bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-primary";
 const date=(value:string|null)=>value?new Date(value).toLocaleString("fr-FR"):"—";
@@ -54,7 +55,7 @@ export function ManagementPanel() {
  else if(form==="license")void run({action:"grant-license",clientId,planId,deviceLimit:limit,note});
  else if(pending)void run({...pending,note});
  }
- const tabs=[["clients","Clients",Users],["licenses","Licences",KeyRound],["payments","Paiements",CreditCard],["audit","Journal",ScrollText]] as const;
+ const tabs=[["beta","Accès TV / Bêtas",ShieldCheck],["clients","Clients",Users],["licenses","Licences",KeyRound],["payments","Paiements",CreditCard],["audit","Journal",ScrollText]] as const;
  const filter=(value:string)=>value.toLowerCase().includes(search.toLowerCase());
  return <div className="mt-8 space-y-5">
  <div className="grid gap-3 sm:grid-cols-3">
@@ -81,8 +82,8 @@ export function ManagementPanel() {
  {pending?.action==="client-status"&&<p className="text-xs text-muted-foreground">Cette action concerne les services VYRO. Le compte de connexion est conservé.</p>}
  <Button type="submit" disabled={busy} variant="primary" size="sm">{busy?"Enregistrement…":"Confirmer"}</Button>
  </form>}
- <label className="block text-xs text-muted-foreground">Filtrer cette page<input className={inputClass} placeholder="E-mail, nom, référence…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
- {loading&&!data?<p role="status" className="py-8 text-muted-foreground">Chargement de la gestion…</p>:<div className="panel overflow-x-auto">
+ {tab!=="beta"&&<label className="block text-xs text-muted-foreground">Filtrer cette page<input className={inputClass} placeholder="E-mail, nom, référence…" value={search} onChange={e=>setSearch(e.target.value)}/></label>}
+ {tab==="beta"?<BetaPanel/>:loading&&!data?<p role="status" className="py-8 text-muted-foreground">Chargement de la gestion…</p>:<div className="panel overflow-x-auto">
  {tab==="clients"&&<table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>{["Client","Compte","Statut","Dernière visite","Action"].map(v=><th key={v} className="p-4">{v}</th>)}</tr></thead><tbody>{data?.clients.filter(c=>filter(c.email+" "+c.first_name)).map(c=><tr key={c.id} className="border-b border-border/60"><td className="p-4"><p>{c.first_name}</p><p className="mt-1 text-xs text-muted-foreground">{c.email}</p></td><td className="p-4">{c.auth_user_id?"Inscrit":"À créer par le client"}</td><td className="p-4">{c.status==="active"?"Actif":"Suspendu"}</td><td className="whitespace-nowrap p-4 text-xs">{date(c.last_seen_at)}</td><td className="p-4"><button className="text-xs text-primary" onClick={()=>{setForm(null);setNote("");setPending({action:"client-status",clientId:c.id,status:c.status==="active"?"suspended":"active"});}}>{c.status==="active"?"Suspendre":"Réactiver"}</button></td></tr>)}</tbody></table>}
  {tab==="licenses"&&<table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>{["Client / clé","Offre","Expiration","Appareils max.","Statut","Action"].map(v=><th key={v} className="p-4">{v}</th>)}</tr></thead><tbody>{data?.licenses.filter(l=>filter((l.email??"")+" "+l.license_key)).map(l=><tr key={l.id} className="border-b border-border/60"><td className="p-4"><p>{l.email}</p><code className="mt-1 block max-w-60 break-all text-xs text-muted-foreground">{l.license_key}</code></td><td className="p-4">{getPlan(l.plan_id)?.name}</td><td className="whitespace-nowrap p-4 text-xs">{date(l.expires_at)}</td><td className="p-4">{l.device_limit}</td><td className="p-4">{l.status==="revoked"?"Révoquée":l.expires_at>new Date().toISOString()?"Active":"Expirée"}</td><td className="p-4">{l.status!=="revoked"&&<button className="text-xs text-destructive" onClick={()=>{setForm(null);setNote("");setPending({action:"revoke-license",licenseId:l.id});}}>Révoquer</button>}</td></tr>)}</tbody></table>}
  {tab==="payments"&&<table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>{["Date","Client","Offre","Montant","Statut","Mode"].map(v=><th key={v} className="p-4">{v}</th>)}</tr></thead><tbody>{data?.payments.filter(p=>filter((p.email??"")+" "+p.id)).map(p=><tr key={p.id} className="border-b border-border/60"><td className="whitespace-nowrap p-4 text-xs">{date(p.paid_at||p.created_at)}</td><td className="p-4">{p.email}<p className="mt-1 text-xs text-muted-foreground">{p.stripe_session_id||p.id}</p></td><td className="p-4">{getPlan(p.plan_id)?.name}</td><td className="p-4">{formatPrice(p.amount_cents/100)}</td><td className="p-4">{{pending:"En attente",paid:"Payé",failed:"Échoué",refunded:"Remboursé"}[p.status]||p.status}</td><td className="p-4">{p.livemode?"Réel":"Test"}</td></tr>)}</tbody></table>}
@@ -90,7 +91,7 @@ export function ManagementPanel() {
  {data&&data[tab].length===0&&<p className="p-7 text-sm text-muted-foreground">Aucun enregistrement pour le moment.</p>}
  </div>}
  <div className="flex items-center justify-between text-xs text-muted-foreground"><button disabled={page===0||loading} onClick={()=>setPage(p=>p-1)} className="rounded-lg border border-border px-3 py-2 disabled:opacity-40">Précédent</button><span>Page {page+1} · 50 éléments maximum par rubrique</span><button disabled={!data?.hasMore||loading} onClick={()=>setPage(p=>p+1)} className="rounded-lg border border-border px-3 py-2 disabled:opacity-40">Suivant</button></div>
- <p className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-primary"/>Les actions sont vérifiées côté serveur et conservées dans le journal. Les licences gérées ici concernent le compte VYRO ; leur validation dans l’application TV nécessite son raccordement.</p>
+ <p className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-primary"/>Les licences VYRO sont reliées au panel et à l’application TV. Les modifications sont vérifiées côté serveur et conservées dans le journal.</p>
  </div>;
 }
 

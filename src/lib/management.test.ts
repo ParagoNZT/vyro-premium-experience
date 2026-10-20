@@ -8,11 +8,13 @@ import { actionSchema } from "./management-validation.ts";
 function setup(){
  const db=new DatabaseSync(":memory:");
  db.exec(readFileSync(new URL("../../migrations/d1/0001_management.sql",import.meta.url),"utf8"));
+ db.exec(readFileSync(new URL("../../tests/fixtures/beta-schema.sql",import.meta.url),"utf8"));
+ db.exec(readFileSync(new URL("../../migrations/d1/0002_shared_beta_access.sql",import.meta.url),"utf8"));
  db.prepare("INSERT INTO clients(id,email,first_name,created_at) VALUES(?,?,?,?)").run("client","client@example.com","Client","2026-01-01T00:00:00.000Z");
  return db;
 }
 function grant(db:DatabaseSync, now:string, months:number, payment:string|null=null){
- return db.prepare(licenseUpsertSql).run("lic","client","VYRO-TEST","3m",now,now,months,3,payment,now,"client",payment,payment,months);
+ return db.prepare(licenseUpsertSql).run("lic","client","VYRO-"+"A".repeat(24),"3m",now,now,months,3,payment,now,"a".repeat(64),"client",payment,payment,months);
 }
 test("calendar duration clamps January 31 to April 30 and renewal extends the existing expiry",()=>{
  const db=setup(); grant(db,"2026-01-31T10:00:00.000Z",3);
@@ -54,4 +56,47 @@ test("Stripe signature checks raw body, freshness, and rotated signatures",async
  assert.equal(await verifyStripeSignature(raw,"t="+t+",v1="+sig,secret,now+301000),false);
  assert.equal(await verifyStripeSignature(raw,"t="+t+",v1="+"0".repeat(64)+",v1="+sig,secret,now),true);
  assert.equal(await verifyStripeSignature(raw,null,secret,now),false);
+});
+
+test("web licence provisions a TV code without changing existing beta testers",()=>{
+ const db=setup();
+ db.prepare("INSERT INTO codes(id,code_hash,name,max_devices,created_at) VALUES('legacy',?,'Existing beta',2,'2026-01-01')").run('b'.repeat(64));
+ db.prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,'2026-01-01')").run('b'.repeat(64),'c'.repeat(64));
+ grant(db,'2026-01-01T10:00:00.000Z',3);
+ const code=db.prepare("SELECT * FROM codes WHERE id='lic'").get()!;
+ assert.equal(code['code_hash'],'a'.repeat(64));assert.equal(code['enabled'],1);assert.equal(code['max_devices'],3);
+ db.exec("UPDATE codes SET expires_at='2027-01-01T00:00:00.000Z',max_devices=5 WHERE id='lic'");
+ const licence=db.prepare("SELECT * FROM licenses WHERE id='lic'").get()!;
+ assert.equal(licence['expires_at'],'2027-01-01T00:00:00.000Z');assert.equal(licence['device_limit'],5);
+ assert.equal(db.prepare("SELECT enabled FROM codes WHERE id='legacy'").get()!['enabled'],1);
+ assert.equal(db.prepare("SELECT count(*) AS n FROM bindings WHERE code_hash=?").get('b'.repeat(64))!['n'],1);
+ db.close();
+});
+test("suspension blocks TV and cannot be bypassed by re-enabling it in the beta panel",()=>{
+ const db=setup();db.exec('PRAGMA recursive_triggers=ON');grant(db,'2026-01-01T10:00:00.000Z',3);
+ db.exec("UPDATE clients SET status='suspended' WHERE id='client'");
+ assert.equal(db.prepare("SELECT enabled FROM codes WHERE id='lic'").get()!['enabled'],0);
+ assert.equal(db.prepare("SELECT status FROM licenses WHERE id='lic'").get()!['status'],'active');
+ db.exec("UPDATE codes SET enabled=1 WHERE id='lic'");
+ assert.equal(db.prepare("SELECT enabled FROM codes WHERE id='lic'").get()!['enabled'],0);
+ db.exec("UPDATE clients SET status='active' WHERE id='client'");
+ assert.equal(db.prepare("SELECT enabled FROM codes WHERE id='lic'").get()!['enabled'],1);
+ db.exec("UPDATE codes SET enabled=0 WHERE id='lic'");
+ assert.equal(db.prepare("SELECT status FROM licenses WHERE id='lic'").get()!['status'],'revoked');db.close();
+});
+test("renewal preserves the TV key and bound devices; deleting an access revokes its web licence",()=>{
+ const db=setup();grant(db,'2026-01-01T10:00:00.000Z',3);
+ db.prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,'2026-01-01')").run('a'.repeat(64),'c'.repeat(64));
+ grant(db,'2026-02-01T10:00:00.000Z',3);
+ assert.equal(db.prepare("SELECT count(*) AS n FROM codes").get()!['n'],1);
+ assert.equal(db.prepare("SELECT count(*) AS n FROM bindings").get()!['n'],1);
+ db.exec("DELETE FROM codes WHERE id='lic'");
+ const licence=db.prepare("SELECT * FROM licenses").get()!;
+ assert.equal(licence['status'],'revoked');assert.equal(licence['beta_code_hash'],null);db.close();
+});
+test("removing a TV expiry preserves unlimited access without a trigger loop",()=>{
+ const db=setup();db.exec('PRAGMA recursive_triggers=ON');grant(db,'2026-01-01T10:00:00.000Z',3);
+ db.exec("UPDATE codes SET expires_at=NULL WHERE id='lic'");
+ assert.equal(db.prepare("SELECT expires_at FROM codes WHERE id='lic'").get()!['expires_at'],null);
+ assert.equal(db.prepare("SELECT expires_at FROM licenses WHERE id='lic'").get()!['expires_at'],'9999-12-31T23:59:59.999Z');db.close();
 });

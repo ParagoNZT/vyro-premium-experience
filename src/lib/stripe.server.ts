@@ -97,7 +97,7 @@ export const webhookRequest=api(async request=>{
  } else if(session.payment_status==="paid"){
  await db.batch([
  // A duplicate session/event cannot extend the licence again: only pending orders qualify, atomically.
- ...(order.livemode===1?[grantStatement(db,order.client_id,order.plan_id,3,order.id)]:[]),
+ ...(order.livemode===1?[await grantStatement(db,order.client_id,order.plan_id,3,order.id)]:[]),
  db.prepare("UPDATE payments SET status='paid',paid_at=?,stripe_session_id=?,stripe_payment_intent=? WHERE id=? AND status='pending'").bind(new Date().toISOString(),session.id,session.payment_intent,order.id),
  logStatement(db,"stripe",order.livemode?"payment-paid":"test-payment-paid",order.id,"Paiement confirmé par Stripe"),
  eventStatement,

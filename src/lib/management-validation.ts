@@ -7,6 +7,6 @@ export const actionSchema = z.discriminatedUnion("action", [
 ]);
 export const deviceSchema = z.discriminatedUnion("action", [
  z.object({ action: z.literal("add"), name: z.string().trim().min(1).max(80), platform: z.enum(["Android TV","Google TV","Amazon Fire TV"]) }),
- z.object({ action: z.literal("remove"), id: z.string().uuid() }),
+ z.object({ action: z.literal("remove"), id: z.string().regex(/^[a-f0-9]{64}$/) }),
 ]);
 export const checkoutSchema = z.object({ planId: z.enum(["3m","6m","12m"]), requestKey: z.string().uuid() });
