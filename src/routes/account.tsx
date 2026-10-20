@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
+  Package,
 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth";
@@ -39,6 +40,7 @@ const NAV = [
   { to: "/account/appareils", label: "Mes appareils", icon: MonitorSmartphone },
   { to: "/account/telechargement", label: "Télécharger VYRO", icon: Download },
   { to: "/account/guides", label: "Guides", icon: BookOpen },
+  { to: "/account/reseller", label: "Revendeur", icon: Package },
   { to: "/account/profil", label: "Compte", icon: UserIcon },
   { to: "/account/support", label: "Support", icon: LifeBuoy },
 ] as const;
