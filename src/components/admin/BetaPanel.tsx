@@ -16,7 +16,9 @@ export function BetaPanel({onSaved}:{onSaved:()=>void}){
  const [edit,setEdit]=useState<Access|null>(null),[expiry,setExpiry]=useState(""),[limit,setLimit]=useState(1),[enabled,setEnabled]=useState(true),[note,setNote]=useState("");
  useEffect(()=>{let live=true;setError("");request("/api/beta?page="+page+"&q="+encodeURIComponent(search)).then(v=>{if(live)setData(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[page,search,version]);
  async function save(e:FormEvent){e.preventDefault();if(!edit)return;setBusy(true);setError("");setNotice("");try{
-  await request("/api/beta",{id:edit.id,enabled,maxDevices:limit,expiresAt:expiry?new Date(expiry+"T23:59:59.999").toISOString():null,note});
+  const initialDate=edit.expiresAt?new Date(edit.expiresAt).toLocaleDateString("sv-SE"):"";
+  const expiresAt=expiry===initialDate?edit.expiresAt:expiry?new Date(expiry+"T23:59:59.999").toISOString():null;
+  await request("/api/beta",{id:edit.id,enabled,maxDevices:limit,expiresAt,note});
   setEdit(null);setVersion(v=>v+1);onSaved();setNotice("Accès enregistré dans le panel et appliqué à l’application TV.");
  }catch(e){setError(e instanceof Error?e.message:"Enregistrement impossible.");}finally{setBusy(false);}}
  return <section className="space-y-5">
