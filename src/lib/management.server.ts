@@ -82,7 +82,7 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Use
  const [license,devices,orders] = await Promise.all([
  db.prepare("SELECT * FROM licenses WHERE client_id=?").bind(client.id).first<LicenseRow>(),
  db.prepare("SELECT id,name,platform,last_seen_at as lastSeen FROM devices WHERE client_id=? ORDER BY last_seen_at DESC").bind(client.id).all(),
- db.prepare("SELECT * FROM payments WHERE client_id=? AND status='paid' ORDER BY paid_at DESC LIMIT 100").bind(client.id).all<PaymentRow>(),
+ db.prepare("SELECT * FROM payments WHERE client_id=? AND status='paid' AND livemode=1 ORDER BY paid_at DESC LIMIT 100").bind(client.id).all<PaymentRow>(),
  ]);
  const active=client.status==="active" && license?.status==="active" && license.expires_at>new Date().toISOString();
  const plan=license ? getPlan(license.plan_id) : undefined;
