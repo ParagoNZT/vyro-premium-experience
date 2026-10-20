@@ -4,6 +4,15 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/support")({
+  head: () => ({ meta: [
+    { title: "Assistance client – VYRO Premium" },
+    { name: "description", content: "Votre assistance VYRO Premium." },
+    { property: "og:title", content: "Assistance client – VYRO Premium" },
+    { property: "og:description", content: "Votre assistance VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: AccountSupportPage,
 });
 

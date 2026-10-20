@@ -5,6 +5,15 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 
 export const Route = createFileRoute("/account/")({
+  head: () => ({ meta: [
+    { title: "Tableau de bord – VYRO Premium" },
+    { name: "description", content: "Votre licence et votre accès VYRO Premium." },
+    { property: "og:title", content: "Tableau de bord – VYRO Premium" },
+    { property: "og:description", content: "Votre licence et votre accès VYRO Premium." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: Dashboard,
 });
 

@@ -4,6 +4,8 @@ import { LegalPage } from "@/components/site/LegalPage";
 export const Route = createFileRoute("/legal/mentions")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Mentions légales – VYRO Premium" },
       {
         name: "description",

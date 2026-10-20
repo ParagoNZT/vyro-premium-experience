@@ -4,6 +4,8 @@ import { LegalPage } from "@/components/site/LegalPage";
 export const Route = createFileRoute("/legal/confidentialite")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Politique de confidentialité – VYRO Premium" },
       {
         name: "description",

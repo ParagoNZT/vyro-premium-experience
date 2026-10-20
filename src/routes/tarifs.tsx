@@ -12,6 +12,8 @@ import { Reveal } from "@/components/site/Reveal";
 export const Route = createFileRoute("/tarifs")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Tarifs – VYRO Premium" },
       {
         name: "description",

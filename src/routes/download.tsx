@@ -8,6 +8,8 @@ import { DOWNLOADS } from "@/config/site";
 export const Route = createFileRoute("/download")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Télécharger VYRO Premium – Android TV, Google TV, Fire TV" },
       {
         name: "description",

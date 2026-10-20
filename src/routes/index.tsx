@@ -24,6 +24,8 @@ import uiContinue from "@/assets/ui-continue.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "VYRO Premium – L'expérience IPTV pensée pour votre TV" },
       {
         name: "description",
