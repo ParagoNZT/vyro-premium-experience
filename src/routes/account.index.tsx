@@ -53,7 +53,7 @@ function Dashboard() {
   const progress = sub && daysLeft !== null ? Math.min(100, (daysLeft / total) * 100) : 0;
 
   function copyKey() {
-    if (!user) return;
+    if (!user?.licenseKey) return;
     void navigator.clipboard.writeText(user.licenseKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -76,11 +76,12 @@ function Dashboard() {
             </p>
             <div className="mt-4 flex items-center gap-3">
               <code className="rounded-[8px] border border-border bg-surface-2 px-3 py-1.5 font-mono text-sm tracking-wider">
-                {user?.licenseKey}
+                {user?.licenseKey || "Aucune licence attribuée"}
               </code>
               <button
                 type="button"
                 onClick={copyKey}
+                disabled={!user?.licenseKey}
                 aria-label="Copier la clé de licence"
                 className="grid h-8 w-8 place-items-center rounded-[8px] border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
               >

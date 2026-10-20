@@ -135,7 +135,7 @@ function ResellerPage() {
     <section className="mt-8 border-y border-border py-5">
       {identity ? <div className="flex flex-wrap items-center justify-between gap-3"><p className="flex min-w-0 items-center gap-2 text-sm"><LockKeyhole className="size-4 shrink-0 text-primary" /><span className="break-all">Compte revendeur · {identity.email}</span></p><IconButton variant="ghost" onClick={async () => { await supabase.auth.signOut(); setLogo(null); setLogoPath(null); setLogoFile(null); setNotice(""); }}><LogOut />Déconnexion revendeur</IconButton></div> : <>
         <h2 className="text-base font-medium">Connexion revendeur sécurisée</h2>
-        <p className="mt-1 text-xs text-muted-foreground">L’espace client actuel est une démonstration. Un compte revendeur réel protège vos réglages et votre logo.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Connectez votre compte VYRO pour protéger vos réglages et votre logo.</p>
         <form onSubmit={authenticate} className="mt-4 flex flex-wrap items-end gap-3">
           <label className="min-w-0 flex-1 text-xs">E-mail<Input className="mt-2" type="email" required value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" /></label>
           <label className="min-w-0 flex-1 text-xs">Mot de passe<Input className="mt-2" type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} autoComplete={register ? "new-password" : "current-password"} /></label>

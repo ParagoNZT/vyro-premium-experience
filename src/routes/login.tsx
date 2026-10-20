@@ -48,10 +48,14 @@ function LoginPage() {
       return;
     }
     setBusy(true);
-    await signIn(email, password);
-    setBusy(false);
-    if (search.plan) navigate({ to: "/checkout", search: { plan: search.plan } });
-    else navigate({ to: "/account" });
+    try {
+      await signIn(email, password);
+      if (search.redirect === "/admin") await navigate({ to: "/admin" });
+      else if (search.plan) await navigate({ to: "/checkout", search: { plan: search.plan } });
+      else await navigate({ to: "/account" });
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : "Connexion impossible. Réessayez.");
+    } finally { setBusy(false); }
   }
 
   return (

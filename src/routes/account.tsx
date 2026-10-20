@@ -52,6 +52,7 @@ function AccountLayout() {
   const navigate = useNavigate();
   const reseller = useRouterState({ select: s => s.location.pathname === "/account/reseller" });
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (ready && !user && !reseller) navigate({ to: "/login" });
@@ -122,15 +123,17 @@ function AccountLayout() {
           ))}
           <button
             type="button"
-            onClick={() => {
-              signOut();
-              navigate({ to: "/" });
+            onClick={async () => {
+              try { await signOut(); await navigate({ to: "/" }); }
+              catch { setError("Déconnexion impossible. Réessayez."); }
             }}
             className="mt-2 flex w-full items-center gap-3 rounded-[8px] px-3 py-2.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
           >
             <LogOut className="h-4 w-4 shrink-0" aria-hidden />
             Déconnexion
           </button>
+          {error && <p role="alert" className="px-3 text-sm text-destructive">{error}</p>}
+          <Link to="/admin" className="mt-3 block px-3 text-xs text-muted-foreground hover:text-primary">Administration</Link>
         </nav>
       </aside>
 

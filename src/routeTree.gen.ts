@@ -29,6 +29,7 @@ import { Route as AccountProfilRouteImport } from './routes/account.profil'
 import { Route as AccountResellerRouteImport } from './routes/account.reseller'
 import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
+import { Route as ApiAdminRouteImport } from './routes/api.admin'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
@@ -134,6 +135,11 @@ const AccountTelechargementRoute = AccountTelechargementRouteImport.update({
   path: '/telechargement',
   getParentRoute: () => AccountRoute,
 } as any)
+const ApiAdminRoute = ApiAdminRouteImport.update({
+  id: '/api/admin',
+  path: '/api/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalConditionsRoute = LegalConditionsRouteImport.update({
   id: '/legal/conditions',
   path: '/legal/conditions',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/admin': typeof ApiAdminRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/admin': typeof ApiAdminRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/account/reseller': typeof AccountResellerRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
+  '/api/admin': typeof ApiAdminRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/admin'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/admin'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/account/reseller'
     | '/account/support'
     | '/account/telechargement'
+    | '/api/admin'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -326,6 +338,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SupportRoute: typeof SupportRoute
   TarifsRoute: typeof TarifsRoute
+  ApiAdminRoute: typeof ApiAdminRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
   LegalMentionsRoute: typeof LegalMentionsRoute
@@ -474,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountTelechargementRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/api/admin': {
+      id: '/api/admin'
+      path: '/api/admin'
+      fullPath: '/api/admin'
+      preLoaderRoute: typeof ApiAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/conditions': {
       id: '/legal/conditions'
       path: '/legal/conditions'
@@ -543,6 +563,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SupportRoute: SupportRoute,
   TarifsRoute: TarifsRoute,
+  ApiAdminRoute: ApiAdminRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,
   LegalMentionsRoute: LegalMentionsRoute,

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { Check, Lock } from "lucide-react";
@@ -32,20 +32,9 @@ export const Route = createFileRoute("/checkout")({
 
 function CheckoutPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate();
-  const { user, activateLicense } = useAuth();
+  const { user } = useAuth();
   const [planId, setPlanId] = useState(search.plan && getPlan(search.plan) ? search.plan : "12m");
-  const [busy, setBusy] = useState(false);
   const plan = getPlan(planId ?? "12m") ?? PLANS[PLANS.length - 1]!;
-
-  async function pay() {
-    setBusy(true);
-    // Le paiement réel sera traité côté serveur par le prestataire de paiement.
-    // Aucune clé ni secret ne transite par le frontend.
-    await activateLicense(plan.id);
-    setBusy(false);
-    navigate({ to: "/account" });
-  }
 
   return (
     <section className="relative overflow-hidden">
@@ -102,17 +91,16 @@ function CheckoutPage() {
             <h2 className="mt-9 text-sm font-medium">3. Paiement</h2>
             <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-              Paiement sécurisé. Activation immédiate de la licence.
+              Le paiement en ligne sera disponible prochainement. Aucune somme n’est prélevée.
             </p>
             <Button
               type="button"
-              onClick={pay}
-              disabled={!user || busy}
+              disabled
               variant="primary"
               size="md"
               className="mt-5 w-full"
             >
-              {busy ? "Activation…" : `Payer ${formatPrice(plan.price)}`}
+              Paiement bientôt disponible
             </Button>
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
