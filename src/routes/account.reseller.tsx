@@ -87,7 +87,7 @@ function ResellerPage() {
 
   async function social(provider: "google" | "lovable") {
     setError("");
-    const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: `${window.location.origin}/account/reseller` });
     if (result.error) setError("La connexion n’a pas abouti. Réessayez.");
   }
 
@@ -111,6 +111,11 @@ function ResellerPage() {
       if (saveError) throw saveError;
       if (logoPath && logoPath !== path) await supabase.storage.from("reseller-logos").remove([logoPath]);
       setConfig(parsed.data); setLogoPath(path);
+      if (path) {
+        const { data: signed } = await supabase.storage.from("reseller-logos").createSignedUrl(path, 3600);
+        setLogo(signed?.signedUrl ?? null);
+      } else setLogo(null);
+      setLogoFile(null);
       setNotice("Vos réglages revendeur sont enregistrés.");
     } catch {
       if (uploaded) await supabase.storage.from("reseller-logos").remove([uploaded]);

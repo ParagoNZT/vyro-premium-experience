@@ -40,28 +40,19 @@ function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setNotice("");
-    if (!firstName.trim() || !email.includes("@") || password.length < 12) {
-      setError("Renseignez un prénom, un e-mail valide et un mot de passe de 12 caractères minimum.");
+    if (!firstName.trim() || !email.includes("@") || password.length < 6) {
+      setError("Renseignez un prénom, un e-mail valide et un mot de passe de 6 caractères minimum.");
       return;
     }
     setBusy(true);
-    try {
-      const created = await signUp(firstName.trim(), email, password);
-      if (!created) {
-        setPassword("");
-        setNotice("Consultez votre boîte e-mail pour confirmer votre adresse, puis revenez vous connecter ici. Si votre compte existe déjà, utilisez la page de connexion.");
-      } else if (search.redirect === "/admin") await navigate({ to: "/admin" });
-      else if (search.plan) await navigate({ to: "/checkout", search: { plan: search.plan } });
-      else await navigate({ to: "/account" });
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Création impossible. Réessayez.");
-    } finally { setBusy(false); }
+    await signUp(firstName.trim(), email, password);
+    setBusy(false);
+    if (search.plan) navigate({ to: "/checkout", search: { plan: search.plan } });
+    else navigate({ to: "/account" });
   }
 
   return (
@@ -94,7 +85,6 @@ function RegisterPage() {
           autoComplete="new-password"
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {notice ? <p role="status" className="text-sm text-primary">{notice}</p> : null}
         <Button type="submit" disabled={busy} variant="primary" size="md" className="mt-2 w-full">
           {busy ? "Création…" : "Créer mon compte"}
         </Button>

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Download, Copy, Check, ShieldCheck, MonitorSmartphone, CalendarClock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
@@ -40,8 +40,6 @@ function Stat({
 function Dashboard() {
   const { user, isActive, daysLeft } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [payment, setPayment] = useState("");
-  useEffect(() => { setPayment(new URLSearchParams(window.location.search).get("payment") ?? ""); }, []);
   const sub = user?.subscription ?? null;
 
   const total = sub
@@ -55,7 +53,7 @@ function Dashboard() {
   const progress = sub && daysLeft !== null ? Math.min(100, (daysLeft / total) * 100) : 0;
 
   function copyKey() {
-    if (!user?.licenseKey) return;
+    if (!user) return;
     void navigator.clipboard.writeText(user.licenseKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -64,8 +62,6 @@ function Dashboard() {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="font-display text-3xl font-semibold">Bonjour, {user?.firstName}</h1>
-      {payment === "processing" && <p role="status" className="panel mt-5 p-4 text-sm text-primary">Retour de Stripe. Votre accès se met à jour après confirmation du paiement.</p>}
-      {payment === "test" && <p role="status" className="panel mt-5 p-4 text-sm text-primary">Paiement de test terminé. Aucune somme réelle n’a été prélevée et aucune licence réelle n’est attribuée.</p>}
       <p className="mt-2 text-sm text-muted-foreground">
         Voici l'état de votre accès VYRO Premium.
       </p>
@@ -80,12 +76,11 @@ function Dashboard() {
             </p>
             <div className="mt-4 flex items-center gap-3">
               <code className="rounded-[8px] border border-border bg-surface-2 px-3 py-1.5 font-mono text-sm tracking-wider">
-                {user?.licenseKey || "Aucune licence attribuée"}
+                {user?.licenseKey}
               </code>
               <button
                 type="button"
                 onClick={copyKey}
-                disabled={!user?.licenseKey}
                 aria-label="Copier la clé de licence"
                 className="grid h-8 w-8 place-items-center rounded-[8px] border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
               >

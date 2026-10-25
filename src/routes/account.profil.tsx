@@ -22,23 +22,18 @@ function ProfilePage() {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setFirstName(user?.firstName ?? "");
     setEmail(user?.email ?? "");
   }, [user?.firstName, user?.email]);
 
-  async function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!firstName.trim() || !email.includes("@")) return;
-    setError(""); setSaved(false); setBusy(true);
-    try {
-      await updateProfile({ firstName: firstName.trim(), ...(email.trim() !== user?.email ? { email: email.trim() } : {}) });
-      setSaved(true);
-    } catch (issue) { setError(issue instanceof Error ? issue.message : "Enregistrement impossible."); }
-    finally { setBusy(false); }
+    updateProfile({ firstName: firstName.trim(), email: email.trim() });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -58,18 +53,17 @@ function ProfilePage() {
           autoComplete="email"
         />
         <div className="flex items-center gap-4 pt-2">
-          <Button type="submit" variant="primary" size="sm" disabled={busy}>
+          <Button type="submit" variant="primary" size="sm">
             Enregistrer
           </Button>
-          {saved ? <span role="status" className="text-sm text-primary">Profil enregistré. Si vous changez d’adresse, confirmez les e-mails reçus.</span> : null}
+          {saved ? <span className="text-sm text-primary">Modifications enregistrées.</span> : null}
         </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </form>
 
       <div className="panel mt-4 p-7">
         <p className="text-sm font-medium">Clé de licence</p>
         <code className="mt-3 inline-block rounded-[8px] border border-border bg-surface-2 px-3 py-1.5 font-mono text-sm tracking-wider">
-          {user?.licenseKey || "Aucune licence attribuée"}
+          {user?.licenseKey}
         </code>
       </div>
 

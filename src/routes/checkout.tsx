@@ -1,12 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { z } from "zod";
 import { Check, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 import { PLANS, PLAN_INCLUDED, formatPrice, getPlan } from "@/config/site";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 
 const searchSchema = z.object({ plan: z.string().optional() });
 
@@ -33,26 +32,19 @@ export const Route = createFileRoute("/checkout")({
 
 function CheckoutPage() {
   const search = Route.useSearch();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, activateLicense } = useAuth();
   const [planId, setPlanId] = useState(search.plan && getPlan(search.plan) ? search.plan : "12m");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
-  const [billing, setBilling] = useState<{enabled:boolean;live:boolean}|null>(null);
-  useEffect(() => { let live=true; fetch("/api/checkout",{cache:"no-store"}).then(r=>r.json()).then(data=>{if(live)setBilling(data);}).catch(()=>{if(live)setBilling({enabled:false,live:false});}); return()=>{live=false;}; },[]);
   const plan = getPlan(planId ?? "12m") ?? PLANS[PLANS.length - 1]!;
 
   async function pay() {
-    setBusy(true); setError("");
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) throw new Error("Connectez-vous avant de payer.");
-      const response = await fetch("/api/checkout", { method: "POST", headers: { Authorization: "Bearer " + data.session.access_token, "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, requestKey }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Paiement indisponible.");
-      if (typeof result.url !== "string" || !result.url.startsWith("https://checkout.stripe.com/")) throw new Error("Page de paiement invalide.");
-      window.location.assign(result.url);
-    } catch (issue) { setError(issue instanceof Error ? issue.message : "Paiement indisponible."); setBusy(false); }
+    setBusy(true);
+    // Le paiement réel sera traité côté serveur par le prestataire de paiement.
+    // Aucune clé ni secret ne transite par le frontend.
+    await activateLicense(plan.id);
+    setBusy(false);
+    navigate({ to: "/account" });
   }
 
   return (
@@ -72,8 +64,7 @@ function CheckoutPage() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => { setPlanId(p.id); setRequestKey(crypto.randomUUID()); setError(""); }}
-                  disabled={busy}
+                  onClick={() => setPlanId(p.id)}
                   className={cn(
                     "flex w-full items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-left transition-colors duration-150",
                     p.id === plan.id
@@ -111,20 +102,18 @@ function CheckoutPage() {
             <h2 className="mt-9 text-sm font-medium">3. Paiement</h2>
             <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-              Paiement sur la page sécurisée Stripe. Accès activé après confirmation du règlement. Aucun renouvellement automatique.
+              Paiement sécurisé. Activation immédiate de la licence.
             </p>
             <Button
               type="button"
               onClick={pay}
-              disabled={!user || busy || !billing?.enabled}
+              disabled={!user || busy}
               variant="primary"
               size="md"
               className="mt-5 w-full"
             >
-              {busy ? "Ouverture de Stripe…" : billing?.enabled ? (billing.live ? `Payer ${formatPrice(plan.price)}` : "Essayer le paiement de test") : "Paiement bientôt disponible"}
+              {busy ? "Activation…" : `Payer ${formatPrice(plan.price)}`}
             </Button>
-            {billing?.enabled && !billing.live && <p className="mt-3 text-xs text-primary">Mode test : aucun prélèvement réel et aucune licence réelle attribuée.</p>}
-            {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
             {!user ? (
               <p className="mt-3 text-xs text-muted-foreground">
                 Connectez-vous ou créez un compte pour finaliser la commande.

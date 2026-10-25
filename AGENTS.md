@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Reseller workspace
+- Keep the demo auth context in a component-free module so Fast Refresh cannot give the provider and consumers different context identities.
 - Store reseller branding and XC base URLs in owner-scoped Cloud tables and private logo storage; the existing demo client session must never authorize Cloud data.
 - APK compilation remains external and unavailable until Android sources and a signing/build service are provided; never label configuration exports as APKs.
 - Keep reseller configuration validation in a shared browser-safe module with database validation as the write boundary; never store end-customer XC credentials in branding configuration.
