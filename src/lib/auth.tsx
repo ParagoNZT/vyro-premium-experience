@@ -1,5 +1,4 @@
 import {
-  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -8,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { getPlan, formatPrice } from "@/config/site";
+import { AuthContext } from "./auth-context";
 
 /**
  * Couche d'authentification / licence côté client.
@@ -53,7 +53,7 @@ export type User = {
   orders: Order[];
 };
 
-type AuthState = {
+export type AuthState = {
   user: User | null;
   ready: boolean;
   daysLeft: number | null;
@@ -68,7 +68,6 @@ type AuthState = {
 };
 
 const STORAGE_KEY = "vyro.session.v2";
-const AuthContext = createContext<AuthState | null>(null);
 
 function makeLicenseKey() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
