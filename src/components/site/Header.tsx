@@ -37,7 +37,7 @@ export function Header() {
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 md:px-6 md:pt-4">
       <div
         className={cn(
-          "mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-full border px-3 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300 xl:max-w-6xl",
+          "mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-full border px-3 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
           scrolled
             ? "border-primary/15 bg-primary/10 backdrop-blur-2xl"
             : "border-white/8 bg-gradient-to-r from-primary/8 via-primary/4 to-transparent",
@@ -62,40 +62,20 @@ export function Header() {
 
         <div className="flex items-center justify-end gap-2">
           {user ? (
-            <>
-              <Button to="/account" variant="ghost" size="sm" className="hidden lg:inline-flex">
-                Mon compte
-              </Button>
-              <Button to="/tarifs" variant="primary" size="sm" className="hidden lg:inline-flex">
-                Obtenir VYRO Premium
-              </Button>
-            </>
+            <Button to="/account" variant="ghost" size="sm" className="hidden lg:inline-flex">
+              Mon compte
+            </Button>
           ) : (
             <>
               <Button to="/login" variant="ghost" size="sm" className="hidden lg:inline-flex">
                 Se connecter
               </Button>
-              <Button
-                to="/register"
-                variant="primary"
-                size="sm"
-                className="hidden lg:inline-flex xl:hidden"
-              >
+              <Button to="/register" variant="primary" size="sm" className="hidden lg:inline-flex">
                 S'enregistrer
-              </Button>
-              <Button
-                to="/register"
-                variant="secondary"
-                size="sm"
-                className="hidden xl:inline-flex"
-              >
-                S'enregistrer
-              </Button>
-              <Button to="/tarifs" variant="primary" size="sm" className="hidden xl:inline-flex">
-                Obtenir VYRO Premium
               </Button>
             </>
           )}
+
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
