@@ -37,13 +37,13 @@ export function Header() {
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 md:px-6 md:pt-4">
       <div
         className={cn(
-          "mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-full border px-3 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
+          "mx-auto flex w-fit max-w-full items-center gap-7 rounded-full border px-4 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
           scrolled
             ? "border-primary/15 bg-primary/10 backdrop-blur-2xl"
             : "border-white/8 bg-gradient-to-r from-primary/8 via-primary/4 to-transparent",
         )}
       >
-        <div className="flex min-w-0 items-center pl-1">
+        <div className="flex min-w-0 items-center">
           <Logo />
         </div>
 
