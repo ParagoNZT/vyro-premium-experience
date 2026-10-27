@@ -37,7 +37,7 @@ export function Header() {
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 md:px-6 md:pt-4">
       <div
         className={cn(
-          "mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-full border px-3 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
+          "mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-full border px-3 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300 xl:max-w-6xl",
           scrolled
             ? "border-primary/15 bg-primary/10 backdrop-blur-2xl"
             : "border-white/8 bg-gradient-to-r from-primary/8 via-primary/4 to-transparent",
@@ -47,7 +47,7 @@ export function Header() {
           <Logo />
         </div>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {NAV.map((item) => (
             <Button
               key={item.to}
@@ -61,28 +61,47 @@ export function Header() {
         </nav>
 
         <div className="flex items-center justify-end gap-2">
-          <Button
-            to={user ? "/account" : "/login"}
-            variant="ghost"
-            size="sm"
-            className="hidden md:inline-flex"
-          >
-            {user ? "Mon compte" : "Se connecter"}
-          </Button>
-          <Button
-            to="/tarifs"
-            variant="primary"
-            size="sm"
-            className="hidden md:inline-flex"
-          >
-            Obtenir VYRO Premium
-          </Button>
+          {user ? (
+            <>
+              <Button to="/account" variant="ghost" size="sm" className="hidden lg:inline-flex">
+                Mon compte
+              </Button>
+              <Button to="/tarifs" variant="primary" size="sm" className="hidden lg:inline-flex">
+                Obtenir VYRO Premium
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button to="/login" variant="ghost" size="sm" className="hidden lg:inline-flex">
+                Se connecter
+              </Button>
+              <Button
+                to="/register"
+                variant="primary"
+                size="sm"
+                className="hidden lg:inline-flex xl:hidden"
+              >
+                S'enregistrer
+              </Button>
+              <Button
+                to="/register"
+                variant="secondary"
+                size="sm"
+                className="hidden xl:inline-flex"
+              >
+                S'enregistrer
+              </Button>
+              <Button to="/tarifs" variant="primary" size="sm" className="hidden xl:inline-flex">
+                Obtenir VYRO Premium
+              </Button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
             aria-expanded={open}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-primary/15 md:hidden"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-primary/15 lg:hidden"
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -90,7 +109,7 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/15 bg-primary/10 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl md:hidden">
+        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/15 bg-primary/10 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
           <nav className="flex flex-col">
             {NAV.map((item) => (
               <Link
@@ -112,15 +131,28 @@ export function Header() {
               <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
             </Link>
           </nav>
-          <Button
-            to="/tarifs"
-            variant="primary"
-            size="md"
-            onClick={() => setOpen(false)}
-            className="mt-4 w-full"
-          >
-            Obtenir VYRO Premium
-          </Button>
+          <div className="mt-4 flex flex-col gap-2">
+            <Button
+              to="/tarifs"
+              variant="primary"
+              size="md"
+              onClick={() => setOpen(false)}
+              className="w-full"
+            >
+              Obtenir VYRO Premium
+            </Button>
+            {user ? null : (
+              <Button
+                to="/register"
+                variant="secondary"
+                size="md"
+                onClick={() => setOpen(false)}
+                className="w-full"
+              >
+                S'enregistrer
+              </Button>
+            )}
+          </div>
         </div>
       ) : null}
     </header>
