@@ -35,8 +35,10 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "px-10 py-4 text-sm tracking-[0.12em]",
 };
 
-const chamfer = "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))";
-const chamferSm = "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))";
+const primaryGlow =
+  "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_26%,transparent),0_12px_44px_-10px_color-mix(in_oklab,var(--primary)_70%,transparent)]";
+const primaryGlowHover =
+  "hover:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_30%,transparent),0_0_0_1px_color-mix(in_oklab,var(--primary)_45%,transparent),0_16px_56px_-8px_color-mix(in_oklab,var(--primary)_85%,transparent)]";
 
 export function Button({
   children,
@@ -102,51 +104,40 @@ export function Button({
     );
   }
 
-  const content = (
-    <>
-      {variant === "primary" ? (
-        <>
-          <span
-            aria-hidden
-            className="absolute -inset-[1px] bg-gradient-to-tr from-primary/60 to-primary opacity-40 transition-opacity duration-300 group-hover:opacity-100"
-            style={{ clipPath: chamfer }}
-          />
-          <span
-            className={cn(
-              "relative flex items-center justify-center gap-2 bg-surface font-semibold uppercase text-primary-foreground transition-all duration-300 active:scale-[0.98]",
-              sizeClasses[size],
-            )}
-            style={{ clipPath: chamfer }}
-          >
-            {children}
-          </span>
-        </>
-      ) : variant === "secondary" ? (
-        <span
-          className={cn(
-            "relative flex items-center justify-center gap-2 border border-border bg-transparent font-medium uppercase text-foreground transition-all duration-300 hover:border-primary/40 hover:bg-surface-2 active:scale-[0.98]",
-            sizeClasses[size],
-          )}
-          style={{ clipPath: chamfer }}
-        >
-          {children}
-        </span>
-      ) : (
-        <span
-          className={cn(
-            "relative flex items-center justify-center gap-2 font-medium uppercase text-muted-foreground transition-all duration-300 hover:text-foreground",
-            sizeClasses[size],
-          )}
-        >
-          {children}
-        </span>
-      )}
-    </>
-  );
+  const content =
+    variant === "primary" ? (
+      <span
+        className={cn(
+          "relative flex items-center justify-center gap-2 rounded-[10px] bg-primary font-semibold uppercase text-primary-foreground transition-all duration-300 hover:brightness-110 active:scale-[0.98]",
+          disabled ? primaryGlow : cn(primaryGlow, primaryGlowHover),
+          sizeClasses[size],
+        )}
+      >
+        {children}
+      </span>
+    ) : variant === "secondary" ? (
+      <span
+        className={cn(
+          "relative flex items-center justify-center gap-2 rounded-[10px] border border-primary/40 bg-transparent font-medium uppercase text-primary transition-all duration-300 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_28px_-12px_var(--primary)] active:scale-[0.98]",
+          sizeClasses[size],
+        )}
+      >
+        {children}
+      </span>
+    ) : (
+      <span
+        className={cn(
+          "relative flex items-center justify-center gap-2 rounded-[10px] font-medium uppercase text-muted-foreground transition-all duration-300 hover:text-foreground",
+          sizeClasses[size],
+        )}
+      >
+        {children}
+      </span>
+    );
 
   const classes = cn(
     "group relative inline-flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    variant === "ghost" && "rounded-md",
+    disabled && "pointer-events-none opacity-60",
     className,
   );
 
