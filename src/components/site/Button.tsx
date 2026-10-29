@@ -36,9 +36,9 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 const primaryGlow =
-  "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_26%,transparent),0_12px_44px_-10px_color-mix(in_oklab,var(--primary)_70%,transparent)]";
+  "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_18%,transparent),0_10px_30px_-14px_color-mix(in_oklab,var(--primary)_40%,transparent)]";
 const primaryGlowHover =
-  "hover:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_30%,transparent),0_0_0_1px_color-mix(in_oklab,var(--primary)_45%,transparent),0_16px_56px_-8px_color-mix(in_oklab,var(--primary)_85%,transparent)]";
+  "hover:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--primary-foreground)_22%,transparent),0_0_0_1px_color-mix(in_oklab,var(--primary)_25%,transparent),0_12px_36px_-14px_color-mix(in_oklab,var(--primary)_50%,transparent)]";
 
 export function Button({
   children,
@@ -118,7 +118,7 @@ export function Button({
     ) : variant === "secondary" ? (
       <span
         className={cn(
-          "relative flex items-center justify-center gap-2 rounded-[10px] border border-primary/40 bg-transparent font-medium uppercase text-primary transition-all duration-300 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_28px_-12px_var(--primary)] active:scale-[0.98]",
+          "relative flex items-center justify-center gap-2 rounded-[10px] border border-primary/30 bg-transparent font-medium uppercase text-primary transition-all duration-300 hover:border-primary/55 hover:bg-primary/8 hover:shadow-[0_0_20px_-14px_var(--primary)] active:scale-[0.98]",
           sizeClasses[size],
         )}
       >

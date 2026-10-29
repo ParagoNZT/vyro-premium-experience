@@ -36,7 +36,7 @@ export function Section({
 
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-primary/90">{children}</p>
+    <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-primary/80">{children}</p>
   );
 }
 
@@ -187,7 +187,7 @@ export function IntegrationsSection() {
                 className={cn(
                   "rounded-[6px] px-2 py-0.5 text-[11px] font-medium",
                   item.status === "available"
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-primary/12 text-primary"
                     : "bg-surface-2 text-muted-foreground",
                 )}
               >
@@ -219,11 +219,11 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
             delay={i * 80}
             className={cn(
               "panel relative flex flex-col p-7",
-              plan.highlight && "border-primary/40 shadow-[var(--shadow-glow)]",
+              plan.highlight && "border-primary/28 shadow-[var(--shadow-glow)]",
             )}
           >
             {plan.highlight ? (
-              <div aria-hidden className="halo -inset-16 -z-10 opacity-40" />
+              <div aria-hidden className="halo -inset-16 -z-10 opacity-25" />
             ) : null}
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-display text-lg font-medium">{plan.name}</h3>
@@ -231,7 +231,7 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
                 <span
                   className={cn(
                     "rounded-[6px] px-2 py-0.5 text-[11px] font-medium",
-                    plan.highlight ? "bg-primary/15 text-primary" : "bg-surface-2 text-muted-foreground",
+                    plan.highlight ? "bg-primary/12 text-primary" : "bg-surface-2 text-muted-foreground",
                   )}
                 >
                   {plan.badge}

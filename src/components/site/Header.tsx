@@ -39,8 +39,8 @@ export function Header() {
         className={cn(
           "mx-auto flex w-fit max-w-full items-center gap-7 rounded-full border px-4 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
           scrolled
-            ? "border-primary/15 bg-primary/10 backdrop-blur-2xl"
-            : "border-white/8 bg-gradient-to-r from-primary/8 via-primary/4 to-transparent",
+            ? "border-primary/12 bg-primary/6 backdrop-blur-2xl"
+            : "border-white/8 bg-gradient-to-r from-primary/5 via-primary/2 to-transparent",
         )}
       >
         <div className="flex min-w-0 items-center">
@@ -81,7 +81,7 @@ export function Header() {
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
             aria-expanded={open}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-primary/15 lg:hidden"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-primary/10 lg:hidden"
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -89,14 +89,14 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/15 bg-primary/10 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
+        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/12 bg-primary/6 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
           <nav className="flex flex-col">
             {NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
+                className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/8 hover:text-primary"
               >
                 {item.label}
                 <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
@@ -105,7 +105,7 @@ export function Header() {
             <Link
               to={user ? "/account" : "/login"}
               onClick={() => setOpen(false)}
-              className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_24px_-16px_var(--color-primary)]"
+              className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/8 hover:text-primary"
             >
               {user ? "Mon compte" : "Se connecter"}
               <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />

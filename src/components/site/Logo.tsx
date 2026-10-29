@@ -7,7 +7,7 @@ export function Logo({ className }: { className?: string }) {
       <span className="relative grid h-7 w-7 shrink-0 place-items-center">
         <span
           aria-hidden
-          className="absolute inset-0 rounded-[8px] bg-primary/20 transition-colors duration-200 group-hover:bg-primary/30"
+          className="absolute inset-0 rounded-[8px] bg-primary/14 transition-colors duration-200 group-hover:bg-primary/22"
         />
         <span aria-hidden className="h-2.5 w-2.5 rounded-[3px] bg-primary" />
       </span>

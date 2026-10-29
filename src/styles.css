@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * VYRO Premium design system — Dark / Purple Crystal.
- * Deep near-black base, higher-contrast anthracite panels, luminous crystal violet.
+ * VYRO Premium design system — Dark / Purple Crystal (sobre).
+ * Deep near-black base, anthracite panels, restrained violet accent, soft halos.
  */
 
 @theme inline {
@@ -59,26 +59,26 @@
 :root {
   --radius: 10px;
 
-  --background: oklch(0.118 0.012 290);
+  --background: oklch(0.118 0.008 290);
   --foreground: oklch(0.985 0.002 290);
-  --surface: oklch(0.18 0.016 292);
-  --surface-2: oklch(0.225 0.02 292);
+  --surface: oklch(0.18 0.011 292);
+  --surface-2: oklch(0.225 0.014 292);
 
-  --card: oklch(0.18 0.016 292);
+  --card: oklch(0.18 0.011 292);
   --card-foreground: oklch(0.985 0.002 290);
-  --popover: oklch(0.18 0.016 292);
+  --popover: oklch(0.18 0.011 292);
   --popover-foreground: oklch(0.985 0.002 290);
 
-  --primary: oklch(0.66 0.23 292);
+  --primary: oklch(0.63 0.16 292);
   --primary-foreground: oklch(0.99 0 0);
 
-  --secondary: oklch(0.225 0.02 292);
+  --secondary: oklch(0.225 0.014 292);
   --secondary-foreground: oklch(0.96 0.002 290);
 
-  --muted: oklch(0.225 0.02 292);
-  --muted-foreground: oklch(0.72 0.018 292);
+  --muted: oklch(0.225 0.014 292);
+  --muted-foreground: oklch(0.72 0.012 292);
 
-  --accent: oklch(0.27 0.04 292);
+  --accent: oklch(0.27 0.028 292);
   --accent-foreground: oklch(0.985 0.002 290);
 
   --destructive: oklch(0.62 0.21 25);
@@ -86,37 +86,37 @@
 
   --border: oklch(1 0 0 / 13%);
   --input: oklch(1 0 0 / 17%);
-  --ring: oklch(0.66 0.23 292 / 65%);
+  --ring: oklch(0.63 0.16 292 / 55%);
 
-  --chart-1: oklch(0.66 0.23 292);
-  --chart-2: oklch(0.76 0.15 292);
-  --chart-3: oklch(0.66 0.13 250);
-  --chart-4: oklch(0.8 0.11 300);
-  --chart-5: oklch(0.56 0.18 292);
+  --chart-1: oklch(0.63 0.16 292);
+  --chart-2: oklch(0.72 0.1 292);
+  --chart-3: oklch(0.63 0.09 250);
+  --chart-4: oklch(0.75 0.07 300);
+  --chart-5: oklch(0.55 0.12 292);
 
-  --sidebar: oklch(0.14 0.012 290);
+  --sidebar: oklch(0.14 0.008 290);
   --sidebar-foreground: oklch(0.92 0.003 290);
-  --sidebar-primary: oklch(0.66 0.23 292);
+  --sidebar-primary: oklch(0.63 0.16 292);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.225 0.02 292);
+  --sidebar-accent: oklch(0.225 0.014 292);
   --sidebar-accent-foreground: oklch(0.985 0.002 290);
   --sidebar-border: oklch(1 0 0 / 13%);
-  --sidebar-ring: oklch(0.66 0.23 292 / 65%);
+  --sidebar-ring: oklch(0.63 0.16 292 / 55%);
 
   --halo: radial-gradient(
     closest-side,
-    color-mix(in oklab, var(--primary) 42%, transparent),
+    color-mix(in oklab, var(--primary) 22%, transparent),
     transparent 72%
   );
   --gradient-hairline: linear-gradient(
     90deg,
     transparent,
-    color-mix(in oklab, var(--foreground) 16%, transparent),
+    color-mix(in oklab, var(--foreground) 12%, transparent),
     transparent
   );
   --shadow-panel: 0 40px 120px -40px oklch(0 0 0 / 0.92);
-  --shadow-glow: 0 0 0 1px color-mix(in oklab, var(--primary) 36%, transparent),
-    0 18px 60px -24px color-mix(in oklab, var(--primary) 62%, transparent);
+  --shadow-glow: 0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent),
+    0 18px 60px -30px color-mix(in oklab, var(--primary) 34%, transparent);
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -151,7 +151,7 @@
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--primary) 40%, transparent);
+    background: color-mix(in oklab, var(--primary) 26%, transparent);
   }
 }
 
@@ -160,8 +160,8 @@
   position: absolute;
   pointer-events: none;
   background: var(--halo);
-  filter: blur(8px);
-  opacity: 0.55;
+  filter: blur(18px);
+  opacity: 0.3;
 }
 
 @utility hairline {

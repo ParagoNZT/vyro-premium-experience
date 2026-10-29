@@ -72,7 +72,7 @@ function DevicesPage() {
         <Reveal className="mt-10">
           <Link
             to="/download"
-            className="inline-flex items-center justify-center rounded-[10px] bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115 hover:shadow-[0_0_28px_-8px_var(--primary)]"
+            className="inline-flex items-center justify-center rounded-[10px] bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-110 hover:shadow-[0_0_22px_-14px_var(--primary)]"
           >
             Télécharger VYRO Premium
           </Link>
