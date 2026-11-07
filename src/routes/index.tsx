@@ -1,195 +1,192 @@
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  DevicesSection,
-  DisclaimerSection,
-  FaqSection,
-  FeatureRow,
-  FinalCta,
-  Heading,
-  IntegrationsSection,
-  Lead,
-  PricingSection,
-  Section,
-  Shot,
-} from "@/components/site/sections";
-import { Button } from "@/components/site/Button";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowDown, ArrowRight, ArrowUpRight, Flame, Monitor, Tv2 } from "lucide-react";
+import { FaqSection, PricingSection } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
-import uiHome from "@/assets/ui-home.jpg";
-import uiLive from "@/assets/ui-livetv.jpg";
-import uiVod from "@/assets/ui-vod.jpg";
-import uiPlayer from "@/assets/ui-player.jpg";
-import uiGuide from "@/assets/ui-guide.jpg";
-import uiContinue from "@/assets/ui-continue.jpg";
+import { Showcase } from "@/components/site/Showcase";
+import { scenes } from "@/components/site/captures";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { title: "VYRO Premium – L'expérience IPTV pensée pour votre TV" },
+      { title: "VYRO Premium — Votre TV. À votre façon." },
       {
         name: "description",
         content:
-          "Découvrez VYRO Premium, une application IPTV moderne conçue pour Android TV, Google TV et Fire TV. Une interface rapide, élégante et entièrement pensée pour la télévision.",
+          "VYRO Premium organise votre direct, vos films et vos séries dans un lecteur conçu pour Android TV, Google TV et Fire TV.",
       },
-      { property: "og:title", content: "VYRO Premium – L'expérience IPTV pensée pour votre TV" },
+      { property: "og:title", content: "VYRO Premium — Votre TV. À votre façon." },
       {
         property: "og:description",
-        content:
-          "Live TV, films, séries et guide TV réunis dans une interface premium pour Android TV, Google TV et Fire TV.",
+        content: "Découvrez les vrais écrans du lecteur et choisissez votre accès VYRO Premium.",
       },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: "https://vyro-player.app/" },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    links: [{ rel: "canonical", href: "https://vyro-player.app/" }],
   }),
   component: Home,
 });
 
-function Hero() {
-  return (
-    <section className="relative overflow-hidden">
-      <div aria-hidden className="halo left-1/2 top-0 h-[620px] w-[1100px] -translate-x-1/2 -translate-y-1/3" />
-      <div className="relative mx-auto max-w-4xl px-5 pb-4 pt-24 text-center md:px-8 md:pt-36">
-        <Reveal>
-          <h1 className="text-balance font-display text-[34px] font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-            Votre télévision.
-            <br />
-            <span className="text-muted-foreground">Comme elle aurait toujours dû être.</span>
-          </h1>
-        </Reveal>
-        <Reveal delay={90}>
-          <Lead className="mx-auto mt-7 max-w-2xl">
-            VYRO Premium réunit Live TV, films, séries, guide TV et vos contenus dans une expérience
-            rapide, élégante et pensée pour votre téléviseur.
-          </Lead>
-        </Reveal>
-        <Reveal delay={160}>
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button to="/tarifs" variant="primary" size="md" className="w-full sm:w-auto">
-              Obtenir VYRO Premium
-            </Button>
-            <Button to="/fonctionnalites" variant="secondary" size="md" className="w-full sm:w-auto">
-              Découvrir l'application
-            </Button>
-          </div>
-          <p className="mt-6 text-[13px] text-muted-foreground">Android TV · Google TV · Fire TV</p>
-        </Reveal>
-      </div>
+const platforms = [
+  { label: "Android TV", icon: Tv2 },
+  { label: "Google TV", icon: Monitor },
+  { label: "Fire TV", icon: Flame },
+] as const;
 
-      <div className="relative mx-auto mt-14 max-w-6xl px-5 md:px-8">
-        <div aria-hidden className="halo -inset-x-10 -top-20 bottom-0 -z-10" />
-        <Reveal delay={120}>
-          <Shot
-            src={uiHome}
-            alt="Écran d'accueil de l'application VYRO Premium sur téléviseur"
-            priority
-          />
-        </Reveal>
-      </div>
-    </section>
-  );
-}
+const steps = [
+  {
+    label: "Vérifiez votre appareil",
+    description: "Android TV, Google TV ou Fire TV.",
+    to: "/appareils",
+  },
+  {
+    label: "Choisissez votre accès",
+    description: "Sélectionnez la durée qui vous convient.",
+    to: "/tarifs",
+  },
+  {
+    label: "Installez et connectez votre source",
+    description: "Suivez le guide d’installation de votre appareil.",
+    to: "/download",
+  },
+] as const;
 
 function Home() {
   return (
     <>
-      <Hero />
-      <DevicesSection />
+      <section className="vyro-hero" aria-labelledby="hero-title">
+        <div className="vyro-hero-texture" aria-hidden />
+        <div className="vyro-wrap vyro-hero-grid">
+          <div className="vyro-hero-copy">
+            <p className="vyro-kicker">
+              <i /> LE LECTEUR POUR VOTRE TÉLÉ
+            </p>
+            <h1 id="hero-title" className="vyro-hero-title">
+              Votre TV.
+              <br />
+              <span>À votre façon.</span>
+            </h1>
+            <p className="vyro-hero-lead">
+              Le direct, vos films et vos séries dans un lecteur pensé pour le grand écran et la
+              télécommande.
+            </p>
+            <div className="vyro-hero-actions">
+              <Link className="vyro-cta" to="/tarifs">
+                Choisir mon accès <ArrowUpRight size={18} aria-hidden />
+              </Link>
+              <a className="vyro-cta vyro-cta-outline" href="#experience">
+                Découvrir <ArrowDown size={17} aria-hidden />
+              </a>
+            </div>
+          </div>
+          <Showcase />
+        </div>
+        <div className="vyro-wrap">
+          <div className="vyro-compat">
+            <span className="vyro-kicker">COMPATIBLE AVEC</span>
+            <ul>
+              {platforms.map(({ label, icon: Icon }) => (
+                <li key={label}>
+                  <Icon size={20} aria-hidden />
+                  {label}
+                </li>
+              ))}
+            </ul>
+            <Link to="/appareils">
+              Vérifier mon appareil <ArrowUpRight size={16} aria-hidden />
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <Section id="experience" className="pb-0">
-        <Reveal className="max-w-3xl">
-          <Heading>
-            Tout ce dont vous avez besoin.
-            <br />
-            <span className="text-muted-foreground">Rien de superflu.</span>
-          </Heading>
+      <section id="experience" className="vyro-wrap vyro-block">
+        <Reveal className="vyro-section-head">
+          <div>
+            <p className="vyro-kicker">
+              <i /> 01 / L’APPLICATION
+            </p>
+            <h2 className="vyro-display-title">Du direct au cinéma.</h2>
+          </div>
+          <p>
+            Retrouvez les programmes du moment, parcourez vos titres et lancez la lecture depuis la
+            même interface.
+          </p>
         </Reveal>
-      </Section>
+        <div className="vyro-feature-grid">
+          {[scenes[1], scenes[2], scenes[3]].map(
+            ({ id, label, name, image, alt, icon: Icon }, index) => (
+              <Reveal key={id} delay={index * 55} className="vyro-feature-card">
+                <Link to="/fonctionnalites" hash={id}>
+                  <div className="vyro-feature-image">
+                    <img
+                      src={image}
+                      alt={alt}
+                      width={1600}
+                      height={900}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <div className="vyro-feature-content">
+                    <span className="vyro-kicker">
+                      <Icon size={15} aria-hidden /> {label}
+                    </span>
+                    <h3>{name}</h3>
+                    <ArrowUpRight className="vyro-feature-arrow" size={19} aria-hidden />
+                  </div>
+                </Link>
+              </Reveal>
+            ),
+          )}
+        </div>
+      </section>
 
-      <Section className="space-y-24 md:space-y-36">
-        <FeatureRow
-          eyebrow="Live TV"
-          title="La télévision en direct, réinventée."
-          description="Naviguez rapidement entre vos catégories et vos chaînes grâce à une interface entièrement pensée pour la télécommande."
-          points={[
-            "Navigation instantanée au D-pad",
-            "Guide des programmes",
-            "Informations EPG",
-            "Aperçu des chaînes",
-            "Favoris et historique récent",
-            "Changement rapide de chaîne",
-          ]}
-          image={uiLive}
-          alt="Interface Live TV de VYRO Premium avec catégories, chaînes et aperçu"
-        />
-        <FeatureRow
-          reversed
-          eyebrow="Films & séries"
-          title="Votre bibliothèque devient une véritable expérience cinéma."
-          description="VYRO Premium transforme une simple liste de contenus en une interface riche avec affiches, synopsis, notes, bandes-annonces et informations détaillées."
-          points={[
-            "Affiches et fonds d'écran",
-            "Synopsis et casting",
-            "Notes TMDB, IMDb et Rotten Tomatoes",
-            "Bandes-annonces",
-            "Saisons et épisodes",
-            "Recherche rapide",
-          ]}
-          image={uiVod}
-          alt="Fiche détaillée d'un film dans VYRO Premium"
-        />
-        <FeatureRow
-          eyebrow="Lecteur"
-          title="Appuyez sur Lecture. VYRO s'occupe du reste."
-          description="Un lecteur optimisé pour la télévision : il choisit automatiquement le bon moteur vidéo pour votre flux, sans réglage technique de votre part."
-          points={[
-            "Pistes audio multiples",
-            "Sous-titres",
-            "Changement de format d'image",
-            "Vitesse de lecture pour la VOD",
-            "Reprise de lecture",
-            "Large compatibilité de codecs et formats",
-          ]}
-          image={uiPlayer}
-          alt="Lecteur vidéo VYRO Premium avec sélection des pistes audio et sous-titres"
-        />
-        <FeatureRow
-          reversed
-          eyebrow="Guide TV"
-          title="Votre programme en un coup d'œil."
-          description="Le programme en cours, les suivants, les informations détaillées et l'accès direct à une chaîne depuis le guide."
-          points={[
-            "Programme actuel",
-            "Programmes suivants",
-            "Navigation rapide",
-            "Informations détaillées",
-            "Accès direct à la chaîne",
-          ]}
-          image={uiGuide}
-          alt="Guide des programmes TV de VYRO Premium en pleine largeur"
-        />
-        <FeatureRow
-          eyebrow="Profils & synchronisation"
-          title="À chacun son espace. Et sa progression."
-          description="Des profils séparés avec favoris, historique et progression de lecture. Reprenez exactement où vous vous êtes arrêté, sur n'importe quel appareil connecté à votre compte."
-          points={[
-            "Profils séparés",
-            "Favoris personnels",
-            "Historique",
-            "Progression de lecture",
-            "Protection PIN lorsqu'elle est configurée",
-            "Synchronisation Trakt en option",
-          ]}
-          image={uiContinue}
-          alt="Section Continuer à regarder avec profils dans VYRO Premium"
-        />
-      </Section>
+      <section className="vyro-steps">
+        <div className="vyro-wrap vyro-block vyro-steps-grid">
+          <Reveal>
+            <p className="vyro-kicker">
+              <i /> 02 / PREMIERS PAS
+            </p>
+            <h2 className="vyro-display-title">Prêt pour ce soir.</h2>
+            <p>
+              La licence donne accès au lecteur VYRO. Vous y connectez une source compatible que
+              vous êtes autorisé à utiliser.
+            </p>
+            <Link className="vyro-inline-link" to="/support">
+              Consulter le centre d’aide <ArrowRight size={17} aria-hidden />
+            </Link>
+          </Reveal>
+          <ol>
+            {steps.map(({ label, description, to }, index) => (
+              <li key={to}>
+                <Link to={to}>
+                  <span className="vyro-step-number">0{index + 1}</span>
+                  <span>
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </span>
+                  <ArrowUpRight size={20} aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-      <IntegrationsSection />
       <PricingSection />
-      <DisclaimerSection />
       <FaqSection compact />
-      <FinalCta />
+      <section className="vyro-wrap vyro-last">
+        <Reveal className="vyro-last-panel">
+          <div>
+            <p className="vyro-kicker">
+              <i /> DÉJÀ CLIENT ?
+            </p>
+            <h2 className="vyro-display-title">Retrouvez votre accès.</h2>
+          </div>
+          <Link className="vyro-cta" to="/account">
+            Ouvrir mon espace <ArrowUpRight size={18} aria-hidden />
+          </Link>
+        </Reveal>
+      </section>
     </>
   );
 }

@@ -1,94 +1,169 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { MailCheck } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
-import { AuthShell, Field } from "@/components/site/AuthShell";
+import { AuthShell, Field, PortalNotice } from "@/components/site/AuthShell";
 
 const searchSchema = z.object({
-  redirect: z.string().optional(),
-  plan: z.string().optional(),
+  redirect: z
+    .enum([
+      "/admin",
+      "/account/abonnement",
+      "/account/appareils",
+      "/account/telechargement",
+      "/account/guides",
+      "/account/profil",
+      "/account/support",
+    ])
+    .optional()
+    .catch(undefined),
+  plan: z.enum(["3m", "6m", "12m"]).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/register")({
   validateSearch: searchSchema,
   head: () => ({
-    meta: [
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { title: "Créer un compte – VYRO Premium" },
-      {
-        name: "description",
-        content: "Créez votre compte VYRO Premium pour activer votre accès et télécharger l'application sur votre téléviseur.",
-      },
-      { property: "og:title", content: "Créer un compte – VYRO Premium" },
-      { property: "og:description", content: "Créez votre compte VYRO Premium en quelques secondes." },
-      { property: "og:url", content: "/register" },
-      { name: "robots", content: "noindex" },
-    ],
-    links: [{ rel: "canonical", href: "/register" }],
+    meta: [{ title: "Créer un compte – VYRO Premium" }, { name: "robots", content: "noindex" }],
   }),
   component: RegisterPage,
 });
 
 function RegisterPage() {
-  const { signUp } = useAuth();
+  const { ready, signUp } = useAuth();
   const navigate = useNavigate();
-  const search = Route.useSearch();
+  const { redirect, plan } = Route.useSearch();
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [awaitingEmail, setAwaitingEmail] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!firstName.trim() || !email.includes("@") || password.length < 6) {
-      setError("Renseignez un prénom, un e-mail valide et un mot de passe de 6 caractères minimum.");
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ready || busy) return;
+    setError("");
+    if (!firstName.trim()) {
+      setError("Renseignez votre prénom.");
       return;
     }
     setBusy(true);
-    await signUp(firstName.trim(), email, password);
-    setBusy(false);
-    if (search.plan) navigate({ to: "/checkout", search: { plan: search.plan } });
-    else navigate({ to: "/account" });
+    try {
+      const created = await signUp(firstName.trim(), email.trim(), password);
+      setPassword("");
+      if (!created) setAwaitingEmail(true);
+      else if (redirect) await navigate({ to: redirect });
+      else if (plan) await navigate({ to: "/checkout", search: { plan } });
+      else await navigate({ to: "/account" });
+    } catch (issue) {
+      setError(
+        issue instanceof Error && !(issue instanceof TypeError)
+          ? issue.message
+          : "Création impossible. Réessayez.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <AuthShell
-      title="Créez votre compte VYRO."
-      subtitle="Trois informations suffisent. Rien de plus."
+      label="Nouveau compte"
+      title={awaitingEmail ? "Confirmez votre adresse." : "Créez votre compte VYRO."}
+      subtitle={
+        awaitingEmail
+          ? "La confirmation de votre adresse est nécessaire avant de vous connecter."
+          : "Votre compte vous permet de retrouver votre accès et les appareils liés à votre licence."
+      }
       footer={
-        <p className="text-sm text-muted-foreground">
-          Déjà un compte ?{" "}
-          <Link to="/login" search={search} className="text-primary hover:brightness-115">
-            Se connecter
-          </Link>
-        </p>
+        !awaitingEmail && (
+          <p className="text-sm text-muted-foreground">
+            Déjà un compte ?{" "}
+            <Link
+              to="/login"
+              search={{ redirect, plan }}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Se connecter
+            </Link>
+          </p>
+        )
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Field label="Prénom" value={firstName} onChange={setFirstName} autoComplete="given-name" />
-        <Field
-          label="Adresse e-mail"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          autoComplete="email"
-        />
-        <Field
-          label="Mot de passe"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          autoComplete="new-password"
-        />
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" disabled={busy} variant="primary" size="md" className="mt-2 w-full">
-          {busy ? "Création…" : "Créer mon compte"}
-        </Button>
-      </form>
+      {awaitingEmail ? (
+        <div className="space-y-4">
+          <MailCheck aria-hidden className="size-7 text-primary" />
+          <p role="status" className="break-words text-sm leading-relaxed text-muted-foreground">
+            Si cette adresse peut être utilisée, un lien vous sera envoyé à{" "}
+            <strong className="text-foreground">{email.trim()}</strong>. Pensez à vérifier les
+            courriers indésirables. Si vous avez déjà un compte, connectez-vous.
+          </p>
+          <Button to="/login" search={{ redirect, plan }} size="sm">
+            Aller à la connexion
+          </Button>
+          <button
+            type="button"
+            onClick={() => setAwaitingEmail(false)}
+            className="block min-h-10 text-sm text-primary hover:underline"
+          >
+            Corriger mon adresse
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
+          <Field
+            label="Prénom"
+            value={firstName}
+            onChange={setFirstName}
+            autoComplete="given-name"
+            maxLength={80}
+            required
+          />
+          <Field
+            label="Adresse e-mail"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+            maxLength={254}
+            required
+          />
+          <Field
+            label="Mot de passe"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={256}
+            hint="12 caractères minimum."
+            required
+          />
+          {error && <PortalNotice error>{error}</PortalNotice>}
+          <Button type="submit" disabled={!ready || busy} className="w-full">
+            {busy ? "Création…" : "Créer mon compte"}
+          </Button>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Consultez les{" "}
+            <Link
+              to="/legal/conditions"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              conditions d’utilisation
+            </Link>{" "}
+            et la{" "}
+            <Link
+              to="/legal/confidentialite"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              politique de confidentialité
+            </Link>
+            .
+          </p>
+        </form>
+      )}
     </AuthShell>
   );
 }

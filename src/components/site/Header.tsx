@@ -1,140 +1,82 @@
-import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
-import { Logo } from "./Logo";
-import { Button } from "./Button";
-import { cn } from "@/lib/utils";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ArrowUpRight, Menu, UserRound, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { Logo } from "./Logo";
 
-const NAV = [
-  { to: "/", label: "Accueil" },
-  { to: "/fonctionnalites", label: "Fonctionnalités" },
+const nav = [
+  { to: "/fonctionnalites", label: "L’application" },
   { to: "/appareils", label: "Appareils" },
   { to: "/tarifs", label: "Tarifs" },
-  { to: "/faq", label: "FAQ" },
+  { to: "/support", label: "Assistance" },
 ] as const;
 
 export function Header() {
-  const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
   const { user } = useAuth();
-
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const open = openedAt === path;
+  const toggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenedAt(null);
+      toggle.current?.focus();
     };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 md:px-6 md:pt-4">
-      <div
-        className={cn(
-          "mx-auto flex w-fit max-w-full items-center gap-7 rounded-full border px-4 py-2 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] transition-all duration-300",
-          scrolled
-            ? "border-primary/12 bg-primary/6 backdrop-blur-2xl"
-            : "border-white/8 bg-gradient-to-r from-primary/5 via-primary/2 to-transparent",
-        )}
-      >
-        <div className="flex min-w-0 items-center">
-          <Logo />
-        </div>
-
-        <nav className="hidden items-center gap-1 lg:flex">
-          {NAV.map((item) => (
-            <Button
-              key={item.to}
-              to={item.to}
-              variant="nav"
-              activeOptions={{ exact: item.to === "/" }}
-            >
-              {item.label}
-            </Button>
+    <header className="vyro-header">
+      <div className="vyro-wrap vyro-header-inner">
+        <Logo />
+        <nav aria-label="Navigation principale" className="vyro-main-nav">
+          {nav.map(({ to, label }) => (
+            <Link key={to} to={to} activeOptions={{ exact: true }}>
+              {label}
+            </Link>
           ))}
         </nav>
-
-        <div className="flex items-center justify-end gap-2">
-          {user ? (
-            <Button to="/account" variant="ghost" size="sm" className="hidden lg:inline-flex">
-              Mon compte
-            </Button>
-          ) : (
-            <>
-              <Button to="/login" variant="ghost" size="sm" className="hidden lg:inline-flex">
-                Se connecter
-              </Button>
-              <Button to="/register" variant="primary" size="sm" className="hidden lg:inline-flex">
-                S'enregistrer
-              </Button>
-            </>
-          )}
-
+        <div className="vyro-header-actions">
+          <Link className="vyro-account-link" to={user ? "/account" : "/login"}>
+            <UserRound size={17} aria-hidden />
+            <span>Espace client</span>
+          </Link>
+          <Link to="/tarifs" className="vyro-cta vyro-cta-compact">
+            Obtenir VYRO <ArrowUpRight size={16} aria-hidden />
+          </Link>
           <button
+            ref={toggle}
             type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            className="vyro-menu-toggle"
             aria-expanded={open}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-primary/10 lg:hidden"
+            aria-controls="vyro-mobile-nav"
+            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            onClick={() => setOpenedAt(open ? null : path)}
           >
-            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            {open ? <X size={23} aria-hidden /> : <Menu size={23} aria-hidden />}
           </button>
         </div>
       </div>
-
-      {open ? (
-        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-primary/12 bg-primary/6 px-4 py-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
-          <nav className="flex flex-col">
-            {NAV.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setOpen(false)}
-                className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/8 hover:text-primary"
-              >
-                {item.label}
-                <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
-              </Link>
-            ))}
-            <Link
-              to={user ? "/account" : "/login"}
-              onClick={() => setOpen(false)}
-              className="group relative rounded-xl border-b border-white/6 px-2 py-3.5 text-base text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:bg-primary/8 hover:text-primary"
-            >
-              {user ? "Mon compte" : "Se connecter"}
-              <span className="absolute bottom-3 left-2 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-4" />
-            </Link>
-          </nav>
-          <div className="mt-4 flex flex-col gap-2">
-            <Button
-              to="/tarifs"
-              variant="primary"
-              size="md"
-              onClick={() => setOpen(false)}
-              className="w-full"
-            >
-              Obtenir VYRO Premium
-            </Button>
-            {user ? null : (
-              <Button
-                to="/register"
-                variant="secondary"
-                size="md"
-                onClick={() => setOpen(false)}
-                className="w-full"
-              >
-                S'enregistrer
-              </Button>
-            )}
-          </div>
-        </div>
-      ) : null}
+      <nav
+        id="vyro-mobile-nav"
+        className="vyro-mobile-nav"
+        aria-label="Navigation mobile"
+        hidden={!open}
+      >
+        {nav.map(({ to, label }) => (
+          <Link key={to} to={to} onClick={() => setOpenedAt(null)}>
+            {label}
+            <ArrowUpRight size={16} aria-hidden />
+          </Link>
+        ))}
+        <Link to={user ? "/account" : "/login"} onClick={() => setOpenedAt(null)}>
+          Espace client
+          <ArrowUpRight size={16} aria-hidden />
+        </Link>
+      </nav>
     </header>
   );
 }

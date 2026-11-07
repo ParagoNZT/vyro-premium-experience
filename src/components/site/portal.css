@@ -1,0 +1,107 @@
+.vyro-portal {
+  --portal-muted: var(--muted-foreground);
+  --portal-panel: color-mix(in oklab, var(--surface) 94%, var(--primary));
+}
+.portal-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.portal-kicker::before {
+  content: "";
+  width: 1.35rem;
+  height: 1px;
+  background: currentColor;
+}
+.portal-panel {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--surface);
+}
+.portal-glow {
+  background:
+    radial-gradient(
+      ellipse at 100% 0,
+      color-mix(in oklab, var(--primary) 15%, transparent),
+      transparent 66%
+    ),
+    var(--surface);
+}
+.portal-art {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 34rem;
+  background: radial-gradient(ellipse at 73% 40%, #332650, #171323 58%, #100e17 85%);
+  color: #f5f2ff;
+}
+.portal-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.36;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 47px, #c7b9ff26 47px 48px),
+    repeating-linear-gradient(90deg, transparent 0 47px, #c7b9ff26 47px 48px);
+  mask-image: linear-gradient(30deg, transparent, black 64%);
+}
+.portal-viewfinder {
+  position: absolute;
+  z-index: -1;
+  width: 74%;
+  aspect-ratio: 16 / 10;
+  top: 22%;
+  right: -12%;
+  border: 1px solid #c7b9ff80;
+  border-radius: 0.85rem;
+  background: radial-gradient(ellipse at 45% 72%, #8e68d54d, transparent 66%);
+  transform: rotate(-15deg);
+  box-shadow:
+    0 0 90px #926dd829,
+    inset 0 0 64px #c7b9ff1a;
+}
+.portal-viewfinder::before,
+.portal-viewfinder::after {
+  content: "";
+  position: absolute;
+  border: 1px solid #c7b9ff47;
+  border-radius: inherit;
+  inset: 10%;
+}
+.portal-viewfinder::after {
+  inset: 20%;
+}
+.portal-enter {
+  animation: portal-enter 0.38s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes portal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (min-width: 64rem) {
+  .portal-art {
+    display: flex;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-enter {
+    animation: none;
+  }
+  .vyro-portal :is(a, button, input, select, textarea) {
+    transition-duration: 0s !important;
+  }
+}

@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Tv, MonitorPlay, Flame } from "lucide-react";
-import { DevicesSection, FinalCta, Heading, Lead, Section, Shot } from "@/components/site/sections";
+import { FinalCta, Lead, Section, Shot } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
-import uiHome from "@/assets/ui-home.jpg";
+import { captureCaption, homeCapture } from "@/components/site/captures";
 
 export const Route = createFileRoute("/appareils")({
   head: () => ({
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/appareils")({
       { property: "og:title", content: "Appareils compatibles – VYRO Premium" },
       {
         property: "og:description",
-        content: "Android TV, Google TV et Amazon Fire TV : les appareils compatibles VYRO Premium.",
+        content:
+          "Android TV, Google TV et Amazon Fire TV : les appareils compatibles VYRO Premium.",
       },
       { property: "og:url", content: "/appareils" },
     ],
@@ -50,7 +51,10 @@ function DevicesPage() {
     <>
       <Section className="pb-0 pt-20 md:pt-28">
         <Reveal className="max-w-3xl">
-          <Heading>Une application, trois plateformes TV.</Heading>
+          <p className="vyro-kicker">
+            <i /> COMPATIBILITÉ
+          </p>
+          <h1 className="vyro-display-title">Une application, trois plateformes TV.</h1>
           <Lead className="mt-6 max-w-2xl">
             VYRO Premium est conçu uniquement pour le grand écran. Aucune version mobile agrandie :
             chaque écran est dessiné pour la télécommande.
@@ -67,7 +71,8 @@ function DevicesPage() {
         </div>
         <Reveal delay={120} className="relative mt-14">
           <div aria-hidden className="halo -inset-10 -z-10" />
-          <Shot src={uiHome} alt="VYRO Premium affiché sur un téléviseur" />
+          <Shot src={homeCapture} alt="Écran d’accueil de l’application sur un téléviseur" />
+          <p className="vyro-capture-note">{captureCaption}</p>
         </Reveal>
         <Reveal className="mt-10">
           <Link
@@ -79,7 +84,6 @@ function DevicesPage() {
         </Reveal>
       </Section>
 
-      <DevicesSection />
       <FinalCta />
     </>
   );

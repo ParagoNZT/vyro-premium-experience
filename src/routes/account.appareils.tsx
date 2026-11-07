@@ -1,118 +1,182 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { Tv, Trash2 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useState } from "react";
+import { Monitor, Trash2 } from "lucide-react";
+import { PortalHeading, PortalNotice } from "@/components/site/AuthShell";
 import { Button } from "@/components/site/Button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/account/appareils")({
-  head: () => ({ meta: [
-    { title: "Mes appareils – VYRO Premium" },
-    { name: "description", content: "Gérez vos appareils VYRO Premium." },
-    { property: "og:title", content: "Mes appareils – VYRO Premium" },
-    { property: "og:description", content: "Gérez vos appareils VYRO Premium." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "robots", content: "noindex" },
-  ] }),
+  head: () => ({
+    meta: [{ title: "Mes appareils – VYRO Premium" }, { name: "robots", content: "noindex" }],
+  }),
   component: DevicesPage,
 });
 
-const PLATFORMS = ["Android TV", "Google TV", "Amazon Fire TV"] as const;
-
 function DevicesPage() {
-  const { user, isActive, addDevice, removeDevice } = useAuth();
-  const [name, setName] = useState("");
-  const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
+  const { user, isActive, refreshAccount, removeDevice } = useAuth();
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const devices = user?.devices ?? [];
+  const limit = user?.subscription?.devicesAllowed;
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    addDevice({ name: name.trim(), platform });
-    setName("");
+  async function remove(id: string) {
+    if (removing) return;
+    setRemoving(id);
+    setError("");
+    setNotice("");
+    try {
+      await removeDevice(id);
+      setSelected(null);
+      setNotice("Appareil retiré de votre licence.");
+    } catch (issue) {
+      setError(
+        issue instanceof Error && !(issue instanceof TypeError)
+          ? issue.message
+          : "Impossible de retirer cet appareil.",
+      );
+    } finally {
+      setRemoving(null);
+    }
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl font-semibold">Mes appareils</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Les appareils sur lesquels votre licence VYRO Premium est activée.
-      </p>
-
-      <div className="mt-8 space-y-3">
-        {devices.length === 0 ? (
-          <div className="panel p-7 text-sm text-muted-foreground">
-            Aucun appareil enregistré pour le moment.
-          </div>
+    <div className="portal-enter">
+      <PortalHeading label="VYRO / Appareils" title="Mes appareils">
+        Les appareils apparaissent ici après l’activation de VYRO Premium sur votre téléviseur.
+      </PortalHeading>
+      <section
+        className="portal-panel portal-glow mt-7 space-y-4 p-5 sm:p-7"
+        aria-labelledby="pair-title"
+      >
+        <h2 id="pair-title" className="font-display text-lg font-semibold">
+          Associer un téléviseur
+        </h2>
+        {isActive ? (
+          <>
+            <ol className="list-inside list-decimal space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <li>Ouvrez VYRO Premium sur votre téléviseur.</li>
+              <li>
+                Copiez votre clé depuis le tableau de bord, puis saisissez-la dans l’application.
+              </li>
+              <li>Revenez ici et actualisez la liste.</li>
+            </ol>
+            <Button to="/account" variant="secondary" size="sm">
+              Accéder à ma clé
+            </Button>
+          </>
         ) : (
-          devices.map((device) => (
-            <div key={device.id} className="panel flex items-center gap-4 p-5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] bg-surface-2 text-primary">
-                <Tv className="h-5 w-5" aria-hidden />
-              </span>
+          <>
+            <p className="text-sm text-muted-foreground">
+              Une licence active est nécessaire pour associer un appareil.
+            </p>
+            <Button to="/tarifs" size="sm">
+              Voir les offres
+            </Button>
+          </>
+        )}
+      </section>
+
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold">
+          Appareils associés{" "}
+          <span className="text-sm text-muted-foreground">
+            {devices.length}
+            {limit != null ? ` / ${limit}` : ""}
+          </span>
+        </h2>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={refreshing || !!removing}
+          onClick={() => {
+            setRefreshing(true);
+            setNotice("");
+            void refreshAccount()
+              .then(() => setNotice("Liste actualisée."))
+              .finally(() => setRefreshing(false));
+          }}
+        >
+          {refreshing ? "Actualisation…" : "Actualiser"}
+        </Button>
+      </div>
+      {notice && (
+        <div className="mt-3">
+          <PortalNotice>{notice}</PortalNotice>
+        </div>
+      )}
+      {devices.length === 0 ? (
+        <div className="portal-panel mt-4 flex items-start gap-3 p-5 text-sm text-muted-foreground">
+          <Monitor aria-hidden className="size-5 shrink-0 text-primary" />
+          Aucun appareil associé pour le moment.
+        </div>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {devices.map((device) => (
+            <li
+              key={device.id}
+              className="portal-panel flex flex-wrap items-center gap-3 p-4 sm:p-5"
+            >
+              <Monitor aria-hidden className="size-5 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{device.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {device.platform} · ajouté le{" "}
-                  {new Date(device.lastSeen).toLocaleDateString("fr-FR")}
+                <p className="break-words text-sm font-semibold">{device.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {device.platform}
+                  {Number.isFinite(Date.parse(device.lastSeen))
+                    ? ` · Dernière activité : ${new Date(device.lastSeen).toLocaleString("fr-FR")}`
+                    : ""}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => removeDevice(device.id)}
-                aria-label={`Retirer ${device.name}`}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] text-muted-foreground transition-colors hover:bg-surface-2 hover:text-destructive"
+              <AlertDialog
+                open={selected === device.id}
+                onOpenChange={(open) => {
+                  if (!removing) {
+                    setSelected(open ? device.id : null);
+                    setError("");
+                  }
+                }}
               >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      <h2 className="mt-12 font-display text-lg font-medium">Ajouter un appareil</h2>
-      <form onSubmit={onSubmit} className="panel mt-4 grid gap-4 p-7 sm:grid-cols-[1fr_auto_auto]">
-        <div>
-          <label htmlFor="device-name" className="text-[13px] text-muted-foreground">
-            Nom de l'appareil
-          </label>
-          <input
-            id="device-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="TV du salon"
-            className="mt-1.5 w-full rounded-[10px] border border-border bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-primary/60"
-          />
-        </div>
-        <div>
-          <label htmlFor="device-platform" className="text-[13px] text-muted-foreground">
-            Plateforme
-          </label>
-          <select
-            id="device-platform"
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
-            className="mt-1.5 w-full rounded-[10px] border border-border bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-primary/60"
-          >
-            {PLATFORMS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end">
-          <Button type="submit" variant="primary" size="sm" disabled={!isActive}>
-            Ajouter
-          </Button>
-        </div>
-      </form>
-
-      <p className="mt-6 text-xs text-muted-foreground">
-        {isActive
-          ? "La limite d'appareils dépend des règles de licence appliquées à votre compte."
-          : "Activez un accès VYRO Premium pour enregistrer un appareil."}
-      </p>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={!!removing}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:border-destructive hover:text-destructive"
+                  >
+                    <Trash2 aria-hidden className="size-4" /> Retirer
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Retirer {device.name} ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      L’appareil devra être réactivé avec votre clé pour utiliser VYRO Premium.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  {error && <PortalNotice error>{error}</PortalNotice>}
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={!!removing}>Annuler</AlertDialogCancel>
+                    <Button size="sm" disabled={!!removing} onClick={() => void remove(device.id)}>
+                      {removing ? "Retrait…" : "Confirmer le retrait"}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

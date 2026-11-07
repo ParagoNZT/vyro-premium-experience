@@ -1,0 +1,94 @@
+import { z } from "zod";
+import { api, identity, json, body, ApiError } from "./access.server";
+import { database, logIfChanged, changed } from "./management.server";
+
+const change = z.object({
+  id: z.string().uuid(),
+  enabled: z.boolean(),
+  maxDevices: z.number().int().min(1).max(10),
+  expiresAt: z.string().datetime().nullable(),
+  note: z.string().trim().min(1).max(300),
+});
+
+export const betaRequest = api(async (request) => {
+  const user = await identity(request, true);
+  const db = await database();
+  if (request.method === "POST") {
+    const parsed = change.safeParse(await body(request));
+    if (!parsed.success) throw new ApiError(400, "Vérifiez l’accès, la date et le motif.");
+    const data = parsed.data;
+    const expiry = data.expiresAt === null ? null : new Date(data.expiresAt).toISOString();
+    if (data.enabled && expiry && Date.parse(expiry) <= Date.now()) {
+      throw new ApiError(400, "Choisissez une date future ou désactivez l’accès.");
+    }
+    const linked = await db
+      .prepare(
+        `SELECT c.status FROM clients c JOIN licenses l ON l.client_id=c.id
+      JOIN codes b ON b.code_hash=l.beta_code_hash WHERE b.id=?`,
+      )
+      .bind(data.id)
+      .first<{ status: string }>();
+    if (!linked) throw new ApiError(409, "Cet accès se gère dans VYRO Studio.");
+    if (data.enabled && linked.status !== "active")
+      throw new ApiError(409, "Réactivez d’abord la fiche client VYRO.");
+    const result = await db.batch([
+      db
+        .prepare(
+          `UPDATE codes SET enabled=?,max_devices=?,expires_at=? WHERE id=?
+        AND EXISTS(SELECT 1 FROM licenses l JOIN clients c ON c.id=l.client_id
+          WHERE l.beta_code_hash=codes.code_hash AND (?=0 OR c.status='active'))
+        AND (SELECT count(*) FROM bindings WHERE code_hash=codes.code_hash)<=?`,
+        )
+        .bind(
+          Number(data.enabled),
+          data.maxDevices,
+          expiry,
+          data.id,
+          Number(data.enabled),
+          data.maxDevices,
+        ),
+      logIfChanged(db, user.id, "beta-access-updated", data.id, data.note),
+    ]);
+    if (!changed(result[0]))
+      throw new ApiError(
+        409,
+        "L’accès a changé ou la limite est inférieure au nombre d’appareils liés.",
+      );
+    return json({ ok: true });
+  }
+
+  const url = new URL(request.url);
+  const search = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
+  const page = Math.floor(Math.max(0, Math.min(100000, Number(url.searchParams.get("page")) || 0)));
+  const [codes, stats] = await Promise.all([
+    db
+      .prepare(
+        `SELECT c.id,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
+      r.name AS resellerName,u.email AS clientEmail,
+      CASE WHEN l.license_key IS NOT NULL THEN 1 ELSE 0 END AS hasRecoverableKey,
+      CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
+      (SELECT count(*) FROM bindings WHERE code_hash=c.code_hash) AS deviceCount,
+      (SELECT max(last_seen) FROM device_profiles WHERE code_hash=c.code_hash) AS lastSeen
+      FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash
+      LEFT JOIN clients u ON u.id=l.client_id
+      WHERE instr(lower(c.name||' '||coalesce(u.email,'')),lower(?))>0 ORDER BY c.created_at DESC,c.id LIMIT 51 OFFSET ?`,
+      )
+      .bind(search, page * 50)
+      .all(),
+    db
+      .prepare(
+        `SELECT (SELECT count(*) FROM codes) AS accesses,
+      (SELECT count(*) FROM codes c WHERE enabled=1 AND (expires_at IS NULL OR expires_at>?)
+      AND (reseller_id IS NULL OR EXISTS(SELECT 1 FROM resellers WHERE id=c.reseller_id AND enabled=1))) AS activeAccesses,
+      (SELECT count(*) FROM bindings) AS devices`,
+      )
+      .bind(new Date().toISOString())
+      .first(),
+  ]);
+  return json({
+    codes: codes.results.slice(0, 50),
+    hasMore: codes.results.length > 50,
+    page,
+    stats,
+  });
+});

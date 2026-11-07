@@ -1,195 +1,200 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Download, Copy, Check, ShieldCheck, MonitorSmartphone, CalendarClock } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { ArrowUpRight, CalendarClock, Copy, Download, Monitor, ShieldCheck } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/site/Button";
+import { PortalHeading, PortalNotice } from "@/components/site/AuthShell";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/account/")({
-  head: () => ({ meta: [
-    { title: "Tableau de bord – VYRO Premium" },
-    { name: "description", content: "Votre licence et votre accès VYRO Premium." },
-    { property: "og:title", content: "Tableau de bord – VYRO Premium" },
-    { property: "og:description", content: "Votre licence et votre accès VYRO Premium." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "robots", content: "noindex" },
-  ] }),
+  validateSearch: z.object({ payment: z.enum(["processing", "test"]).optional().catch(undefined) }),
+  head: () => ({
+    meta: [{ title: "Tableau de bord – VYRO Premium" }, { name: "robots", content: "noindex" }],
+  }),
   component: Dashboard,
 });
 
-function Stat({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  icon: typeof ShieldCheck;
-}) {
-  return (
-    <div className="panel p-6">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <p className="text-xs">{label}</p>
-      </div>
-      <p className="mt-3 font-display text-lg font-medium">{value}</p>
-    </div>
-  );
-}
+const formatDate = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" });
 
 function Dashboard() {
-  const { user, isActive, daysLeft } = useAuth();
-  const [copied, setCopied] = useState(false);
-  const sub = user?.subscription ?? null;
+  const { user, isActive, daysLeft, refreshAccount } = useAuth();
+  const { payment } = Route.useSearch();
+  const [feedback, setFeedback] = useState<"copied" | "error" | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const subscription = user?.subscription;
+  const expiry =
+    subscription && Number.isFinite(Date.parse(subscription.expiresAt))
+      ? formatDate.format(new Date(subscription.expiresAt))
+      : "—";
+  const devices = user?.devices.length ?? 0;
+  const deviceValue =
+    subscription?.devicesAllowed == null
+      ? String(devices)
+      : `${devices} / ${subscription.devicesAllowed}`;
+  const status = isActive
+    ? "Actif"
+    : subscription?.status === "revoked"
+      ? "Révoqué"
+      : subscription
+        ? "Expiré"
+        : "Sans abonnement";
 
-  const total = sub
-    ? Math.max(
-        1,
-        Math.round(
-          (new Date(sub.expiresAt).getTime() - new Date(sub.startedAt).getTime()) / 86_400_000,
-        ),
-      )
-    : 0;
-  const progress = sub && daysLeft !== null ? Math.min(100, (daysLeft / total) * 100) : 0;
+  useEffect(() => {
+    if (payment !== "processing") return;
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      if (++attempts > 12) {
+        window.clearInterval(interval);
+        return;
+      }
+      void refreshAccount();
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [payment, refreshAccount]);
 
-  function copyKey() {
-    if (!user) return;
-    void navigator.clipboard.writeText(user.licenseKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+  async function copyKey() {
+    if (!isActive || !user?.licenseKey) return;
+    try {
+      await navigator.clipboard.writeText(user.licenseKey);
+      setFeedback("copied");
+    } catch {
+      setFeedback("error");
+    }
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-3xl font-semibold">Bonjour, {user?.firstName}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Voici l'état de votre accès VYRO Premium.
-      </p>
+    <div className="portal-enter">
+      <PortalHeading
+        label="VYRO / Tableau de bord"
+        title={`Bonjour, ${user?.firstName || "et bienvenue"}.`}
+      >
+        Retrouvez l’état de votre accès, installez le lecteur et associez votre téléviseur.
+      </PortalHeading>
 
-      <div className="panel relative mt-9 overflow-hidden p-7">
-        <div aria-hidden className="halo -right-24 -top-24 h-72 w-72" />
-        <div className="relative flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Licence VYRO Premium</p>
-            <p className="mt-2 font-display text-2xl font-medium">
-              {sub ? sub.planName : "Aucun accès actif"}
-            </p>
-            <div className="mt-4 flex items-center gap-3">
-              <code className="rounded-[8px] border border-border bg-surface-2 px-3 py-1.5 font-mono text-sm tracking-wider">
-                {user?.licenseKey}
-              </code>
-              <button
-                type="button"
-                onClick={copyKey}
-                aria-label="Copier la clé de licence"
-                className="grid h-8 w-8 place-items-center rounded-[8px] border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-primary" aria-hidden />
-                ) : (
-                  <Copy className="h-4 w-4" aria-hidden />
-                )}
-              </button>
-            </div>
+      {payment && (
+        <div className="mt-6 space-y-2">
+          <PortalNotice>
+            {payment === "test"
+              ? "Retour du paiement de test. Aucun prélèvement réel et aucune licence attribuée."
+              : "Retour de Stripe. La licence et l’historique se mettent à jour après confirmation du paiement."}
+          </PortalNotice>
+          {payment === "processing" && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={refreshing}
+              onClick={() => {
+                setRefreshing(true);
+                void refreshAccount().finally(() => setRefreshing(false));
+              }}
+            >
+              {refreshing ? "Actualisation…" : "Actualiser mon accès"}
+            </Button>
+          )}
+        </div>
+      )}
+
+      <section className="portal-panel portal-glow mt-8 p-5 sm:p-8" aria-labelledby="license-title">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="portal-kicker">Votre licence</p>
+            <h2 id="license-title" className="mt-4 font-display text-2xl font-semibold sm:text-3xl">
+              {subscription?.planName ? `VYRO Premium · ${subscription.planName}` : "VYRO Premium"}
+            </h2>
           </div>
-
           <span
-            className={
-              isActive
-                ? "rounded-[6px] border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary"
-                : "rounded-[6px] border border-border bg-surface-2 px-3 py-1 text-xs text-muted-foreground"
-            }
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${isActive ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-surface-2 text-muted-foreground"}`}
           >
-            {isActive ? "Actif" : "Inactif"}
+            <ShieldCheck aria-hidden className="size-4" />
+            {status}
           </span>
         </div>
-
-        {sub ? (
-          <div className="relative mt-7">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {daysLeft} jour{daysLeft && daysLeft > 1 ? "s" : ""} restant
-              {daysLeft && daysLeft > 1 ? "s" : ""} · expire le{" "}
-              {new Date(sub.expiresAt).toLocaleDateString("fr-FR")}
-            </p>
+        <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
+          {isActive
+            ? "Pour associer un appareil, ouvrez VYRO sur votre TV et saisissez votre clé d’activation."
+            : subscription
+              ? "Prolongez votre accès pour continuer à utiliser VYRO Premium sur vos appareils."
+              : "Choisissez une offre pour obtenir une licence et activer l’application sur votre TV."}
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {isActive && user?.licenseKey ? (
+            <Button size="sm" onClick={() => void copyKey()}>
+              <Copy aria-hidden className="size-4" /> Copier ma clé TV
+            </Button>
+          ) : isActive ? null : (
+            <Button to="/tarifs" size="sm">
+              {subscription ? "Prolonger mon accès" : "Voir les offres"}
+            </Button>
+          )}
+          {isActive && (
+            <Button to="/account/telechargement" variant="secondary" size="sm">
+              <Download aria-hidden className="size-4" /> Installer VYRO
+            </Button>
+          )}
+        </div>
+        {isActive && feedback && (
+          <div className="mt-4">
+            <PortalNotice error={feedback === "error"}>
+              {feedback === "copied"
+                ? "Clé copiée. Utilisez-la uniquement dans l’application VYRO."
+                : "Votre navigateur n’a pas autorisé la copie. Réessayez sur un navigateur compatible ou contactez l’assistance."}
+            </PortalNotice>
           </div>
-        ) : (
-          <p className="relative mt-6 text-sm text-muted-foreground">
-            Choisissez une offre pour activer votre licence et télécharger l'application.
+        )}
+        <dl className="mt-7 grid gap-4 border-t border-border pt-6 sm:grid-cols-3">
+          {[
+            { label: "Accès", value: status, Icon: ShieldCheck },
+            { label: "Échéance", value: expiry, Icon: CalendarClock },
+            { label: "Appareils associés", value: deviceValue, Icon: Monitor },
+          ].map(({ label, value, Icon }) => (
+            <div key={label}>
+              <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Icon aria-hidden className="size-4 text-primary" />
+                {label}
+              </dt>
+              <dd className="mt-1.5 font-display text-base font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {isActive && daysLeft != null && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            {daysLeft} jour{daysLeft === 1 ? "" : "s"} restant{daysLeft === 1 ? "" : "s"}
           </p>
         )}
-      </div>
+      </section>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Stat
-          label="Statut"
-          value={isActive ? "Actif" : "Inactif"}
-          icon={ShieldCheck}
-        />
-        <Stat
-          label="Expiration"
-          value={sub ? new Date(sub.expiresAt).toLocaleDateString("fr-FR") : "—"}
-          icon={CalendarClock}
-        />
-        <Stat
-          label="Appareils"
-          value={`${user?.devices.length ?? 0}${sub?.devicesAllowed ? ` / ${sub.devicesAllowed}` : ""}`}
-          icon={MonitorSmartphone}
-        />
-      </div>
-
-      <div className="mt-10 flex flex-wrap gap-3">
-        {isActive ? (
-          <Button to="/account/telechargement" variant="primary" size="sm">
-            <Download className="h-4 w-4" aria-hidden />
-            Télécharger VYRO Premium
-          </Button>
-        ) : (
-          <Button to="/tarifs" variant="primary" size="sm">
-            Obtenir un accès
-          </Button>
-        )}
-        <Button to="/account/appareils" variant="secondary" size="sm">
-          Gérer mes appareils
-        </Button>
-        <Button to="/account/guides" variant="ghost" size="sm">
-          Voir les guides
-        </Button>
-      </div>
-
-      <h2 className="mt-14 font-display text-lg font-medium">Prochaines étapes</h2>
-      <ol className="mt-4 space-y-3">
-        {[
-          { done: true, text: "Créer votre compte VYRO" },
-          { done: isActive, text: "Activer un accès VYRO Premium" },
-          { done: (user?.devices.length ?? 0) > 0, text: "Installer l'application sur votre TV" },
-          { done: false, text: "Connecter votre propre source compatible" },
-        ].map((step) => (
-          <li key={step.text} className="flex items-center gap-3 text-sm">
-            <span
-              className={
-                step.done
-                  ? "grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/15 text-primary"
-                  : "grid h-5 w-5 shrink-0 place-items-center rounded-full border border-border text-muted-foreground"
-              }
+      <section className="mt-9">
+        <h2 className="font-display text-xl font-semibold">Sur votre téléviseur</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              to: "/account/appareils",
+              label: "Mes appareils",
+              text: "Consultez les appareils associés à votre licence.",
+            },
+            {
+              to: "/account/guides",
+              label: "Guides de configuration",
+              text: "Apprenez à connecter votre source dans l’application.",
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="portal-panel flex min-h-24 items-start justify-between gap-4 p-5 transition-colors hover:border-primary/50"
             >
-              {step.done ? <Check className="h-3 w-3" aria-hidden /> : null}
-            </span>
-            <span className={step.done ? "text-muted-foreground line-through" : ""}>
-              {step.text}
-            </span>
-          </li>
-        ))}
-      </ol>
-
-      <p className="mt-10 text-xs text-muted-foreground">
-        VYRO Premium est un lecteur. Aucune chaîne, aucun film et aucune série n'est fourni avec
-        votre licence.
+              <span>
+                <span className="block text-sm font-semibold">{item.label}</span>
+                <span className="mt-2 block text-sm text-muted-foreground">{item.text}</span>
+              </span>
+              <ArrowUpRight aria-hidden className="size-4 shrink-0 text-primary" />
+            </Link>
+          ))}
+        </div>
+      </section>
+      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+        VYRO Premium est un lecteur. Vous devez disposer d’une source compatible que vous êtes
+        autorisé à utiliser.
       </p>
     </div>
   );

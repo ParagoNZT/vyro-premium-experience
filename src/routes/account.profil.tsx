@@ -1,75 +1,100 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
-import { Field } from "@/components/site/AuthShell";
+import { Field, PortalHeading, PortalNotice } from "@/components/site/AuthShell";
 
 export const Route = createFileRoute("/account/profil")({
-  head: () => ({ meta: [
-    { title: "Mon profil – VYRO Premium" },
-    { name: "description", content: "Vos informations de compte VYRO Premium." },
-    { property: "og:title", content: "Mon profil – VYRO Premium" },
-    { property: "og:description", content: "Vos informations de compte VYRO Premium." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "robots", content: "noindex" },
-  ] }),
+  head: () => ({
+    meta: [{ title: "Mon profil – VYRO Premium" }, { name: "robots", content: "noindex" }],
+  }),
   component: ProfilePage,
 });
 
 function ProfilePage() {
   const { user, updateProfile } = useAuth();
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const nameChanged = firstName.trim() !== user?.firstName;
+  const emailChanged = email.trim() !== user?.email;
 
-  useEffect(() => {
-    setFirstName(user?.firstName ?? "");
-    setEmail(user?.email ?? "");
-  }, [user?.firstName, user?.email]);
-
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!firstName.trim() || !email.includes("@")) return;
-    updateProfile({ firstName: firstName.trim(), email: email.trim() });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !user || (!nameChanged && !emailChanged)) return;
+    setNotice("");
+    setError("");
+    if (!firstName.trim()) {
+      setError("Renseignez votre prénom.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateProfile({
+        ...(nameChanged ? { firstName: firstName.trim() } : {}),
+        ...(emailChanged ? { email: email.trim() } : {}),
+      });
+      setNotice(
+        emailChanged
+          ? "Vérifiez votre boîte e-mail pour confirmer le changement d’adresse."
+          : "Votre prénom a été mis à jour.",
+      );
+    } catch (issue) {
+      setError(
+        issue instanceof Error && !(issue instanceof TypeError)
+          ? issue.message
+          : "Modification impossible.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl font-semibold">Compte</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Vos informations de compte VYRO Premium.
-      </p>
-
-      <form onSubmit={onSubmit} className="panel mt-8 space-y-4 p-7">
-        <Field label="Prénom" value={firstName} onChange={setFirstName} autoComplete="given-name" />
+    <div className="portal-enter">
+      <PortalHeading label="VYRO / Profil" title="Mes informations">
+        Gérez les informations utilisées pour votre compte.
+      </PortalHeading>
+      <form
+        onSubmit={onSubmit}
+        className="portal-panel mt-7 max-w-2xl space-y-5 p-5 sm:p-7"
+        aria-busy={busy}
+      >
+        <Field
+          label="Prénom"
+          value={firstName}
+          onChange={setFirstName}
+          autoComplete="given-name"
+          required
+          maxLength={80}
+        />
         <Field
           label="Adresse e-mail"
-          type="email"
           value={email}
           onChange={setEmail}
+          type="email"
           autoComplete="email"
+          required
+          maxLength={254}
+          hint="Un changement d’adresse peut nécessiter une confirmation par e-mail."
         />
-        <div className="flex items-center gap-4 pt-2">
-          <Button type="submit" variant="primary" size="sm">
-            Enregistrer
-          </Button>
-          {saved ? <span className="text-sm text-primary">Modifications enregistrées.</span> : null}
-        </div>
+        {notice && <PortalNotice>{notice}</PortalNotice>}
+        {error && <PortalNotice error>{error}</PortalNotice>}
+        <Button type="submit" size="sm" disabled={busy || (!nameChanged && !emailChanged)}>
+          {busy ? "Enregistrement…" : "Enregistrer"}
+        </Button>
       </form>
-
-      <div className="panel mt-4 p-7">
-        <p className="text-sm font-medium">Clé de licence</p>
-        <code className="mt-3 inline-block rounded-[8px] border border-border bg-surface-2 px-3 py-1.5 font-mono text-sm tracking-wider">
-          {user?.licenseKey}
-        </code>
+      <div className="portal-panel mt-4 max-w-2xl space-y-3 p-5 sm:p-7">
+        <h2 className="font-display text-lg font-semibold">Besoin d’aide avec votre compte ?</h2>
+        <p className="text-sm text-muted-foreground">
+          Le lien « Mot de passe oublié ? » se trouve sur la page de connexion.
+        </p>
+        <Button to="/account/support" variant="secondary" size="sm">
+          Contacter l’assistance
+        </Button>
       </div>
-
-      <p className="mt-6 text-xs text-muted-foreground">
-        Pour changer votre mot de passe ou supprimer votre compte, contactez le support.
-      </p>
     </div>
   );
 }

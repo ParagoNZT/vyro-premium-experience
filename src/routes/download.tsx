@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, Tv, Flame } from "lucide-react";
-import { Heading, Lead, Section } from "@/components/site/sections";
+import { Lead, Section } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import { Button } from "@/components/site/Button";
 import { DOWNLOADS } from "@/config/site";
@@ -34,7 +34,10 @@ function DownloadPage() {
   return (
     <Section className="pt-20 md:pt-28">
       <Reveal className="max-w-2xl">
-        <Heading>Télécharger VYRO Premium.</Heading>
+        <p className="vyro-kicker">
+          <i /> INSTALLATION
+        </p>
+        <h1 className="vyro-display-title">Télécharger VYRO Premium.</h1>
         <Lead className="mt-5">
           Choisissez votre plateforme. Le téléchargement et l'activation nécessitent un compte VYRO
           avec un accès valide.
@@ -54,27 +57,11 @@ function DownloadPage() {
                 </div>
               </div>
 
-              <dl className="mt-6 grid grid-cols-3 gap-3 text-sm">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Version</dt>
-                  <dd className="mt-1 font-medium">{target.version}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Mise à jour</dt>
-                  <dd className="mt-1 font-medium">{target.updatedAt}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Taille</dt>
-                  <dd className="mt-1 font-medium">{target.size}</dd>
-                </div>
-              </dl>
-
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Button to="/account" variant="primary" size="sm">
+                <Button to="/account/telechargement" variant="primary" size="sm">
                   <Download className="h-4 w-4" aria-hidden />
-                  Télécharger
+                  Accéder au téléchargement
                 </Button>
-                <span className="text-xs text-muted-foreground">{target.file}</span>
               </div>
 
               <div className="mt-7 border-t border-border pt-6">
@@ -87,23 +74,6 @@ function DownloadPage() {
                     </li>
                   ))}
                 </ol>
-              </div>
-
-              <div className="mt-7 flex items-center gap-4 border-t border-border pt-6">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&bgcolor=1a1a1e&color=ffffff&data=${encodeURIComponent(
-                    `https://vyro.premium/download#${target.id}`,
-                  )}`}
-                  alt={`QR code de téléchargement pour ${target.platform}`}
-                  width={80}
-                  height={80}
-                  loading="lazy"
-                  className="h-20 w-20 rounded-[8px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Scannez ce code depuis un téléphone pour ouvrir la page de téléchargement, ou
-                  saisissez l'adresse directement sur votre téléviseur.
-                </p>
               </div>
             </Reveal>
           );

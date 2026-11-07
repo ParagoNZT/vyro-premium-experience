@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   DisclaimerSection,
   FaqSection,
-  Heading,
   Lead,
   PricingSection,
   Section,
@@ -37,8 +36,13 @@ function PricingPage() {
     <>
       <Section className="pb-0 pt-20 text-center md:pt-28">
         <Reveal className="mx-auto max-w-2xl">
-          <Heading>Choisissez votre accès VYRO Premium.</Heading>
-          <Lead className="mt-5">Un seul abonnement. Toute l'expérience VYRO Premium.</Lead>
+          <p className="vyro-kicker">
+            <i /> LES OFFRES
+          </p>
+          <h1 className="vyro-display-title">Choisissez votre accès VYRO.</h1>
+          <Lead className="mt-5">
+            Les mêmes fonctionnalités, avec 3, 6 ou 12 mois d’accès au lecteur.
+          </Lead>
         </Reveal>
       </Section>
       <PricingSection withHeading={false} />

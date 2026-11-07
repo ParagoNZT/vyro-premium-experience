@@ -1,92 +1,228 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
-import { useAuth } from "@/lib/auth";
+import { AuthShell, Field, PortalNotice } from "@/components/site/AuthShell";
 import { Button } from "@/components/site/Button";
-import { AuthShell, Field } from "@/components/site/AuthShell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 const searchSchema = z.object({
-  redirect: z.string().optional(),
-  plan: z.string().optional(),
+  redirect: z
+    .enum([
+      "/admin",
+      "/account/abonnement",
+      "/account/appareils",
+      "/account/telechargement",
+      "/account/guides",
+      "/account/profil",
+      "/account/support",
+    ])
+    .optional()
+    .catch(undefined),
+  plan: z.enum(["3m", "6m", "12m"]).optional().catch(undefined),
+  recovery: z
+    .union([z.literal("1"), z.literal(1)])
+    .optional()
+    .catch(undefined),
 });
 
 export const Route = createFileRoute("/login")({
   validateSearch: searchSchema,
   head: () => ({
-    meta: [
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { title: "Connexion – VYRO Premium" },
-      {
-        name: "description",
-        content: "Connectez-vous à votre espace client VYRO Premium pour gérer votre accès, vos appareils et vos téléchargements.",
-      },
-      { property: "og:title", content: "Connexion – VYRO Premium" },
-      { property: "og:description", content: "Accédez à votre espace client VYRO Premium." },
-      { property: "og:url", content: "/login" },
-      { name: "robots", content: "noindex" },
-    ],
-    links: [{ rel: "canonical", href: "/login" }],
+    meta: [{ title: "Connexion – VYRO Premium" }, { name: "robots", content: "noindex" }],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { signIn } = useAuth();
+  const { ready, signIn, signOut, requestPasswordReset, resetPassword } = useAuth();
   const navigate = useNavigate();
-  const search = Route.useSearch();
+  const { redirect, plan, recovery } = Route.useSearch();
+  const [mode, setMode] = useState<"login" | "forgot" | "reset">("login");
+  const [recoveryPending, setRecoveryPending] = useState(!!recovery);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!email.includes("@") || password.length < 6) {
-      setError("Adresse e-mail ou mot de passe invalide.");
-      return;
-    }
+  useEffect(() => {
+    if (!recovery) return;
+    let active = true;
+    let received = false;
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active || event !== "PASSWORD_RECOVERY" || !session) return;
+      received = true;
+      setError("");
+      setMode("reset");
+      setRecoveryPending(false);
+    });
+    // The auth client consumes the recovery token and emits PASSWORD_RECOVERY.
+    // An ordinary existing session must never be mistaken for a recovery link.
+    const timer = window.setTimeout(() => {
+      if (active && !received) {
+        setRecoveryPending(false);
+        setMode("forgot");
+        setError("Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien.");
+      }
+    }, 4000);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      data.subscription.unsubscribe();
+    };
+  }, [recovery]);
+
+  function switchMode(next: "login" | "forgot") {
+    if (recovery) void navigate({ to: "/login", search: { redirect, plan }, replace: true });
+    setMode(next);
+    setError("");
+    setNotice("");
+    setPassword("");
+    setConfirmation("");
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ready || busy || recoveryPending) return;
+    setError("");
+    setNotice("");
     setBusy(true);
-    await signIn(email, password);
-    setBusy(false);
-    if (search.plan) navigate({ to: "/checkout", search: { plan: search.plan } });
-    else navigate({ to: "/account" });
+    try {
+      if (mode === "forgot") {
+        await requestPasswordReset(email.trim());
+        setNotice(
+          "Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation.",
+        );
+      } else if (mode === "reset") {
+        if (password !== confirmation)
+          throw new Error("Les deux mots de passe doivent être identiques.");
+        await resetPassword(password);
+        switchMode("login");
+        try {
+          await signOut();
+        } catch {
+          setError(
+            "Mot de passe modifié. La session n’a pas pu être fermée ; déconnectez-vous depuis votre compte.",
+          );
+          return;
+        }
+        setNotice("Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.");
+      } else {
+        await signIn(email, password);
+        setPassword("");
+        if (redirect) await navigate({ to: redirect });
+        else if (plan) await navigate({ to: "/checkout", search: { plan } });
+        else await navigate({ to: "/account" });
+      }
+    } catch (issue) {
+      setError(
+        issue instanceof Error && !(issue instanceof TypeError)
+          ? issue.message
+          : "La demande n’a pas abouti. Réessayez.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <AuthShell
-      title="Content de vous revoir."
-      subtitle="Connectez-vous pour retrouver votre accès VYRO Premium."
+      title={
+        mode === "forgot"
+          ? "Réinitialiser votre accès."
+          : mode === "reset"
+            ? "Nouveau mot de passe."
+            : "Heureux de vous retrouver."
+      }
+      subtitle={
+        mode === "forgot"
+          ? "Nous vous enverrons un lien pour choisir un nouveau mot de passe."
+          : mode === "reset"
+            ? "Choisissez un mot de passe que vous n’utilisez sur aucun autre site."
+            : redirect === "/admin"
+              ? "Connectez-vous avec le compte autorisé à administrer VYRO."
+              : "Retrouvez votre licence VYRO et gérez vos appareils."
+      }
       footer={
-        <p className="text-sm text-muted-foreground">
-          Pas encore de compte ?{" "}
-          <Link to="/register" search={search} className="text-primary hover:brightness-115">
-            Créer un compte
-          </Link>
-        </p>
+        mode === "login" && !recoveryPending && redirect !== "/admin" ? (
+          <p className="text-sm text-muted-foreground">
+            Pas encore de compte ?{" "}
+            <Link
+              to="/register"
+              search={{ redirect, plan }}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Créer un compte
+            </Link>
+          </p>
+        ) : undefined
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Field
-          label="Adresse e-mail"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          autoComplete="email"
-        />
-        <Field
-          label="Mot de passe"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          autoComplete="current-password"
-        />
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" disabled={busy} variant="primary" size="md" className="mt-2 w-full">
-          {busy ? "Connexion…" : "Se connecter"}
-        </Button>
-      </form>
+      {recoveryPending ? (
+        <PortalNotice>Vérification du lien de réinitialisation…</PortalNotice>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
+          {mode !== "reset" && (
+            <Field
+              label="Adresse e-mail"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              autoComplete="username"
+              maxLength={254}
+              required
+            />
+          )}
+          {mode !== "forgot" && (
+            <Field
+              label={mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+              type="password"
+              value={password}
+              onChange={setPassword}
+              autoComplete={mode === "reset" ? "new-password" : "current-password"}
+              minLength={mode === "reset" ? 12 : undefined}
+              maxLength={256}
+              hint={mode === "reset" ? "12 caractères minimum." : undefined}
+              required
+            />
+          )}
+          {mode === "reset" && (
+            <Field
+              label="Confirmer le mot de passe"
+              type="password"
+              value={confirmation}
+              onChange={setConfirmation}
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={256}
+              required
+            />
+          )}
+          {error && <PortalNotice error>{error}</PortalNotice>}
+          {notice && <PortalNotice>{notice}</PortalNotice>}
+          <Button type="submit" disabled={!ready || busy} className="w-full">
+            {busy
+              ? "Veuillez patienter…"
+              : mode === "login"
+                ? "Se connecter"
+                : mode === "forgot"
+                  ? "Demander un lien"
+                  : "Enregistrer le mot de passe"}
+          </Button>
+          {mode !== "reset" && (
+            <button
+              type="button"
+              disabled={!ready || busy}
+              className="min-h-10 text-sm text-primary underline-offset-4 hover:underline"
+              onClick={() => switchMode(mode === "login" ? "forgot" : "login")}
+            >
+              {mode === "login" ? "Mot de passe oublié ?" : "Revenir à la connexion"}
+            </button>
+          )}
+        </form>
+      )}
     </AuthShell>
   );
 }

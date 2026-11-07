@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Heading, Lead, Section } from "@/components/site/sections";
+import { Lead, Section } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import {
   Accordion,
@@ -87,20 +87,18 @@ function SupportPage() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return ARTICLES;
-    return ARTICLES.filter((a) =>
-      `${a.category} ${a.title} ${a.body}`.toLowerCase().includes(q),
-    );
+    return ARTICLES.filter((a) => `${a.category} ${a.title} ${a.body}`.toLowerCase().includes(q));
   }, [query]);
 
-  const categories = useMemo(
-    () => Array.from(new Set(results.map((a) => a.category))),
-    [results],
-  );
+  const categories = useMemo(() => Array.from(new Set(results.map((a) => a.category))), [results]);
 
   return (
     <Section className="pt-20 md:pt-28">
       <Reveal className="max-w-2xl">
-        <Heading>Centre d'aide.</Heading>
+        <p className="vyro-kicker">
+          <i /> ASSISTANCE
+        </p>
+        <h1 className="vyro-display-title">Centre d’aide.</h1>
         <Lead className="mt-5">
           Installation, connexion de votre source, lecture, compte et abonnement.
         </Lead>
@@ -128,7 +126,11 @@ function SupportPage() {
               {results
                 .filter((a) => a.category === category)
                 .map((article) => (
-                  <AccordionItem key={article.title} value={article.title} className="border-border">
+                  <AccordionItem
+                    key={article.title}
+                    value={article.title}
+                    className="border-border"
+                  >
                     <AccordionTrigger className="py-4 text-left text-[15px] font-normal hover:no-underline">
                       {article.title}
                     </AccordionTrigger>
@@ -142,7 +144,11 @@ function SupportPage() {
         ))}
         {results.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Aucun résultat. Écrivez-nous à support@vyro-premium.app.
+            Aucun résultat.{" "}
+            <a className="underline" href="mailto:support@vyro-premium.app">
+              Écrivez à l’assistance
+            </a>
+            .
           </p>
         ) : null}
       </div>

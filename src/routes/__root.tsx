@@ -44,7 +44,9 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error instanceof Error ? error : new Error(String(error)), { boundary: "tanstack_root_error_component" });
+    reportLovableError(error instanceof Error ? error : new Error(String(error)), {
+      boundary: "tanstack_root_error_component",
+    });
   }, [error]);
 
   return (
@@ -103,7 +105,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/vyro-mark.svg", type: "image/svg+xml" },
     ],
     scripts: [
       {
@@ -148,8 +150,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <a className="vyro-skip" href="#main">
+          Aller au contenu
+        </a>
         {bare ? null : <Header />}
-        <main className={bare ? "" : "pt-[88px]"}>
+        <main id="main" tabIndex={-1} className={bare ? "" : "vyro-public"}>
           {/* Required: nested routes render here. */}
           <Outlet />
         </main>

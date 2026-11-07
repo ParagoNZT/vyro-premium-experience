@@ -3,46 +3,26 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { getPlan, formatPrice } from "@/config/site";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "./auth-context";
-
-/**
- * Couche d'authentification / licence côté client.
- *
- * Elle est volontairement isolée derrière ce contexte : le jour où le backend
- * (comptes, licences, paiements, appareils) est branché, seules les fonctions
- * ci-dessous changent — aucun écran n'a besoin d'être réécrit.
- * Aucune clé ni secret ne doit être placé ici.
- */
+import { portalApi, PortalApiError } from "./portal-api";
 
 export type Subscription = {
   planId: string;
   planName: string;
-  status: "active" | "expired" | "none";
-  startedAt: string; // ISO
-  expiresAt: string; // ISO
+  status: "active" | "expired" | "revoked" | "none";
+  startedAt: string;
+  expiresAt: string;
   devicesUsed: number;
   devicesAllowed: number | null;
 };
-
-export type Device = {
-  id: string;
-  name: string;
-  platform: string;
-  lastSeen: string; // ISO
-};
-
-export type Order = {
-  id: string;
-  date: string; // ISO
-  planName: string;
-  amount: string;
-  status: "paid";
-};
-
+export type Device = { id: string; name: string; platform: string; lastSeen: string };
+export type Order = { id: string; date: string; planName: string; amount: string; status: "paid" };
 export type User = {
   id: string;
   firstName: string;
@@ -56,242 +36,269 @@ export type User = {
 export type AuthState = {
   user: User | null;
   ready: boolean;
+  accountError: string | null;
   daysLeft: number | null;
   isActive: boolean;
+  refreshAccount: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<User>;
-  signUp: (firstName: string, email: string, password: string) => Promise<User>;
-  signOut: () => void;
-  activateLicense: (planId: string) => Promise<void>;
-  updateProfile: (patch: { firstName?: string; email?: string }) => void;
-  addDevice: (device: { name: string; platform: string }) => void;
-  removeDevice: (id: string) => void;
+  signUp: (firstName: string, email: string, password: string) => Promise<User | null>;
+  signOut: () => Promise<void>;
+  updateProfile: (patch: { firstName?: string; email?: string }) => Promise<void>;
+  removeDevice: (id: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
+  /** Retained for older callers. Activations now come from the Stripe webhook or administration. */
+  activateLicense: (planId: string) => Promise<never>;
+  /** Devices are enrolled on the TV. */
+  addDevice: (device: { name: string; platform: string }) => Promise<never>;
 };
 
-const STORAGE_KEY = "vyro.session.v2";
-
-function makeLicenseKey() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const block = () =>
-    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  return `VYRO-${block()}-${block()}-${block()}`;
-}
-
-function normalize(raw: unknown): User | null {
-  if (!raw || typeof raw !== "object") return null;
-  const u = raw as Partial<User>;
-  if (!u.email) return null;
+function identityOnly({ user }: Session): User {
   return {
-    id: u.id ?? crypto.randomUUID(),
-    firstName: u.firstName ?? "Vous",
-    email: u.email,
-    licenseKey: u.licenseKey ?? makeLicenseKey(),
-    subscription: u.subscription ?? null,
-    devices: Array.isArray(u.devices) ? u.devices : [],
-    orders: Array.isArray(u.orders) ? u.orders : [],
+    id: user.id,
+    email: user.email ?? "",
+    firstName:
+      typeof user.user_metadata["first_name"] === "string"
+        ? user.user_metadata["first_name"].slice(0, 80)
+        : user.email?.split("@")[0] || "Vous",
+    licenseKey: "",
+    subscription: null,
+    devices: [],
+    orders: [],
   };
-}
-
-function read(): User | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? normalize(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
-}
-
-function persist(user: User | null) {
-  if (typeof window === "undefined") return;
-  if (user) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-  else window.localStorage.removeItem(STORAGE_KEY);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setUser(read());
-    setReady(true);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const generation = useRef(0);
+  const abortRequest = useRef<AbortController | null>(null);
+  const invalidate = useCallback(() => {
+    abortRequest.current?.abort();
+    return ++generation.current;
   }, []);
 
-  const save = useCallback((next: User | null) => {
-    setUser(next);
-    persist(next);
-  }, []);
-
-  const signIn = useCallback(
-    async (email: string) => {
-      const existing = read();
-      const next: User =
-        existing && existing.email === email
-          ? existing
-          : {
-              id: crypto.randomUUID(),
-              firstName: email.split("@")[0] || "Vous",
-              email,
-              licenseKey: makeLicenseKey(),
-              subscription: null,
-              devices: [],
-              orders: [],
-            };
-      save(next);
+  const synchronize = useCallback(
+    async (session: Session | null): Promise<User | null> => {
+      const revision = invalidate();
+      if (!session || session.user.is_anonymous || !session.user.email_confirmed_at) {
+        setUser(null);
+        setAccountError(null);
+        setReady(true);
+        return null;
+      }
+      const controller = new AbortController();
+      abortRequest.current = controller;
+      setUser((previous) => (previous?.id === session.user.id ? previous : null));
+      const stub = identityOnly(session);
+      let next: User | null = stub;
+      let issue: string | null = null;
+      try {
+        next = await portalApi<User>("/api/account", {
+          token: session.access_token,
+          signal: controller.signal,
+        });
+        if (next.id !== session.user.id) throw new Error("Identité de compte inattendue.");
+      } catch (error) {
+        next = error instanceof PortalApiError && error.status === 401 ? null : stub;
+        issue = controller.signal.aborted
+          ? null
+          : error instanceof Error
+            ? error.message
+            : "Impossible de charger votre espace client.";
+      }
+      if (revision === generation.current) {
+        setUser(next);
+        setAccountError(issue);
+        setReady(true);
+      }
       return next;
     },
-    [save],
+    [invalidate],
+  );
+
+  const refreshAccount = useCallback(async () => {
+    const revision = generation.current;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (generation.current !== revision) return;
+      if (error) throw error;
+      await synchronize(data.session);
+    } catch {
+      if (generation.current !== revision) return;
+      await synchronize(null);
+      setAccountError("Le service de connexion est indisponible. Réessayez.");
+    }
+  }, [synchronize]);
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    let pending: number | undefined;
+    // Ignore and remove the demo state. Only Supabase sessions can reach account data.
+    try {
+      localStorage.removeItem("vyro.session.v2");
+    } catch {
+      /* Storage can be disabled. */
+    }
+    try {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        window.clearTimeout(pending);
+        if (event === "SIGNED_OUT") {
+          void synchronize(null);
+          return;
+        }
+        // Supabase holds its session lock while invoking this callback.
+        pending = window.setTimeout(() => {
+          if (active) void synchronize(session);
+        }, 0);
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch {
+      void refreshAccount();
+    }
+    const onFocus = () => {
+      void refreshAccount();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      active = false;
+      invalidate();
+      unsubscribe?.();
+      window.clearTimeout(pending);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [invalidate, refreshAccount, synchronize]);
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error || !data.session)
+        throw new Error(
+          "Connexion refusée. Vérifiez vos identifiants et la confirmation de votre e-mail.",
+        );
+      const next = await synchronize(data.session);
+      if (!next) throw new Error("Confirmez votre adresse e-mail avant de vous connecter.");
+      return next;
+    },
+    [synchronize],
   );
 
   const signUp = useCallback(
-    async (firstName: string, email: string) => {
-      const next: User = {
-        id: crypto.randomUUID(),
-        firstName,
-        email,
-        licenseKey: makeLicenseKey(),
-        subscription: null,
-        devices: [],
-        orders: [],
-      };
-      save(next);
-      return next;
-    },
-    [save],
-  );
-
-  const signOut = useCallback(() => save(null), [save]);
-
-  const activateLicense = useCallback(
-    async (planId: string) => {
-      const plan = getPlan(planId);
-      const current = read();
-      if (!plan || !current) return;
-
-      // Le temps restant est conservé et prolongé.
-      const base =
-        current.subscription && new Date(current.subscription.expiresAt) > new Date()
-          ? new Date(current.subscription.expiresAt)
-          : new Date();
-      const expires = new Date(base);
-      expires.setMonth(expires.getMonth() + plan.months);
-
-      save({
-        ...current,
-        subscription: {
-          planId: plan.id,
-          planName: `VYRO Premium · ${plan.name}`,
-          status: "active",
-          startedAt: current.subscription?.startedAt ?? new Date().toISOString(),
-          expiresAt: expires.toISOString(),
-          devicesUsed: current.devices.length,
-          devicesAllowed: null,
+    async (firstName: string, email: string, password: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { first_name: firstName.trim().slice(0, 80) },
+          emailRedirectTo: window.location.origin + "/login",
         },
-        orders: [
-          {
-            id: `VY-${Date.now().toString(36).toUpperCase()}`,
-            date: new Date().toISOString(),
-            planName: `VYRO Premium · ${plan.name}`,
-            amount: formatPrice(plan.price),
-            status: "paid",
-          },
-          ...current.orders,
-        ],
       });
+      if (error)
+        throw new Error(
+          "Création impossible. Vérifiez les informations ou connectez-vous si votre compte existe déjà.",
+        );
+      return data.session ? synchronize(data.session) : null;
     },
-    [save],
+    [synchronize],
   );
+
+  const signOut = useCallback(async () => {
+    invalidate();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) throw new Error("Déconnexion impossible. Réessayez.");
+    await synchronize(null);
+  }, [invalidate, synchronize]);
 
   const updateProfile = useCallback(
-    (patch: { firstName?: string; email?: string }) => {
-      const current = read();
-      if (!current) return;
-      save({ ...current, ...patch });
-    },
-    [save],
-  );
-
-  const addDevice = useCallback(
-    (device: { name: string; platform: string }) => {
-      const current = read();
-      if (!current) return;
-      const devices = [
-        ...current.devices,
-        {
-          id: crypto.randomUUID(),
-          name: device.name,
-          platform: device.platform,
-          lastSeen: new Date().toISOString(),
-        },
-      ];
-      save({
-        ...current,
-        devices,
-        subscription: current.subscription
-          ? { ...current.subscription, devicesUsed: devices.length }
-          : null,
+    async (patch: { firstName?: string; email?: string }) => {
+      const { error } = await supabase.auth.updateUser({
+        ...(patch.firstName !== undefined
+          ? { data: { first_name: patch.firstName.trim().slice(0, 80) } }
+          : {}),
+        ...(patch.email !== undefined ? { email: patch.email.trim() } : {}),
       });
+      if (error) throw new Error("Impossible d’enregistrer le profil. Réessayez.");
+      await refreshAccount();
     },
-    [save],
+    [refreshAccount],
   );
 
-  const removeDevice = useCallback(
-    (id: string) => {
-      const current = read();
-      if (!current) return;
-      const devices = current.devices.filter((d) => d.id !== id);
-      save({
-        ...current,
-        devices,
-        subscription: current.subscription
-          ? { ...current.subscription, devicesUsed: devices.length }
-          : null,
-      });
-    },
-    [save],
-  );
+  const removeDevice = useCallback(async (id: string) => {
+    const next = await portalApi<User>("/api/account", {
+      method: "POST",
+      body: { action: "remove", id },
+    });
+    setUser((previous) => (previous?.id === next.id ? next : previous));
+  }, []);
 
-  const daysLeft = useMemo(() => {
-    if (!user?.subscription) return null;
-    const ms = new Date(user.subscription.expiresAt).getTime() - Date.now();
-    return Math.max(0, Math.ceil(ms / 86_400_000));
-  }, [user]);
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin + "/login?recovery=1",
+    });
+    if (error) throw new Error("Impossible de demander un nouveau mot de passe. Réessayez.");
+  }, []);
+  const resetPassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error)
+      throw new Error(
+        "Impossible de modifier le mot de passe. Vérifiez que le lien est toujours valide.",
+      );
+  }, []);
 
-  const isActive = Boolean(user?.subscription && daysLeft !== null && daysLeft > 0);
-
-  const value = useMemo(
+  const daysLeft = user?.subscription
+    ? Math.max(0, Math.ceil((Date.parse(user.subscription.expiresAt) - Date.now()) / 86_400_000))
+    : null;
+  const isActive = user?.subscription?.status === "active" && daysLeft !== null && daysLeft > 0;
+  const value = useMemo<AuthState>(
     () => ({
       user,
       ready,
+      accountError,
       daysLeft,
       isActive,
+      refreshAccount,
       signIn,
       signUp,
       signOut,
-      activateLicense,
       updateProfile,
-      addDevice,
       removeDevice,
+      requestPasswordReset,
+      resetPassword,
+      activateLicense: async () => {
+        throw new Error("L’activation intervient après confirmation du paiement.");
+      },
+      addDevice: async () => {
+        throw new Error("Saisissez la clé dans l’application TV pour l’associer à votre compte.");
+      },
     }),
     [
       user,
       ready,
+      accountError,
       daysLeft,
       isActive,
+      refreshAccount,
       signIn,
       signUp,
       signOut,
-      activateLicense,
       updateProfile,
-      addDevice,
       removeDevice,
+      requestPasswordReset,
+      resetPassword,
     ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- Keep the established hook import; context identity is isolated in auth-context.ts.
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth doit être utilisé dans AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth doit être utilisé dans AuthProvider");
+  return context;
 }

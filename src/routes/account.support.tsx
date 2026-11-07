@@ -1,98 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { useAuth } from "@/lib/auth";
+import { ArrowUpRight, BookOpen, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/site/Button";
+import { PortalHeading } from "@/components/site/AuthShell";
 
 export const Route = createFileRoute("/account/support")({
-  head: () => ({ meta: [
-    { title: "Assistance client – VYRO Premium" },
-    { name: "description", content: "Votre assistance VYRO Premium." },
-    { property: "og:title", content: "Assistance client – VYRO Premium" },
-    { property: "og:description", content: "Votre assistance VYRO Premium." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "robots", content: "noindex" },
-  ] }),
+  head: () => ({
+    meta: [{ title: "Assistance client – VYRO Premium" }, { name: "robots", content: "noindex" }],
+  }),
   component: AccountSupportPage,
 });
 
-const SUBJECTS = ["Installation", "Lecture", "Compte", "Abonnement", "Autre"] as const;
-
 function AccountSupportPage() {
-  const { user } = useAuth();
-  const [subject, setSubject] = useState<string>(SUBJECTS[0]);
-  const [message, setMessage] = useState("");
-  const [sent, setSent] = useState(false);
-
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!message.trim()) return;
-    setSent(true);
-    setMessage("");
-    setTimeout(() => setSent(false), 4000);
-  }
-
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl font-semibold">Support</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Une question sur l'installation, la lecture ou votre abonnement ?
-      </p>
-
-      <form onSubmit={onSubmit} className="panel mt-8 space-y-4 p-7">
-        <div>
-          <label htmlFor="ticket-subject" className="text-[13px] text-muted-foreground">
-            Sujet
-          </label>
-          <select
-            id="ticket-subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="mt-1.5 w-full rounded-[10px] border border-border bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-primary/60"
+    <div className="portal-enter">
+      <PortalHeading label="VYRO / Assistance" title="Comment pouvons-nous vous aider ?">
+        Installation, lecture, compte ou paiement : consultez les guides ou contactez l’assistance
+        par e-mail.
+      </PortalHeading>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <section className="portal-panel portal-glow space-y-4 p-6">
+          <LifeBuoy aria-hidden className="size-6 text-primary" />
+          <h2 className="font-display text-xl font-semibold">Écrire à l’assistance</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Indiquez l’adresse de votre compte, votre appareil et le problème rencontré. N’incluez
+            pas votre mot de passe ni votre clé de licence.
+          </p>
+          <a
+            href="mailto:support@vyro-premium.app?subject=Assistance%20VYRO%20Premium"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 px-4 text-sm text-primary hover:border-primary"
           >
-            {SUBJECTS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="ticket-message" className="text-[13px] text-muted-foreground">
-            Votre message
-          </label>
-          <textarea
-            id="ticket-message"
-            rows={5}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Décrivez votre problème, votre appareil et ce que vous avez déjà essayé."
-            className="mt-1.5 w-full resize-y rounded-[10px] border border-border bg-surface-2 px-4 py-3 text-sm outline-none transition-colors duration-150 focus:border-primary/60"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-4 pt-2">
-          <Button type="submit" variant="primary" size="sm">
-            Envoyer la demande
+            Ouvrir mon application e-mail <ArrowUpRight aria-hidden className="size-4" />
+          </a>
+        </section>
+        <section className="portal-panel space-y-4 p-6">
+          <BookOpen aria-hidden className="size-6 text-primary" />
+          <h2 className="font-display text-xl font-semibold">Consulter les guides</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Retrouvez les étapes pour installer le lecteur et connecter votre source.
+          </p>
+          <Button to="/support" size="sm" variant="secondary">
+            Centre d’aide
           </Button>
-          {sent ? (
-            <span className="text-sm text-primary">
-              Demande envoyée. Réponse sous 24 à 48 h ouvrées.
-            </span>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Votre demande sera rattachée à {user?.email}.
-        </p>
-      </form>
-
-      <div className="panel mt-4 flex flex-wrap items-center gap-4 p-7">
-        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-          Vous préférez chercher par vous-même ? Le centre d'aide couvre l'installation, la
-          connexion d'une source et le dépannage.
-        </p>
-        <Button to="/support" variant="secondary" size="sm">
-          Ouvrir le centre d'aide
-        </Button>
+        </section>
       </div>
     </div>
   );

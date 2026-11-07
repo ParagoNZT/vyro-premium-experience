@@ -1,4 +1,4 @@
-import { Check, Tv, MonitorPlay, Flame } from "lucide-react";
+import { ArrowUpRight, Check, Tv, MonitorPlay, Flame, Plus } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { Button } from "./Button";
 import { cn } from "@/lib/utils";
@@ -11,12 +11,6 @@ import {
   formatPrice,
   monthlyEquivalent,
 } from "@/config/site";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 
 export function Section({
   children,
@@ -28,7 +22,10 @@ export function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className={cn("relative mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28", className)}>
+    <section
+      id={id}
+      className={cn("relative mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28", className)}
+    >
       {children}
     </section>
   );
@@ -36,11 +33,19 @@ export function Section({
 
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-primary/80">{children}</p>
+    <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-primary/80">
+      {children}
+    </p>
   );
 }
 
-export function Heading({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Heading({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <h2
       className={cn(
@@ -55,7 +60,12 @@ export function Heading({ children, className }: { children: React.ReactNode; cl
 
 export function Lead({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("text-pretty text-[15px] leading-relaxed text-muted-foreground md:text-lg", className)}>
+    <p
+      className={cn(
+        "text-pretty text-[15px] leading-relaxed text-muted-foreground md:text-lg",
+        className,
+      )}
+    >
       {children}
     </p>
   );
@@ -174,8 +184,8 @@ export function IntegrationsSection() {
         <Eyebrow>Intégrations</Eyebrow>
         <Heading className="mt-4">Connecté aux services que vous utilisez déjà.</Heading>
         <Lead className="mt-5">
-          VYRO Premium enrichit votre bibliothèque avec les services que vous avez déjà. Rien de plus,
-          rien d'inventé.
+          VYRO Premium enrichit votre bibliothèque avec les services que vous avez déjà. Rien de
+          plus, rien d'inventé.
         </Lead>
       </Reveal>
       <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -208,7 +218,7 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
       {withHeading ? (
         <Reveal className="mx-auto max-w-2xl text-center">
           <Heading>Choisissez votre accès VYRO Premium.</Heading>
-          <Lead className="mt-5">Un seul abonnement. Toute l'expérience VYRO Premium.</Lead>
+          <Lead className="mt-5">Choisissez 3, 6 ou 12 mois d’accès au lecteur.</Lead>
         </Reveal>
       ) : null}
 
@@ -218,7 +228,7 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
             key={plan.id}
             delay={i * 80}
             className={cn(
-              "panel relative flex flex-col p-7",
+              "vyro-price-card panel relative flex flex-col p-7",
               plan.highlight && "border-primary/28 shadow-[var(--shadow-glow)]",
             )}
           >
@@ -231,7 +241,9 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
                 <span
                   className={cn(
                     "rounded-[6px] px-2 py-0.5 text-[11px] font-medium",
-                    plan.highlight ? "bg-primary/12 text-primary" : "bg-surface-2 text-muted-foreground",
+                    plan.highlight
+                      ? "bg-primary/12 text-primary"
+                      : "bg-surface-2 text-muted-foreground",
                   )}
                 >
                   {plan.badge}
@@ -251,7 +263,7 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
               size="md"
               className="mt-8 w-full"
             >
-              {plan.cta}
+              {plan.cta} <ArrowUpRight size={16} aria-hidden />
             </Button>
           </Reveal>
         ))}
@@ -297,13 +309,16 @@ export function DisclaimerSection() {
 export function FinalCta() {
   return (
     <section className="relative overflow-hidden border-t border-border">
-      <div aria-hidden className="halo left-1/2 top-1/2 h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2" />
+      <div
+        aria-hidden
+        className="halo left-1/2 top-1/2 h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2"
+      />
       <div className="relative mx-auto max-w-3xl px-5 py-28 text-center md:px-8 md:py-36">
         <Reveal>
           <Heading>Votre expérience TV commence ici.</Heading>
           <Lead className="mx-auto mt-6 max-w-xl">
-            Installez VYRO Premium et profitez d'une interface pensée jusque dans les moindres détails
-            pour votre télévision.
+            Installez VYRO Premium et profitez d'une interface pensée jusque dans les moindres
+            détails pour votre télévision.
           </Lead>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button to="/tarifs" variant="primary" size="md" className="w-full sm:w-auto">
@@ -326,18 +341,17 @@ export function FaqSection({ compact = false }: { compact?: boolean }) {
         <Heading>Questions fréquentes.</Heading>
       </Reveal>
       <Reveal delay={60} className="mx-auto mt-12 max-w-3xl">
-        <Accordion type="single" collapsible className="w-full">
-          {(compact ? FAQ.slice(0, 6) : FAQ).map((item, i) => (
-            <AccordionItem key={item.q} value={`item-${i}`} className="border-border">
-              <AccordionTrigger className="py-5 text-left text-[15px] font-medium hover:no-underline md:text-base">
+        <div className="vyro-faq">
+          {(compact ? FAQ.slice(0, 6) : FAQ).map((item) => (
+            <details key={item.q}>
+              <summary>
                 {item.q}
-              </AccordionTrigger>
-              <AccordionContent className="pb-6 text-[14.5px] leading-relaxed text-muted-foreground">
-                {item.a}
-              </AccordionContent>
-            </AccordionItem>
+                <Plus size={19} aria-hidden />
+              </summary>
+              <p>{item.a}</p>
+            </details>
           ))}
-        </Accordion>
+        </div>
       </Reveal>
     </Section>
   );

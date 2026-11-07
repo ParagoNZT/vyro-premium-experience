@@ -1,70 +1,156 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Lock } from "lucide-react";
+import { Download, MonitorDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { DOWNLOADS } from "@/config/site";
 import { useAuth } from "@/lib/auth";
+import { portalApi } from "@/lib/portal-api";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/site/Button";
+import { PortalHeading, PortalNotice } from "@/components/site/AuthShell";
 
 export const Route = createFileRoute("/account/telechargement")({
-  head: () => ({ meta: [
-    { title: "Téléchargements client – VYRO Premium" },
-    { name: "description", content: "Vos téléchargements VYRO Premium." },
-    { property: "og:title", content: "Téléchargements client – VYRO Premium" },
-    { property: "og:description", content: "Vos téléchargements VYRO Premium." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "robots", content: "noindex" },
-  ] }),
+  head: () => ({
+    meta: [{ title: "Téléchargements – VYRO Premium" }, { name: "robots", content: "noindex" }],
+  }),
   component: AccountDownloadPage,
 });
 
 function AccountDownloadPage() {
-  const { isActive } = useAuth();
+  const { isActive, user } = useAuth();
+  return <DownloadPanel key={user?.id ?? "guest"} isActive={isActive} />;
+}
+
+function DownloadPanel({ isActive }: { isActive: boolean }) {
+  const [published, setPublished] = useState<string[] | null>(null);
+  const [issue, setIssue] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const transfer = useRef<AbortController | null>(null);
+  useEffect(() => () => transfer.current?.abort(), [isActive]);
+  useEffect(() => {
+    if (!isActive) return;
+    const controller = new AbortController();
+    void portalApi<{ platforms: string[] }>("/api/download", { signal: controller.signal })
+      .then((result) => {
+        if (!controller.signal.aborted) setPublished(result.platforms);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setIssue("Impossible de vérifier les fichiers disponibles.");
+      });
+    return () => controller.abort();
+  }, [attempt, isActive]);
+
+  async function download(id: string) {
+    if (transfer.current || !isActive) return;
+    const controller = new AbortController();
+    transfer.current = controller;
+    setBusy(id);
+    setIssue("");
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new Error();
+      const response = await fetch("/api/download?platform=" + encodeURIComponent(id), {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store",
+        redirect: "error",
+        signal: controller.signal,
+      });
+      if (
+        !response.ok ||
+        response.headers.get("content-type") !== "application/vnd.android.package-archive"
+      )
+        throw new Error();
+      const apk = await response.blob();
+      if (controller.signal.aborted) return;
+      const url = URL.createObjectURL(apk);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "vyro-premium-" + id + ".apk";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      if (!controller.signal.aborted)
+        setIssue("Le téléchargement n’a pas abouti. Vérifiez votre licence ou réessayez.");
+    } finally {
+      setBusy(null);
+      transfer.current = null;
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl font-semibold">Télécharger VYRO Premium</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {isActive
-          ? "Choisissez le fichier correspondant à votre appareil."
-          : "Un accès actif est nécessaire pour télécharger l'application."}
-      </p>
-
-      {!isActive ? (
-        <div className="panel mt-8 flex flex-wrap items-center gap-4 p-6">
-          <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-          <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-            Activez un accès VYRO Premium pour débloquer les téléchargements.
-          </p>
-          <Button to="/tarifs" variant="primary" size="sm">
+    <div className="portal-enter">
+      <PortalHeading label="VYRO / Installation" title="Installer VYRO Premium">
+        Téléchargez le fichier officiel correspondant à votre téléviseur et suivez les étapes
+        d’installation.
+      </PortalHeading>
+      <div className="portal-panel portal-glow mt-7 flex flex-wrap items-center gap-4 p-5 sm:p-7">
+        <MonitorDown aria-hidden className="size-6 shrink-0 text-primary" />
+        <p className="min-w-52 flex-1 text-sm text-muted-foreground" role="status">
+          {!isActive
+            ? "Une licence active est nécessaire pour accéder aux fichiers d’installation."
+            : published?.length === 0
+              ? "Aucun fichier d’installation n’est publié pour le moment."
+              : published
+                ? "Choisissez le fichier correspondant à votre plateforme."
+                : issue
+                  ? "Fichiers indisponibles."
+                  : "Vérification des fichiers disponibles…"}
+        </p>
+        {!isActive && (
+          <Button to="/tarifs" size="sm">
             Voir les offres
           </Button>
+        )}
+        {isActive && issue && published === null && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setIssue("");
+              setAttempt((current) => current + 1);
+            }}
+          >
+            Réessayer
+          </Button>
+        )}
+      </div>
+      {issue && (
+        <div className="mt-4">
+          <PortalNotice error>{issue}</PortalNotice>
         </div>
-      ) : null}
-
-      <div className="mt-8 grid gap-3 lg:grid-cols-2">
+      )}
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {DOWNLOADS.map((target) => (
-          <div key={target.id} className="panel p-6">
-            <h2 className="font-display text-lg font-medium">{target.platform}</h2>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Version {target.version} · {target.size} · {target.updatedAt}
-            </p>
-            <div className="mt-5">
-              <Button type="button" variant="primary" size="sm" disabled={!isActive}>
-                <Download className="h-4 w-4" aria-hidden />
-                Télécharger
-              </Button>
-            </div>
-            <ol className="mt-6 space-y-2 border-t border-border pt-5 text-sm text-muted-foreground">
-              {target.steps.map((step, i) => (
-                <li key={step} className="flex gap-3">
-                  <span className="text-primary">{i + 1}.</span>
-                  <span>{step}</span>
-                </li>
+          <section key={target.id} className="portal-panel p-5">
+            <h2 className="font-display text-lg font-semibold">{target.platform}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{target.subtitle}</p>
+            <ol className="mt-4 list-inside list-decimal space-y-2 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
+              {target.steps.map((step) => (
+                <li key={step}>{step}</li>
               ))}
             </ol>
-          </div>
+            {isActive && published?.includes(target.id) && (
+              <Button
+                className="mt-5"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => void download(target.id)}
+              >
+                <Download className="size-4" aria-hidden />
+                {busy === target.id ? "Téléchargement…" : "Télécharger l’APK"}
+              </Button>
+            )}
+          </section>
         ))}
       </div>
+      {isActive && (
+        <Button to="/account/appareils" variant="secondary" size="sm" className="mt-6">
+          Associer mon appareil
+        </Button>
+      )}
     </div>
   );
 }
