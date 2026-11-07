@@ -152,6 +152,13 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.equal((await call("/api/account", { token: "first" })).json.email, accounts.first.email);
   assert.equal((await call("/api/account", { token: "second" })).json.email, accounts.second.email);
 
+  assert.deepEqual((await call("/api/checkout")).json, { enabled: false, live: false });
+  assert.equal(
+    (await post("/api/checkout", "second", { planId: "3m", requestKey: randomUUID() })).status,
+    503,
+  );
+  assert.equal(sessions.size, 0);
+  process.env.VYRO_STRIPE_ENABLED = "true";
   assert.equal((await call("/api/checkout")).status, 503);
   assert.equal(
     (await post("/api/checkout", "second", { planId: "3m", requestKey: randomUUID() })).status,
