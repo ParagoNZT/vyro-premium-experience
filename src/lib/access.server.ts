@@ -54,7 +54,8 @@ export async function identity(request: Request, admin = false): Promise<Verifie
   const { endpoint, key } = publicAuthConfig();
   const result = await fetch(endpoint, {
     headers: { Authorization: "Bearer " + token, apikey: key },
-    redirect: "error",
+    // Workers reject "error". Keep the credentials on the configured host and reject 3xx below.
+    redirect: "manual",
     signal: AbortSignal.timeout(8000),
   });
   if (result.status === 401 || result.status === 403)

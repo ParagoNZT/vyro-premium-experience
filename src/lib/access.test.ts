@@ -7,6 +7,7 @@ test("the server validates a Supabase session before granting admin privileges",
   process.env["SUPABASE_PUBLISHABLE_KEY"] = "sb_publishable_fixture";
   process.env["VYRO_ADMIN_USER_ID"] = "immutable-admin";
   delete process.env["VYRO_ADMIN_EMAIL"];
+  let authRedirect = false;
   let user = {
     id: "different",
     email: "owner@example.test",
@@ -17,6 +18,8 @@ test("the server validates a Supabase session before granting admin privileges",
     assert.equal(url, "https://auth.example.test/auth/v1/user");
     assert.equal(new Headers(init.headers).get("authorization"), "Bearer fixture");
     assert.equal(new Headers(init.headers).get("apikey"), "sb_publishable_fixture");
+    assert.equal(init.redirect, "manual");
+    if (authRedirect) return Response.redirect("https://other.example.test/auth/v1/user", 307);
     return Response.json(user);
   });
   await assert.rejects(identity(new Request("https://site.example.test/api/manage"), true), {
@@ -31,9 +34,11 @@ test("the server validates a Supabase session before granting admin privileges",
   await assert.rejects(identity(request, true), { status: 401 });
   user = { ...user, email_confirmed_at: "2026-01-01" };
   assert.equal((await identity(request, true)).id, "immutable-admin");
+  authRedirect = true;
+  await assert.rejects(identity(request, true), { status: 503 });
   process.env["SUPABASE_PUBLISHABLE_KEY"] = "sb_secret_fixture";
   await assert.rejects(identity(request, true), { status: 503 });
-  assert.equal(verify.mock.callCount(), 3);
+  assert.equal(verify.mock.callCount(), 4);
 });
 
 test("portal writes require the configured origin and bounded JSON input", async () => {
