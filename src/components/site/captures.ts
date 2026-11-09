@@ -42,4 +42,4 @@ export const scenes = [
 
 export const homeCapture = home;
 export const captureCaption =
-  "Captures réelles d’une version de développement de l’application. Contenus affichés à titre d’illustration, non inclus.";
+  "Captures de l’interface VYRO retouchées avec des affiches et des programmes fictifs. Aucun contenu n’est inclus.";
