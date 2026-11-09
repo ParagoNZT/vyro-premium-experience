@@ -34,7 +34,7 @@ export type BetaPage = {
   codes: Access[];
   hasMore: boolean;
   stats: { accesses: number; activeAccesses: number; devices: number };
-  resellers: { id: string; name: string }[];
+  resellers: { id: string; name: string; kind: "reseller" | "partner" }[];
 };
 type DialogState = { kind: "edit" | "reveal"; access: Access };
 
@@ -274,7 +274,10 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
                 <option value="show-plus">Revendeur · SHOW+</option>
                 <option value="review">SHOW+ · À vérifier</option>
                 {data?.result.resellers.map((partner) => (
-                  <option key={partner.id} value={`reseller:${partner.id}`}>
+                  <option
+                    key={`${partner.kind}:${partner.id}`}
+                    value={`${partner.kind}:${partner.id}`}
+                  >
                     Revendeur · {partner.name}
                   </option>
                 ))}

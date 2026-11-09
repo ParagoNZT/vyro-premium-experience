@@ -18,6 +18,8 @@ import { AdminPagination, AdminStats, AdminStatus, AdminTable } from "./AdminTab
 import { BetaPanel, type BetaPage } from "./BetaPanel";
 import type { AdminSection } from "./sections";
 import { TvPanelLink } from "./TvPanelLink";
+import { SupportDesk } from "@/components/account/SupportDesk";
+import { PartnerWorkspace } from "@/components/account/PartnerWorkspace";
 
 type OnDenied = (status: 401 | 403) => void;
 type Action =
@@ -193,6 +195,10 @@ export function ManagementPanel({
 }) {
   return section === "beta" ? (
     <BetaPanel onAccessDenied={onAccessDenied} />
+  ) : section === "support" ? (
+    <SupportDesk admin />
+  ) : section === "partners" ? (
+    <PartnerWorkspace admin />
   ) : (
     <ManagementSection section={section} onAccessDenied={onAccessDenied} />
   );
@@ -202,7 +208,7 @@ function ManagementSection({
   section,
   onAccessDenied,
 }: {
-  section: Exclude<AdminSection, "beta">;
+  section: Exclude<AdminSection, "beta" | "support" | "partners">;
   onAccessDenied: OnDenied;
 }) {
   const [page, setPage] = useState(0);

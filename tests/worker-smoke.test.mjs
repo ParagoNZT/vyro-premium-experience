@@ -60,6 +60,8 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0005_tv_profiles.sql",
     "../migrations/d1/0006_backup_device_kind.sql",
     "../migrations/d1/0007_show_reseller_memberships.sql",
+    "../migrations/d1/0008_partner_control.sql",
+    "../migrations/d1/0009_support_tickets.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -172,7 +174,13 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   );
   insertAccess.run(showFixture, "show-fixture", "SHOW+ · Native installation", fixtureDate, null);
   insertAccess.run(directFixture, "direct-fixture", "Direct client", fixtureDate, null);
-  insertAccess.run(reviewFixture, "review-fixture", "SHOW+ · Unconfirmed label", fixtureDate, null);
+  insertAccess.run(
+    reviewFixture,
+    "review-fixture",
+    "SHOW+ - Legacy installation",
+    fixtureDate,
+    null,
+  );
   insertAccess.run(
     partnerFixture,
     "partner-fixture",
@@ -198,13 +206,13 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.equal(resellerDirectory.status, 200);
   assert.deepEqual(
     resellerDirectory.json.devices.map((device) => device.id),
-    [showFixture],
+    [reviewFixture, showFixture].sort(),
   );
   for (const [scope, expected] of [
-    ["all", [directFixture, reviewFixture, partnerFixture, showFixture]],
+    ["all", [directFixture, partnerFixture, reviewFixture, showFixture]],
     ["direct", [directFixture]],
-    ["show-plus", [showFixture]],
-    ["review", [reviewFixture]],
+    ["show-plus", [reviewFixture, showFixture]],
+    ["review", []],
     ["reseller:" + resellerCode, [partnerFixture]],
   ]) {
     const beta = await call("/api/beta?sort=reseller&scope=" + encodeURIComponent(scope), {
@@ -216,6 +224,187 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       expected,
     );
   }
+  const partnerApi = "/api/partner-control";
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "message",
+        app: "show-plus",
+        target: directFixture,
+        title: "Bonjour",
+        message: "Essai local",
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "message",
+        app: "show-plus",
+        target: reviewFixture,
+        title: "Bonjour",
+        message: "Essai local",
+      })
+    ).status,
+    201,
+  );
+  assert.equal(
+    sqlite.prepare("SELECT target_code_hash FROM messages").get().target_code_hash,
+    "review-fixture",
+  );
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "refresh",
+        app: "show-plus",
+        target: showFixture,
+        kind: "epg",
+      })
+    ).status,
+    409,
+  );
+  sqlite.exec("INSERT INTO partner_client_capabilities VALUES ('show-fixture','2026-11-09')");
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "refresh",
+        app: "show-plus",
+        target: showFixture,
+        kind: "epg",
+      })
+    ).status,
+    201,
+  );
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "refresh",
+        app: "show-plus",
+        target: showFixture,
+        kind: "epg",
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "server",
+        app: "show-plus",
+        url: "http://not-secure.example.com",
+        confirmed: true,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await post(partnerApi, "first", {
+        action: "server",
+        app: "show-plus",
+        url: "https://stream.example.com",
+        confirmed: true,
+      })
+    ).status,
+    200,
+  );
+  const firstOrder = await post(partnerApi, "second", {
+    action: "order",
+    name: "Fixture Partner",
+    packageName: "fr.fixture.player",
+  });
+  assert.equal(firstOrder.status, 201);
+  const adminPartner = partnerApi + "?view=admin";
+  const decision = {
+    action: "decision",
+    id: firstOrder.json.id,
+    paid: true,
+    receipt: "Fixture virement",
+  };
+  assert.equal((await post(adminPartner, "first", decision)).status, 403);
+  assert.equal((await post(adminPartner, "admin", decision)).status, 200);
+  assert.equal((await post(adminPartner, "admin", decision)).status, 409);
+  const partnerApp = (await call(partnerApi, { token: "second" })).json.apps[0];
+  assert.equal(partnerApp.name, "Fixture Partner");
+  assert.equal(
+    (await call("/api/show-directory?app=" + partnerApp.id, { token: "first" })).status,
+    403,
+  );
+  const release = {
+    action: "release",
+    app: partnerApp.id,
+    versionName: "1.0",
+    versionCode: 1,
+    url: "https://releases.example.com/app.apk",
+    sha256: "a".repeat(64),
+    changelog: "",
+    initial: true,
+  };
+  assert.equal((await post(adminPartner, "admin", release)).status, 201);
+  assert.equal(
+    (await post(partnerApi, "second", { ...release, versionCode: 2, initial: false })).status,
+    409,
+  );
+  const renewal = await post(partnerApi, "second", { action: "renew", app: partnerApp.id });
+  assert.equal(renewal.status, 201);
+  assert.equal(
+    (await post(adminPartner, "admin", { ...decision, id: renewal.json.id })).status,
+    200,
+  );
+  assert.equal(
+    (await post(partnerApi, "second", { ...release, versionCode: 2, initial: false })).status,
+    201,
+  );
+  assert.equal(
+    sqlite.prepare("SELECT count(*) AS total FROM partner_update_periods").get().total,
+    1,
+  );
+  const support = "/api/support-tickets";
+  const ticket = await post(support, "second", {
+    action: "create",
+    subject: "Question de test",
+    category: "application",
+    message: "Message de test local",
+  });
+  assert.equal(ticket.status, 201);
+  assert.equal((await call(support + "?id=" + ticket.json.id, { token: "first" })).status, 404);
+  assert.equal(
+    (
+      await post(support + "?view=admin", "admin", {
+        action: "reply",
+        id: ticket.json.id,
+        message: "Réponse de test",
+      })
+    ).status,
+    200,
+  );
+  const thread = await call(support + "?id=" + ticket.json.id, { token: "second" });
+  assert.equal(thread.json.ticket.status, "waiting");
+  assert.deepEqual(
+    thread.json.replies.map((reply) => reply.author),
+    ["customer", "support"],
+  );
+  assert.equal(
+    (
+      await post(support + "?view=admin", "admin", {
+        action: "status",
+        id: ticket.json.id,
+        status: "closed",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await post(support, "second", {
+        action: "reply",
+        id: ticket.json.id,
+        message: "Tentative sur ticket fermé",
+      })
+    ).status,
+    409,
+  );
   sqlite.exec(
     "DELETE FROM show_installations WHERE code_hash='show-fixture'; DELETE FROM codes WHERE code_hash IN ('show-fixture','direct-fixture','review-fixture','partner-fixture');",
   );

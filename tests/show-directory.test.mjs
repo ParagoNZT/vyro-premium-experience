@@ -14,15 +14,16 @@ test("SHOW+ data stays limited to the verified reseller and excludes direct and 
       ),
     );
     sqlite.exec(`
-      CREATE TABLE codes (id TEXT, code_hash TEXT, name TEXT, reseller_id TEXT, enabled INT, expires_at TEXT);
+      CREATE TABLE codes (id TEXT, code_hash TEXT, name TEXT, reseller_id TEXT, enabled INT, expires_at TEXT, created_at TEXT DEFAULT '2026-11-09');
       CREATE TABLE licenses (beta_code_hash TEXT);
       CREATE TABLE show_installations (code_hash TEXT, device_hash TEXT, legacy_code_hash TEXT, created_at TEXT);
       CREATE TABLE show_management_installations (device_hash TEXT, account_id TEXT);
       CREATE TABLE show_management_accounts (id TEXT, support_id TEXT);
       CREATE TABLE device_profiles (device_hash TEXT, code_hash TEXT, last_seen TEXT);
       INSERT INTO show_reseller_memberships VALUES ('reseller-id', 'reseller@example.test', '2026-11-09', 1);
-      INSERT INTO codes VALUES
+      INSERT INTO codes(id,code_hash,name,reseller_id,enabled,expires_at) VALUES
         ('show','s','SHOW+ Device',NULL,1,NULL),
+        ('legacy','j','SHOW+ - Ancien appareil',NULL,1,NULL),
         ('spoof','x','SHOW+ Label alone',NULL,1,NULL),
         ('direct','d','VYRO Direct',NULL,1,NULL),
         ('linked','l','SHOW+ linked to VYRO',NULL,1,NULL),
@@ -36,6 +37,9 @@ test("SHOW+ data stays limited to the verified reseller and excludes direct and 
       INSERT INTO show_management_installations VALUES ('device-s','account-s');
       INSERT INTO show_management_accounts VALUES ('account-s','SHP-FIXTURE');
     `);
+    sqlite.exec(
+      readFileSync(new URL("../migrations/d1/0008_partner_control.sql", import.meta.url), "utf8"),
+    );
     const db = {
       prepare(sql) {
         const stmt = sqlite.prepare(sql);
@@ -74,7 +78,10 @@ test("SHOW+ data stays limited to the verified reseller and excludes direct and 
       ["show"],
     );
     assert.equal(allowed.devices[0].supportRef, "SHP-FIXTURE");
-    assert.equal((await lookup()).total, 1);
+    assert.deepEqual(
+      (await lookup()).devices.map((item) => item.id),
+      ["legacy", "show"],
+    );
     assert.equal((await lookup("q=VYRO")).total, 0);
     sqlite.exec("UPDATE show_reseller_memberships SET enabled=0");
     await assert.rejects(lookup(), { status: 403 });

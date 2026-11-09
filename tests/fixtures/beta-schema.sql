@@ -100,5 +100,6 @@ CREATE TABLE beta_updates (
   version_name TEXT NOT NULL,
   changelog TEXT NOT NULL DEFAULT '',
   sha256 TEXT,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  apk_url TEXT
 );

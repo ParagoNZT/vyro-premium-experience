@@ -1,4 +1,13 @@
-import { Activity, CreditCard, KeyRound, LayoutDashboard, Monitor, Users } from "lucide-react";
+import {
+  Activity,
+  CreditCard,
+  KeyRound,
+  LayoutDashboard,
+  LifeBuoy,
+  Monitor,
+  Package,
+  Users,
+} from "lucide-react";
 
 export const adminSections = {
   overview: {
@@ -27,6 +36,16 @@ export const adminSections = {
     title: "Paiements",
     description: "Consultez l’état de Stripe et l’historique des transactions réelles et de test.",
     Icon: CreditCard,
+  },
+  partners: {
+    title: "Applications partenaires",
+    description: "Gérez les demandes d’applications et les périodes de mises à jour.",
+    Icon: Package,
+  },
+  support: {
+    title: "Support",
+    description: "Consultez les tickets clients, répondez et suivez leur statut.",
+    Icon: LifeBuoy,
   },
   audit: {
     title: "Journal",

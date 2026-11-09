@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, BookOpen, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/site/Button";
 import { PortalHeading } from "@/components/site/AuthShell";
+import { SupportDesk } from "@/components/account/SupportDesk";
 
 export const Route = createFileRoute("/account/support")({
   head: () => ({
@@ -14,9 +15,9 @@ function AccountSupportPage() {
   return (
     <div className="portal-enter">
       <PortalHeading label="VYRO / Assistance" title="Comment pouvons-nous vous aider ?">
-        Installation, lecture, compte ou paiement : consultez les guides ou contactez l’assistance
-        par e-mail.
+        Ouvrez une demande et suivez les réponses depuis votre compte.
       </PortalHeading>
+      <SupportDesk />
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <section className="portal-panel portal-glow space-y-4 p-6">
           <LifeBuoy aria-hidden className="size-6 text-primary" />

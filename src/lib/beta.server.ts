@@ -63,15 +63,20 @@ export const betaRequest = api(async (request) => {
   const page = Math.floor(Math.max(0, Math.min(100000, Number(url.searchParams.get("page")) || 0)));
   const scope = url.searchParams.get("scope") ?? "all";
   const sort = url.searchParams.get("sort") ?? "recent";
-  const partnerId = scope.startsWith("reseller:") ? scope.slice(9) : null;
+  const partnerKind = scope.startsWith("partner:")
+    ? "partner"
+    : scope.startsWith("reseller:")
+      ? "reseller"
+      : null;
+  const partnerId = partnerKind ? scope.slice(partnerKind.length + 1) : null;
   let scopeSql = "1=1";
   const scopeArgs: string[] = [];
   if (scope === "show-plus") scopeSql = showRegistration;
   else if (scope === "review") scopeSql = showNeedsReview;
   else if (scope === "direct")
-    scopeSql = `c.reseller_id IS NULL AND NOT (${showRegistration}) AND NOT (${showNeedsReview})`;
+    scopeSql = `c.reseller_id IS NULL AND a.id IS NULL AND NOT (${showRegistration}) AND NOT (${showNeedsReview})`;
   else if (partnerId && z.string().uuid().safeParse(partnerId).success) {
-    scopeSql = "c.reseller_id=?";
+    scopeSql = partnerKind === "partner" ? "a.id=?" : "c.reseller_id=?";
     scopeArgs.push(partnerId);
   } else if (scope !== "all") throw new ApiError(400, "Filtre revendeur invalide.");
   if (sort !== "recent" && sort !== "name" && sort !== "reseller")
@@ -86,7 +91,7 @@ export const betaRequest = api(async (request) => {
     db
       .prepare(
         `SELECT c.id,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
-      CASE WHEN ${showRegistration} THEN 'SHOW+' ELSE r.name END AS resellerName,
+      CASE WHEN ${showRegistration} THEN 'SHOW+' ELSE coalesce(a.name,r.name) END AS resellerName,
       CASE WHEN ${showNeedsReview} THEN 1 ELSE 0 END AS needsReview,u.email AS clientEmail,
       CASE WHEN l.license_key IS NOT NULL THEN 1 ELSE 0 END AS hasRecoverableKey,
       CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
@@ -94,6 +99,8 @@ export const betaRequest = api(async (request) => {
       (SELECT max(last_seen) FROM device_profiles WHERE code_hash=c.code_hash) AS lastSeen
       FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash
       LEFT JOIN clients u ON u.id=l.client_id
+      LEFT JOIN partner_app_devices p ON p.code_hash=c.code_hash
+      LEFT JOIN partner_apps a ON a.id=p.app_id
       WHERE ${scopeSql} AND instr(lower(c.name||' '||coalesce(u.email,'')),lower(?))>0
       ORDER BY ${order},c.id LIMIT 51 OFFSET ?`,
       )
@@ -108,7 +115,13 @@ export const betaRequest = api(async (request) => {
       )
       .bind(new Date().toISOString())
       .first(),
-    db.prepare("SELECT id,name FROM resellers ORDER BY name COLLATE NOCASE,id").all(),
+    db
+      .prepare(
+        `SELECT id,name,'reseller' AS kind FROM resellers
+      UNION ALL SELECT id,name,'partner' AS kind FROM partner_apps WHERE id<>'show-plus'
+      ORDER BY name COLLATE NOCASE,id`,
+      )
+      .all(),
   ]);
   return json({
     codes: codes.results.slice(0, 50),

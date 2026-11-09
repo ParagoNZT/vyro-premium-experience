@@ -7,7 +7,17 @@ import type { ShowDirectoryPage } from "@/lib/show-directory.server";
 
 const date = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 
-export function ShowDirectory() {
+export function ShowDirectory({
+  app = "show-plus",
+  name = "SHOW+",
+  admin = false,
+  onManage,
+}: {
+  app?: string;
+  name?: string;
+  admin?: boolean;
+  onManage?: (device: ShowDirectoryPage["devices"][number]) => void;
+}) {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -20,7 +30,12 @@ export function ShowDirectory() {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    const params = new URLSearchParams({ q: search, page: String(page) });
+    const params = new URLSearchParams({
+      q: search,
+      page: String(page),
+      app,
+      view: admin ? "admin" : "mine",
+    });
     void portalApi<ShowDirectoryPage>(`/api/show-directory?${params}`, {
       signal: controller.signal,
     })
@@ -37,13 +52,13 @@ export function ShowDirectory() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, page, refresh]);
+  }, [search, page, refresh, app, admin]);
 
   if (!result && !error) return null;
 
   return (
     <section
-      id="show-plus"
+      id={app}
       className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
       aria-labelledby="show-directory-title"
       aria-busy={loading}
@@ -51,10 +66,10 @@ export function ShowDirectory() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            SHOW+ / Revendeur
+            {name} / Appareils
           </p>
           <h2 id="show-directory-title" className="font-display text-xl font-semibold">
-            Utilisateurs SHOW+
+            Utilisateurs {name}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Consultez les appareils enregistrés avec votre application.
@@ -115,20 +130,24 @@ export function ShowDirectory() {
               <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
                 {search
                   ? "Aucun appareil ne correspond à cette recherche."
-                  : "Aucun appareil SHOW+ enregistré."}
+                  : "Aucun appareil enregistré."}
               </p>
             ) : (
               <div className="mt-5 overflow-x-auto">
                 <table className="w-full min-w-[32rem] text-left text-sm">
                   <thead className="text-muted-foreground">
                     <tr>
-                      {["Appareil", "Référence d’assistance", "Accès", "Dernière activité"].map(
-                        (label) => (
-                          <th key={label} scope="col" className="px-3 py-2 font-medium">
-                            {label}
-                          </th>
-                        ),
-                      )}
+                      {[
+                        "Appareil",
+                        "Référence d’assistance",
+                        "Accès",
+                        "Dernière activité",
+                        ...(onManage ? ["Actions"] : []),
+                      ].map((label) => (
+                        <th key={label} scope="col" className="px-3 py-2 font-medium">
+                          {label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border border-y border-border">
@@ -144,6 +163,19 @@ export function ShowDirectory() {
                             ? date.format(new Date(device.lastSeen))
                             : "—"}
                         </td>
+                        {onManage && (
+                          <td className="px-3 py-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              aria-label={`Gérer ${device.name}`}
+                              onClick={() => onManage(device)}
+                            >
+                              Gérer
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

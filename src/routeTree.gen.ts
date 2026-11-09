@@ -37,9 +37,11 @@ import { Route as ApiBetaKeyRouteImport } from './routes/api.beta-key'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiDownloadRouteImport } from './routes/api.download'
 import { Route as ApiManageRouteImport } from './routes/api.manage'
+import { Route as ApiPartnerControlRouteImport } from './routes/api.partner-control'
 import { Route as ApiSettingsBackupsRouteImport } from './routes/api.settings-backups'
 import { Route as ApiShowDirectoryRouteImport } from './routes/api.show-directory'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
+import { Route as ApiSupportTicketsRouteImport } from './routes/api.support-tickets'
 import { Route as ApiTvSettingsRouteImport } from './routes/api.tv-settings'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
@@ -186,6 +188,11 @@ const ApiManageRoute = ApiManageRouteImport.update({
   path: '/api/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPartnerControlRoute = ApiPartnerControlRouteImport.update({
+  id: '/api/partner-control',
+  path: '/api/partner-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSettingsBackupsRoute = ApiSettingsBackupsRouteImport.update({
   id: '/api/settings-backups',
   path: '/api/settings-backups',
@@ -199,6 +206,11 @@ const ApiShowDirectoryRoute = ApiShowDirectoryRouteImport.update({
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe-webhook',
   path: '/api/stripe-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSupportTicketsRoute = ApiSupportTicketsRouteImport.update({
+  id: '/api/support-tickets',
+  path: '/api/support-tickets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTvSettingsRoute = ApiTvSettingsRouteImport.update({
@@ -255,9 +267,11 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/partner-control': typeof ApiPartnerControlRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -292,9 +306,11 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/partner-control': typeof ApiPartnerControlRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -331,9 +347,11 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/partner-control': typeof ApiPartnerControlRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -371,9 +389,11 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/partner-control'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
+    | '/api/support-tickets'
     | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -408,9 +428,11 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/partner-control'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
+    | '/api/support-tickets'
     | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -446,9 +468,11 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/partner-control'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
+    | '/api/support-tickets'
     | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -477,9 +501,11 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiDownloadRoute: typeof ApiDownloadRoute
   ApiManageRoute: typeof ApiManageRoute
+  ApiPartnerControlRoute: typeof ApiPartnerControlRoute
   ApiSettingsBackupsRoute: typeof ApiSettingsBackupsRoute
   ApiShowDirectoryRoute: typeof ApiShowDirectoryRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiSupportTicketsRoute: typeof ApiSupportTicketsRoute
   ApiTvSettingsRoute: typeof ApiTvSettingsRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
@@ -685,6 +711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiManageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/partner-control': {
+      id: '/api/partner-control'
+      path: '/api/partner-control'
+      fullPath: '/api/partner-control'
+      preLoaderRoute: typeof ApiPartnerControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/settings-backups': {
       id: '/api/settings-backups'
       path: '/api/settings-backups'
@@ -704,6 +737,13 @@ declare module '@tanstack/react-router' {
       path: '/api/stripe-webhook'
       fullPath: '/api/stripe-webhook'
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/support-tickets': {
+      id: '/api/support-tickets'
+      path: '/api/support-tickets'
+      fullPath: '/api/support-tickets'
+      preLoaderRoute: typeof ApiSupportTicketsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tv-settings': {
@@ -791,9 +831,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiDownloadRoute: ApiDownloadRoute,
   ApiManageRoute: ApiManageRoute,
+  ApiPartnerControlRoute: ApiPartnerControlRoute,
   ApiSettingsBackupsRoute: ApiSettingsBackupsRoute,
   ApiShowDirectoryRoute: ApiShowDirectoryRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiSupportTicketsRoute: ApiSupportTicketsRoute,
   ApiTvSettingsRoute: ApiTvSettingsRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,

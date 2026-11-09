@@ -1,0 +1,313 @@
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -113,6 +113,17 @@
+     betaKeyAlias,
+     betaKeyPassword
+ ).all(String::isNotBlank)
++
++val partnerAppId = providers.gradleProperty("VYRO_PARTNER_APP_ID").orElse("").get()
++val partnerPackage = providers.gradleProperty("VYRO_PARTNER_PACKAGE").orElse("").get()
++val partnerName = providers.gradleProperty("VYRO_PARTNER_NAME").orElse("").get()
++val partnerSigner = providers.gradleProperty("VYRO_PARTNER_SIGNER_SHA256").orElse("").get().lowercase()
++require(partnerAppId.isEmpty() || (
++    Regex("[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}").matches(partnerAppId) &&
++    Regex("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){2,}").matches(partnerPackage) &&
++    !partnerPackage.startsWith("com.vyro.") && partnerName.isNotBlank() &&
++    Regex("[a-f0-9]{64}").matches(partnerSigner)
++)) { "Configure the partner UUID, its Android package and its display name together." }
+ 
+ android {
+     namespace = "com.vyro.tv"
+@@ -136,6 +147,8 @@
+         buildConfigField("Boolean", "SHOW_SIDEBAR_VITRINE", "false")
+         buildConfigField("Boolean", "SHOW_NAVIGATION_PREVIEW", "false")
+         buildConfigField("Boolean", "SHOW_TV_CINEMA_NAVIGATION", "false")
++        buildConfigField("String", "PARTNER_APP_ID", "\"\"")
++        buildConfigField("String", "PARTNER_SIGNER_SHA256", "\"\"")
+         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+         vectorDrawables.useSupportLibrary = true
+         // One APK for physical phones and Android/Google/Fire TV devices.
+@@ -217,6 +230,9 @@
+             }
+             // Legacy flag selects the dedicated SHOW+ edition; it no longer enables a licence gate.
+             buildConfigField("Boolean", "BETA_ACCESS_ENABLED", "true")
++            buildConfigField("String", "PARTNER_APP_ID", "\"$partnerAppId\"")
++            buildConfigField("String", "PARTNER_SIGNER_SHA256", "\"$partnerSigner\"")
++            manifestPlaceholders["partnerAppLabel"] = if (partnerAppId.isEmpty()) "@string/app_name" else partnerName
+             buildConfigField("Boolean", "SHOW_TV_CINEMA_NAVIGATION", "true")
+             buildConfigField("String", "BETA_ACCESS_API_BASE_URL", "\"$betaAccessApiBaseUrl\"")
+             buildConfigField("String", "UPDATE_MANIFEST_URL", "\"$betaUpdateManifestUrl\"")
+@@ -313,9 +329,10 @@
+         variant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
+     }
+     onVariants(selector().withBuildType("beta")) { variant ->
++        if (partnerAppId.isNotEmpty()) variant.applicationId.set(partnerPackage)
+         variant.outputs.forEach { output ->
+-            output.versionCode.set(343)
+-            output.versionName.set("1.0.45")
++            output.versionCode.set(providers.gradleProperty("VYRO_PARTNER_VERSION_CODE").map(String::toInt).orElse(344))
++            output.versionName.set(providers.gradleProperty("VYRO_PARTNER_VERSION_NAME").orElse("1.0.46"))
+         }
+     }
+ }
+--- a/app/src/beta/AndroidManifest.xml
++++ b/app/src/beta/AndroidManifest.xml
+@@ -1,6 +1,6 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+     <application
+-        android:label="@string/app_name"
++        android:label="${partnerAppLabel}"
+         android:icon="@drawable/beta_launcher_icon"
+         android:roundIcon="@drawable/beta_launcher_icon"
+         android:banner="@drawable/beta_tv_banner"
+--- /dev/null
++++ b/app/src/main/java/com/vyro/tv/PartnerControl.kt
+@@ -0,0 +1,58 @@
++package com.vyro.tv
++
++import android.content.Context
++import androidx.compose.runtime.staticCompositionLocalOf
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
++import org.json.JSONObject
++
++internal data class PartnerCommand(val id: String, val kind: String)
++internal data class PartnerControl(
++    val commands: List<PartnerCommand>,
++    val complete: suspend (String, Boolean) -> Unit,
++)
++internal val LocalPartnerControl = staticCompositionLocalOf<PartnerControl?> { null }
++
++private val commandId = Regex("[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}")
++
++internal fun partnerPost(context: Context, path: String, extra: JSONObject = JSONObject()): JSONObject {
++    val identity = ShowInstallationManager.get(context).identity()
++    return showPost(context, path, extra.put("code", identity.token).put("deviceId", identity.deviceId))
++}
++
++internal suspend fun readPartnerCommands(context: Context): List<PartnerCommand>? = withContext(Dispatchers.IO) {
++    try {
++        val response = partnerPost(context, "/v1/show/partner-control")
++        val array = response.optJSONArray("commands")
++        val preferences = context.getSharedPreferences("partner_command_results", Context.MODE_PRIVATE)
++        buildList {
++            for (index in 0 until minOf(array?.length() ?: 0, 8)) {
++                val row = array?.optJSONObject(index) ?: continue
++                val id = row.optString("id")
++                val kind = row.optString("kind")
++                if (!commandId.matches(id) || kind !in setOf("playlist", "epg")) continue
++                val previous = preferences.getString(id, null)
++                if (previous != null) sendPartnerReceipt(context, id, previous)
++                else add(PartnerCommand(id, kind))
++            }
++        }
++    } catch (cancelled: CancellationException) { throw cancelled }
++    catch (_: Exception) { null }
++}
++
++private fun sendPartnerReceipt(context: Context, id: String, outcome: String) {
++    val ack = JSONObject().put("id", id).put("outcome", outcome)
++    val result = partnerPost(context, "/v1/show/partner-control", JSONObject().put("ack", ack))
++    if (result.optBoolean("ok"))
++        context.getSharedPreferences("partner_command_results", Context.MODE_PRIVATE).edit().remove(id).apply()
++}
++
++internal suspend fun completePartnerCommand(context: Context, id: String, success: Boolean) = withContext(Dispatchers.IO) {
++    val outcome = if (success) "applied" else "failed"
++    context.getSharedPreferences("partner_command_results", Context.MODE_PRIVATE)
++        .edit().putString(id, outcome).apply()
++    try { sendPartnerReceipt(context, id, outcome) }
++    catch (cancelled: CancellationException) { throw cancelled }
++    catch (_: Exception) { /* The next authenticated poll retries the receipt. */ }
++}
+--- a/app/src/main/java/com/vyro/tv/ShowPlayerGate.kt
++++ b/app/src/main/java/com/vyro/tv/ShowPlayerGate.kt
+@@ -37,6 +37,7 @@
+     val pending = remember(inbox, announced) { inbox.filter { !it.isRead && it.id !in announced } }
+     var credential by remember { mutableStateOf<String?>(null) }
+     var hidden by remember { mutableStateOf(emptySet<String>()) }
++    var commands by remember { mutableStateOf(emptyList<PartnerCommand>()) }
+     DisposableEffect(owner) {
+         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_START) refresh++ }
+         owner.lifecycle.addObserver(observer)
+@@ -63,6 +64,7 @@
+                     if (snapshot.playlistChanged) revision++
+                     withContext(Dispatchers.IO) { acknowledgeTargetedMessages(context, token, snapshot.messages) }
+                     ShowMessageReplies.sync(context.applicationContext, token)
++                    readPartnerCommands(context.applicationContext)?.let { commands = it }
+                 }
+             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+             catch (_: ShowRegistrationException) {
+@@ -80,6 +82,11 @@
+         }
+     }
+     LaunchedEffect(feedback) { if (feedback != null) { delay(6_000); feedback = null } }
++    val control = PartnerControl(commands) { id, success ->
++        completePartnerCommand(context.applicationContext, id, success)
++        commands = commands.filterNot { it.id == id }
++    }
++    CompositionLocalProvider(LocalPartnerControl provides control) {
+     content(revision, inbox, ShowInboxAlerts(pending, feedback), { ids ->
+         val next = (announced + ids).toList().takeLast(300).toSet()
+         if (next != announced) {
+@@ -96,4 +103,5 @@
+             else feedback = "Suppression impossible. Réessayez."
+         } }
+     }, { refresh++ })
++    }
+ }
+--- a/app/src/main/java/com/vyro/tv/ShowInstallationManager.kt
++++ b/app/src/main/java/com/vyro/tv/ShowInstallationManager.kt
+@@ -114,6 +114,10 @@
+     }
+     private fun register(identity: ShowInstallationIdentity): JSONObject {
+         val body = JSONObject().put("deviceId", identity.deviceId).put("token", identity.token).put("device", deviceInfo())
++        if (BuildConfig.PARTNER_APP_ID.isNotEmpty()) {
++            body.put("partnerAppId", BuildConfig.PARTNER_APP_ID).put("partnerPackage", BuildConfig.APPLICATION_ID)
++            return post("/v1/show/register", body)
++        }
+         previousCode()
+             ?.takeIf { it.startsWith("VYRO-") || it.startsWith("SHOW-") }?.let { body.put("previousCode", it) }
+         return post("/v1/show/register", body)
+--- a/app/src/main/java/com/vyro/tv/data/AppUpdateManager.kt
++++ b/app/src/main/java/com/vyro/tv/data/AppUpdateManager.kt
+@@ -89,7 +89,9 @@
+             if (BuildConfig.BETA_ACCESS_ENABLED) "Source de mise à jour non configurée." else "Source non configurée. Renseigne VYRO_UPDATE_MANIFEST_URL dans gradle.properties."
+         )
+         runCatching {
+-            val json = manifestSource?.invoke() ?: readText(BuildConfig.UPDATE_MANIFEST_URL)
++            val json = manifestSource?.invoke() ?: if (BuildConfig.BETA_ACCESS_ENABLED && BuildConfig.PARTNER_APP_ID.isNotEmpty()) {
++                com.vyro.tv.partnerPost(context, "/v1/show/partner-control/update").toString()
++            } else readText(BuildConfig.UPDATE_MANIFEST_URL)
+             val root = JSONObject(json)
+             val info = RemoteUpdate(
+                 versionCode = root.getInt("versionCode"),
+--- a/app/src/main/java/com/vyro/tv/security/AppIntegrity.kt
++++ b/app/src/main/java/com/vyro/tv/security/AppIntegrity.kt
+@@ -15,7 +15,7 @@
+         if (!BuildConfig.BETA_ACCESS_ENABLED) return true
+         return verified ?: synchronized(this) {
+             verified ?: runCatching {
+-                context.packageName == "com.vyro.tv.beta" && matches(context.packageManager.getPackageInfo(context.packageName, flags()))
++                context.packageName == expectedPackage() && matches(context.packageManager.getPackageInfo(context.packageName, flags()))
+             }.getOrDefault(false).also { verified = it }
+         }
+     }
+@@ -23,7 +23,7 @@
+     fun archiveMatches(context: Context, path: String): Boolean {
+         val candidate = context.packageManager.getPackageArchiveInfo(path, archiveFlags()) ?: return false
+         if (candidate.packageName != context.packageName) return false
+-        if (BuildConfig.BETA_ACCESS_ENABLED) return candidate.packageName == "com.vyro.tv.beta" && matches(candidate)
++        if (BuildConfig.BETA_ACCESS_ENABLED) return candidate.packageName == expectedPackage() && matches(candidate)
+         val installed = context.packageManager.getPackageInfo(context.packageName, flags())
+         val installedSigners = current(installed).toSet()
+         return SigningIdentityPolicy.accepts(current(candidate), history(candidate), multiple(candidate), installedSigners)
+@@ -43,5 +43,9 @@
+     private fun history(info: PackageInfo): List<String> = if (Build.VERSION.SDK_INT >= 28 && !multiple(info))
+         info.signingInfo?.signingCertificateHistory.orEmpty().map { digest(it.toByteArray()) } else emptyList()
+     private fun multiple(info: PackageInfo) = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.hasMultipleSigners() == true else current(info).size > 1
+-    private fun matches(info: PackageInfo) = SigningIdentityPolicy.accepts(current(info), history(info), multiple(info), official)
++    private fun expectedPackage() = if (BuildConfig.PARTNER_APP_ID.isEmpty()) "com.vyro.tv.beta" else BuildConfig.APPLICATION_ID
++    private fun matches(info: PackageInfo) = SigningIdentityPolicy.accepts(
++        current(info), history(info), multiple(info),
++        if (BuildConfig.PARTNER_APP_ID.isEmpty()) official else setOf(BuildConfig.PARTNER_SIGNER_SHA256)
++    )
+ }
+--- a/app/src/main/java/com/vyro/tv/ui/IptvApp.kt
++++ b/app/src/main/java/com/vyro/tv/ui/IptvApp.kt
+@@ -593,7 +593,8 @@
+         premiumEntitlement = activeProfile?.id?.let(premiumStore::load) ?: PremiumEntitlement()
+     }
+ 
+-    fun refreshEpg(resolvedSource: PlaylistSource, resolvedCatalog: Catalog, appSettings: AppSettings, notify: Boolean = false) {
++    fun refreshEpg(resolvedSource: PlaylistSource, resolvedCatalog: Catalog, appSettings: AppSettings, notify: Boolean = false,
++        onComplete: ((Boolean) -> Unit)? = null) {
+         val key = listOf(activeProfile?.id, vault.playlistId(resolvedSource), System.identityHashCode(resolvedCatalog),
+             appSettings.epgUrl, appSettings.epgOffsetMinutes, appSettings.epgEnabled)
+         if (notify) epgRefreshNotice = "Actualisation du guide TV en cours…"
+@@ -607,6 +608,7 @@
+             epgNext = emptyMap()
+             epgSchedule = emptyMap()
+             epgRefreshNotice = null
++            onComplete?.invoke(false)
+             return
+         }
+         epgRefreshError = ""
+@@ -621,11 +623,13 @@
+                 epgNext = snapshot.next
+                 epgSchedule = snapshot.schedule
+                 if (epgRefreshNotice != null) epgRefreshNotice = "Guide TV actualisé avec succès"
++                onComplete?.invoke(true)
+             }.onFailure {
+                 if (it is kotlinx.coroutines.CancellationException) throw it
+                 if (generation != epgGeneration) return@onFailure
+                 epgRefreshError = "Le guide TV n’a pas pu être actualisé."
+                 if (epgRefreshNotice != null) epgRefreshNotice = "Échec de l’actualisation du guide TV"
++                onComplete?.invoke(false)
+             }
+             } finally { if (generation == epgGeneration) epgLoading = false }
+         }
+@@ -656,7 +660,8 @@
+         resolvedSource: PlaylistSource,
+         savePlaylist: Boolean = false,
+         notifyPlaylistRefresh: Boolean = false,
+-        backgroundRefresh: Boolean = false
++        backgroundRefresh: Boolean = false,
++        onComplete: ((Boolean) -> Unit)? = null,
+     ) {
+         // A remote beta assignment can arrive while the first playlist is still loading.
+         // That request must finish the startup flow even if it replaces an in-flight load.
+@@ -751,7 +756,9 @@
+                             buildPlaylistRefreshNotice(resolvedSource.profileName, newCatalog)
+                         )
+                     }
++                    onComplete?.invoke(true)
+                 }.onFailure { failure ->
++                    if (failure is kotlinx.coroutines.CancellationException) throw failure
+                     if (requestGeneration == connectGeneration) {
+                         if (!refreshInBackground) error = failure.message ?: "Connexion impossible."
+                         if (!refreshInBackground && page == AppPage.CATALOG && session == null)
+@@ -762,6 +769,7 @@
+                                 reason = failure.message
+                             )
+                         }
++                        onComplete?.invoke(false)
+                         if (page == AppPage.STARTUP) {
+                             loginReturnPage = AppPage.STARTUP
+                             page = AppPage.LOGIN
+@@ -770,6 +778,34 @@
+                 }
+             if (requestGeneration == connectGeneration) loading = false
+         }
++    }
++
++    val partnerControl = com.vyro.tv.LocalPartnerControl.current
++    val pendingPartnerCommand = partnerControl?.commands?.firstOrNull()
++    LaunchedEffect(pendingPartnerCommand, activeProfile?.id, source, catalog != null) {
++        val control = partnerControl ?: return@LaunchedEffect
++        val command = pendingPartnerCommand ?: return@LaunchedEffect
++        val profile = activeProfile?.id ?: return@LaunchedEffect
++        val current = source ?: return@LaunchedEffect
++        val currentCatalog = catalog ?: return@LaunchedEffect
++        val result = kotlinx.coroutines.CompletableDeferred<Boolean>()
++        val job = when (command.kind) {
++            "playlist" -> {
++                connectJob?.join()
++                if (source != current || activeProfile?.id != profile) return@LaunchedEffect
++                connect(profile, current, backgroundRefresh = true, onComplete = { result.complete(it) })
++                connectJob
++            }
++            "epg" -> {
++                epgJob?.join()
++                if (source != current || activeProfile?.id != profile) return@LaunchedEffect
++                refreshEpg(current, currentCatalog, settings, onComplete = { result.complete(it) })
++                epgJob
++            }
++            else -> return@LaunchedEffect
++        }
++        job?.join()
++        if (result.isCompleted) control.complete(command.id, result.await())
+     }
+ 
+     LaunchedEffect(playlistRefreshState) {

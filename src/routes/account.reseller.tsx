@@ -17,7 +17,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/site/Button";
 import { Button as IconButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShowDirectory } from "@/components/account/ShowDirectory";
+import { PartnerWorkspace } from "@/components/account/PartnerWorkspace";
 import { resellerSchema, exportResellerConfig, type ResellerConfig } from "@/lib/reseller";
 
 export const Route = createFileRoute("/account/reseller")({
@@ -336,7 +336,7 @@ function ResellerPage() {
           </>
         )}
       </section>
-      {identity && <ShowDirectory key={identity.id + ":" + identity.email} />}
+      {identity && <PartnerWorkspace key={identity.id + ":" + identity.email} />}
       {error && (
         <p role="alert" className="mt-4 text-sm text-destructive">
           {error}
