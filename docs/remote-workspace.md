@@ -1,0 +1,17 @@
+# Gestion à distance VYRO
+
+Le panneau est accessible depuis **Espace client → Gestion à distance**. Dans une version Android compatible, ouvrir **Réglages → Sauvegardes → Afficher le QR code**. Le code expire après cinq minutes et n'associe l'appareil qu'après connexion et confirmation du compte VYRO. Sur mobile, le bouton **Associer dans le navigateur** remplace le scan.
+
+L'association porte sur le profil Android sélectionné. La liste des appareils, les catalogues et les sauvegardes appartiennent au compte qui a confirmé l'association. Les permissions d'administration et de revendeur ne donnent pas accès à ces historiques. La dissociation supprime l'appareil et ses commandes; le compte garde ses sauvegardes.
+
+- VYRO permet de renommer les playlists personnelles et d'ajouter ou modifier les URL M3U HTTPS. Une nouvelle URL constitue une nouvelle source; les favoris et l'historique de l'ancienne playlist ne sont pas déplacés. Une source Xtream peut être renommée si elle n'est pas partagée; serveur et identifiants se modifient dans l'application. Les sources SHOW+ assignées par le revendeur restent dans son panneau de gestion.
+- Les réglages de catégories et groupes portent sur la playlist ouverte. Le panneau présente jusqu'à 700 chaînes et suspend l'édition des catégories si le catalogue ne peut pas être représenté fidèlement dans la limite de 500 catégories.
+- Les commandes attendent au maximum 30 minutes et sont traitées quand l'application est ouverte sur le profil associé. L'état « Appliquée » confirme l'enregistrement dans l'application, pas la disponibilité de la source IPTV. Les URL M3U sont chiffrées par le navigateur pour l'appareil, et le serveur ne récupère jamais la playlist.
+- Les sauvegardes complètes enregistrent réglages, favoris, liste à voir, catégories, groupes et positions de lecture, sans connexion de playlist. Jusqu'à 30 sauvegardes peuvent être stockées, exportées et importées au format JSON VYRO. Pour restaurer l'historique, ouvrir la même playlist sur la destination. Les sauvegardes de l'ancien espace sont transférables par export/import; les fonctions de synchronisation existantes restent dans leur espace.
+- **Espace revendeur → Commandes** : création à 100 €, couverture de mises à jour à 20 € par an. Les deux règlements sont confirmés séparément. L'APK n'est disponible qu'après publication de la première version signée. Le tableau **Console → Échéances** filtre licences, accès TV et couverture annuelle par période et par client ou revendeur. Stripe reste désactivé.
+
+## Intégration Android
+
+Le patch `android/remote-workspace.patch` s'applique à la base Android commune VYRO 0.24.49 / SHOW+ 1.0.46 qui contient déjà `TvSettingsSync.kt` et `TvProfileTransfer.kt`. L'intégration conserve l'ancien protocole SHOW+ et laisse les variantes partenaires distinctes. Pour une version officielle VYRO, appliquer aussi la messagerie VYRO si la branche ne la contient pas, conserver le canal VYRO et signer avec le certificat de l'application distribuée. Ne pas publier le binaire de test.
+
+Le test `RemoteWorkspaceTest` utilise des profils et une playlist fictive. Pour le serveur, construire le Worker puis lancer `node --test tests/worker-smoke.test.mjs`. La migration D1 0012 doit être appliquée avant le déploiement du site. Les tests du serveur ne nécessitent aucun compte de production.

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
+import { sealPlaylistUrl } from "../src/lib/remote-seal.ts";
 import { readFileSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { DatabaseSync } from "node:sqlite";
@@ -64,6 +65,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0009_support_tickets.sql",
     "../migrations/d1/0010_support_processing.sql",
     "../migrations/d1/0011_vyro_app_console.sql",
+    "../migrations/d1/0012_remote_workspace.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -1108,6 +1110,217 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   );
   assert.deepEqual((await tv(chambre, "poll")).json, { linked: false, command: null });
   assert.equal((await firstPage()).backups.length, 1);
+
+  await t.test("QR, encrypted playlists, layouts and private backups", async () => {
+    const endpoint = "/api/remote-workspace";
+    const native = "/api/remote-device";
+    const pairKey = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const publicKey = pairKey.publicKey.export({ type: "spki", format: "der" }).toString("base64");
+    function device() {
+      const id = randomUUID(),
+        token = randomBytes(32).toString("hex");
+      return {
+        id,
+        send: (payload) =>
+          call(native, { native: true, body: JSON.stringify({ id, token, ...payload }) }),
+      };
+    }
+    const tvDevice = device(),
+      phone = device(),
+      other = device();
+    const browser = (payload, token = "first") => post(endpoint, token, payload);
+    async function pair(inst, kind, owner = "first", edition = "vyro") {
+      const result = await inst.send({ action: "pair", edition, kind, name: kind, publicKey });
+      assert.equal(result.status, 200, JSON.stringify(result));
+      const { proof } = result.json;
+      assert.equal((await browser({ action: "preview", proof }, owner)).json.edition, edition);
+      assert.equal((await browser({ action: "claim", proof }, owner)).status, 200);
+      assert.equal((await browser({ action: "claim", proof }, "admin")).status, 409);
+    }
+    await pair(tvDevice, "tv");
+    await pair(phone, "mobile");
+    await pair(other, "tv", "second", "show-plus");
+    const playlist = bundle.playlist;
+    const context = "a".repeat(64);
+    const groups = bundle.groups;
+    const manifest = {
+      context,
+      active: playlist,
+      playlists: [{ id: playlist, name: "Démo", kind: "m3u", editable: true }],
+      categories: [{ id: "LIVE:1", name: "Infos" }],
+      channels: [{ id: "live:123", name: "Démo" }],
+      layout: { visible: null, groups },
+      layoutComplete: true,
+    };
+    assert.equal((await tvDevice.send({ action: "poll", catalog: manifest })).status, 200);
+    assert.equal((await phone.send({ action: "poll", catalog: manifest })).status, 200);
+    assert.equal((await other.send({ action: "poll", catalog: manifest })).status, 200);
+    assert.equal((await call(endpoint, { token: "first" })).json.devices.length, 2);
+    assert.equal((await call(endpoint, { token: "admin" })).json.devices.length, 0);
+    assert.equal(
+      (await browser({ action: "backup", device: other.id, name: "Privé", full: true })).status,
+      404,
+    );
+    assert.equal(
+      (
+        await browser(
+          { action: "playlist", device: other.id, context, playlist, name: "Autre" },
+          "second",
+        )
+      ).status,
+      400,
+    );
+    const layout = {
+      visible: ["LIVE:1"],
+      groups: [
+        { id: "group-" + randomUUID(), name: "Infos", pinned: true, channels: ["live:123"] },
+      ],
+    };
+    assert.equal(
+      (
+        await browser({
+          action: "layout",
+          device: tvDevice.id,
+          context: "e".repeat(64),
+          playlist,
+          layout,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (await browser({ action: "layout", device: tvDevice.id, context, playlist, layout })).status,
+      202,
+    );
+    const action = (await tvDevice.send({ action: "poll", catalog: manifest })).json.job;
+    assert.deepEqual(action.payload.layout, layout);
+    assert.equal((await browser({ action: "cancel", job: action.id })).status, 409);
+    await phone.send({ action: "complete", jobId: action.id, ok: true });
+    assert.equal(
+      (await tvDevice.send({ action: "poll", catalog: manifest })).json.job.id,
+      action.id,
+    );
+    await tvDevice.send({ action: "complete", jobId: action.id, ok: true });
+    assert.equal((await tvDevice.send({ action: "poll", catalog: manifest })).json.job, null);
+
+    const url = "https://playlist.example.test/list.m3u?password=fixture-secret";
+    const sealed = await sealPlaylistUrl(publicKey, url, tvDevice.id);
+    assert.equal(
+      (
+        await browser({
+          action: "playlist",
+          device: tvDevice.id,
+          context,
+          playlist,
+          name: "Démo M3U",
+          sealed,
+        })
+      ).status,
+      202,
+    );
+    const queued = (await tvDevice.send({ action: "poll", catalog: manifest })).json.job;
+    assert.deepEqual(queued.payload.sealed, sealed);
+    assert.doesNotMatch(
+      sqlite.prepare("SELECT payload FROM remote_jobs WHERE id=?").get(queued.id).payload,
+      /fixture-secret/,
+    );
+    await tvDevice.send({ action: "complete", jobId: queued.id, ok: true });
+    assert.equal(
+      sqlite.prepare("SELECT payload FROM remote_jobs WHERE id=?").get(queued.id).payload,
+      null,
+    );
+
+    assert.equal(
+      (await browser({ action: "backup", device: tvDevice.id, name: "Salon", full: true })).status,
+      202,
+    );
+    const capture = (await tvDevice.send({ action: "poll", catalog: manifest })).json.job;
+    assert.equal(capture.kind, "backup");
+    assert.equal(
+      (
+        await tvDevice.send({
+          action: "complete",
+          jobId: capture.id,
+          ok: true,
+          settings,
+          profile: bundle,
+        })
+      ).status,
+      200,
+    );
+    const file = await call(endpoint + "?backup=" + capture.id, { token: "first" });
+    assert.deepEqual(file.json.profile, bundle);
+    assert.equal((await call(endpoint + "?backup=" + capture.id, { token: "second" })).status, 404);
+    assert.equal((await call(endpoint + "?backup=" + capture.id, { token: "admin" })).status, 404);
+    const imported = await browser({ action: "import", name: "Import JSON", file: file.json });
+    assert.equal(imported.status, 200);
+    await phone.send({ action: "poll", catalog: { ...manifest, active: "b".repeat(64) } });
+    assert.equal(
+      (await browser({ action: "restore", device: phone.id, backup: capture.id })).status,
+      409,
+    );
+    await phone.send({ action: "poll", catalog: manifest });
+    assert.equal(
+      (await browser({ action: "restore", device: phone.id, backup: capture.id })).status,
+      202,
+    );
+    const restore = (await phone.send({ action: "poll", catalog: manifest })).json.job;
+    assert.deepEqual(restore.payload.profile, bundle);
+    await phone.send({ action: "complete", jobId: restore.id, ok: true });
+    assert.equal((await browser({ action: "unlink", device: tvDevice.id }, "second")).status, 404);
+    assert.equal((await browser({ action: "unlink", device: tvDevice.id })).status, 200);
+    assert.equal((await tvDevice.send({ action: "poll", catalog: manifest })).json.linked, false);
+  });
+
+  await t.test("white label order, separate coverage and admin deadlines", async () => {
+    const ordered = await post(partnerApi, "second", {
+      action: "order",
+      name: "Studio Démo",
+      packageName: "fr.studio.demo",
+      accent: "#4455aa",
+      brief: "Version TV et téléphone",
+      updates: true,
+    });
+    assert.equal(ordered.status, 201, JSON.stringify(ordered));
+    const adminPath = partnerApi + "?view=admin";
+    const decide = (id) =>
+      post(adminPath, "admin", { action: "decision", id, paid: true, receipt: "REG TEST" });
+    assert.equal((await decide(ordered.json.id)).status, 200);
+    const orderPage = (await call(partnerApi, { token: "second" })).json;
+    assert.equal(orderPage.orders.find((o) => o.id === ordered.json.id).stage, "preparing");
+    const renewal = orderPage.orders.find((o) => o.name === "Studio Démo" && o.kind === "updates");
+    assert.equal(renewal.status, "pending");
+    assert.equal(renewal.cents, 2000);
+    const app = orderPage.apps.find((a) => a.name === "Studio Démo");
+    assert.equal(app.coveredUntil, null);
+    assert.equal((await decide(renewal.id)).status, 200);
+    assert.equal((await decide(renewal.id)).status, 409);
+    assert.equal(
+      sqlite.prepare("SELECT count(*) AS n FROM partner_update_periods WHERE app_id=?").get(app.id)
+        .n,
+      1,
+    );
+    const upcoming = randomUUID();
+    sqlite
+      .prepare(
+        "INSERT INTO codes(id,code_hash,name,created_at,expires_at,reseller_id) VALUES(?,?,?,?,?,?)",
+      )
+      .run(
+        upcoming,
+        "upcoming-fixture",
+        "Accès démo",
+        new Date().toISOString(),
+        new Date(Date.now() + 5 * 86400_000).toISOString(),
+        resellerCode,
+      );
+    const deadlines = "/api/admin-deadlines?kind=access&horizon=7";
+    assert.equal((await call(deadlines, { token: "second" })).status, 403);
+    const result = await call(deadlines + "&owner=r:" + resellerCode, { token: "admin" });
+    assert.equal(result.status, 200, JSON.stringify(result));
+    assert.ok(result.json.rows.some((row) => row.id === upcoming));
+    assert.ok(result.json.rows.every((row) => row.owner === "Other reseller"));
+  });
+
   sqlite.prepare("UPDATE clients SET status='suspended' WHERE id=?").run(clientId);
   assert.equal((await call(backupPath, { token: "first" })).status, 403);
   assert.deepEqual((await tv(salon, "poll")).json, { linked: false, command: null });

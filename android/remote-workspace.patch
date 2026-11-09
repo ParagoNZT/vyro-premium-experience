@@ -1,0 +1,655 @@
+diff --git a/app/src/main/java/com/vyro/tv/RemoteWorkspace.kt b/app/src/main/java/com/vyro/tv/RemoteWorkspace.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/vyro/tv/RemoteWorkspace.kt
+@@ -0,0 +1,305 @@
++package com.vyro.tv
++
++import android.os.Build
++import android.os.SystemClock
++import android.util.Base64
++import androidx.compose.runtime.*
++import androidx.lifecycle.Lifecycle
++import androidx.lifecycle.compose.LocalLifecycleOwner
++import androidx.lifecycle.repeatOnLifecycle
++import com.vyro.tv.data.*
++import com.vyro.tv.domain.*
++import com.vyro.tv.security.readControlResponse
++import kotlinx.coroutines.*
++import org.json.JSONArray
++import org.json.JSONObject
++import java.net.HttpURLConnection
++import java.net.URI
++import java.net.URL
++import java.security.KeyFactory
++import java.security.KeyPairGenerator
++import java.security.MessageDigest
++import java.security.SecureRandom
++import java.security.spec.MGF1ParameterSpec
++import java.security.spec.PKCS8EncodedKeySpec
++import java.util.UUID
++import javax.crypto.Cipher
++import javax.crypto.spec.GCMParameterSpec
++import javax.crypto.spec.OAEPParameterSpec
++import javax.crypto.spec.PSource
++import javax.crypto.spec.SecretKeySpec
++
++private val stable = Regex("[a-zA-Z0-9_.:-]{1,128}")
++private val groupId = Regex("group-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
++private val proofFormat = Regex("[A-F0-9]{32}")
++private fun hex(value: ByteArray) = value.joinToString("") { "%02x".format(it.toInt() and 255) }
++private fun hash(value: String) = hex(MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)))
++private fun b64(value: ByteArray) = Base64.encodeToString(value, Base64.NO_WRAP)
++private fun unb64(value: String) = Base64.decode(value, Base64.NO_WRAP)
++
++internal class RemoteIdentity(val id: String, val token: String, val publicKey: String, private val privateKey: String) {
++    companion object {
++        fun load(vault: CredentialVault, profileId: String, create: Boolean = false): RemoteIdentity? {
++            val key = "remote_device:$profileId"
++            val stored = vault.readIntegrationSecretStrict(key)
++            if (!stored.isNullOrEmpty()) {
++                val obj = JSONObject(stored)
++                return RemoteIdentity(obj.getString("id"),obj.getString("token"),obj.getString("publicKey"),obj.getString("privateKey"))
++            }
++            if (!create) return null
++            val keys = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
++            val identity = RemoteIdentity(UUID.randomUUID().toString(),hex(ByteArray(32).also(SecureRandom()::nextBytes)),
++                b64(keys.public.encoded),b64(keys.private.encoded))
++            vault.persistRemoteIdentity(key, JSONObject().put("id",identity.id).put("token",identity.token)
++                .put("publicKey",identity.publicKey).put("privateKey",identity.privateKey).toString())
++            return identity
++        }
++    }
++
++    fun open(envelope: JSONObject): String {
++        val private = KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(unb64(privateKey)))
++        val wrap = Cipher.getInstance("RSA/ECB/OAEPPadding").apply {
++            init(Cipher.DECRYPT_MODE, private, OAEPParameterSpec("SHA-256","MGF1",MGF1ParameterSpec.SHA256,PSource.PSpecified.DEFAULT))
++        }
++        val key = wrap.doFinal(unb64(envelope.getString("key")))
++        val bytes = try {
++            require(key.size == 32)
++            Cipher.getInstance("AES/GCM/NoPadding").run {
++                init(Cipher.DECRYPT_MODE,SecretKeySpec(key,"AES"),GCMParameterSpec(128,unb64(envelope.getString("iv"))))
++                updateAAD(id.toByteArray(Charsets.UTF_8))
++                doFinal(unb64(envelope.getString("data")))
++            }
++        } finally { key.fill(0) }
++        val url = bytes.toString(Charsets.UTF_8)
++        bytes.fill(0)
++        val parsed = URI(url)
++        val host = parsed.host?.lowercase() ?: error("Host invalide")
++        require(url.length <= 2048 && parsed.scheme == "https" && parsed.userInfo == null && parsed.fragment == null &&
++            '.' in host && !host.matches(Regex("[0-9.]+")) && !listOf(".localhost",".local",".internal").any { host.trimEnd('.').endsWith(it) })
++        return url
++    }
++}
++
++private data class RemoteReply(val status: Int, val body: JSONObject)
++private suspend fun request(identity: RemoteIdentity, action: String, fill: JSONObject.() -> Unit): RemoteReply? =
++    withContext(Dispatchers.IO) {
++        val body = JSONObject().put("id",identity.id).put("token",identity.token).put("action",action).apply(fill)
++        try {
++            val connection = URL("https://vyro-player.app/api/remote-device").openConnection() as HttpURLConnection
++            try {
++                connection.requestMethod = "POST"
++                connection.instanceFollowRedirects = false
++                connection.connectTimeout = 6_000
++                connection.readTimeout = 8_000
++                connection.doOutput = true
++                connection.setRequestProperty("Content-Type","application/json")
++                val bytes = body.toString().toByteArray(Charsets.UTF_8)
++                if (bytes.size > 400_000) return@withContext null
++                connection.setFixedLengthStreamingMode(bytes.size)
++                connection.outputStream.use { it.write(bytes) }
++                val status = connection.responseCode
++                val result = if (status in 200..299) connection.inputStream.use { JSONObject(readControlResponse(it,400_000)) }
++                    else JSONObject()
++                RemoteReply(status,result)
++            } finally { connection.disconnect() }
++        } catch (_: java.io.IOException) { null }
++          catch (_: org.json.JSONException) { null }
++    }
++
++internal data class RemoteCatalogInput(
++    val profile: UserProfile, val allProfiles: List<UserProfile>, val binding: TvProfileBinding?,
++    val catalog: Catalog?, val custom: PlaylistCustomization,
++) {
++    fun encode(vault: CredentialVault): JSONObject {
++        val playlists = profile.playlists.take(40).map {
++            val id = vault.playlistId(it)
++            JSONObject().put("id",tvPlaylistReference(it)).put("name",it.profileName.trim().take(80).ifEmpty { "Playlist" })
++                .put("kind",if (it is XtreamSource) "xc" else "m3u")
++                .put("editable",!BuildConfig.BETA_ACCESS_ENABLED && allProfiles.none { other ->
++                    other.id != profile.id && other.playlists.any { source -> vault.playlistId(source) == id }
++                })
++        }
++        val categories = catalog?.categories.orEmpty()
++        val validCategories = categories.asSequence().filter { stable.matches(it.storageKey()) }.distinctBy { it.storageKey() }.take(501).toList()
++        val visible = custom.visibleCategoryKeys
++        val groupsValid = custom.groups.size <= 80 && custom.groups.all { groupId.matches(it.id) &&
++            it.name.isNotBlank() && it.name.length <= 80 && it.channelIds.size <= 2000 && it.channelIds.all(stable::matches) }
++        val complete = binding != null && catalog != null && groupsValid && categories.size == validCategories.size &&
++            validCategories.size <= 500 && (visible == null || visible.all { key -> validCategories.any { it.storageKey() == key } })
++        val groups = if (complete) JSONArray(custom.groups.map { g -> JSONObject()
++            .put("id",g.id).put("name",g.name).put("pinned",g.pinned).put("channels",JSONArray(g.channelIds)) }) else JSONArray()
++        val layout = JSONObject().put("visible",if (complete) visible?.sorted()?.let(::JSONArray) ?: JSONObject.NULL else JSONObject.NULL)
++            .put("groups",groups)
++        val fits = layout.toString().toByteArray(Charsets.UTF_8).size <= 140_000
++        val channels = catalog?.items.orEmpty().asSequence().filter { it.kind == ContentKind.LIVE && stable.matches(it.id) }
++            .distinctBy { it.id }.take(700).map { JSONObject().put("id",it.id).put("name",it.title.trim().take(100).ifEmpty { "Chaîne" }) }.toList()
++        val result = JSONObject().put("active",binding?.playlist ?: JSONObject.NULL)
++            .put("playlists",JSONArray(playlists))
++            .put("categories",JSONArray(validCategories.take(500).map {
++                JSONObject().put("id",it.storageKey()).put("name",it.name.trim().take(100).ifEmpty { "Catégorie" })
++            })).put("channels",JSONArray(channels))
++            .put("layout",if (binding == null) JSONObject.NULL else if (fits) layout else JSONObject().put("visible",JSONObject.NULL).put("groups",JSONArray()))
++            .put("layoutComplete",complete && fits)
++        return result.put("context",hash(result.toString()))
++    }
++}
++
++@Composable
++internal fun rememberRemoteWorkspace(
++    vault: CredentialVault, settings: SettingsStore, snapshot: RemoteCatalogInput?,
++    profileTransfer: TvProfileTransfer, customization: PlaylistCustomizationStore,
++    isTv: Boolean, profileUnlocked: Boolean, onRestored: () -> Unit, onPlaylistChanged: () -> Unit,
++): TvSettingsUi {
++    val lifecycle = LocalLifecycleOwner.current.lifecycle
++    val scope = rememberCoroutineScope()
++    val profileId = snapshot?.profile?.id
++    val current by rememberUpdatedState(snapshot)
++    val unlocked by rememberUpdatedState(profileUnlocked)
++    val restore by rememberUpdatedState(onRestored)
++    val reload by rememberUpdatedState(onPlaylistChanged)
++    var identity by remember(profileId) { mutableStateOf<RemoteIdentity?>(null) }
++    var code by remember(profileId) { mutableStateOf<String?>(null) }
++    var expires by remember(profileId) { mutableLongStateOf(0L) }
++    var linked by remember(profileId) { mutableStateOf(false) }
++    var busy by remember(profileId) { mutableStateOf(false) }
++    var message by remember(profileId) { mutableStateOf<String?>(null) }
++    var lastReceipt by remember(profileId) { mutableStateOf<Pair<String, JSONObject>?>(null) }
++
++    LaunchedEffect(profileId) {
++        identity = profileId?.let { withContext(Dispatchers.IO) { runCatching { RemoteIdentity.load(vault,it) }.getOrNull() } }
++    }
++    LaunchedEffect(code,expires) {
++        if (code != null) {
++            delay((expires-SystemClock.elapsedRealtime()).coerceAtLeast(0))
++            code = null
++        }
++    }
++    LaunchedEffect(lifecycle,identity,code,profileUnlocked) {
++        val registered = identity ?: return@LaunchedEffect
++        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
++            while (true) {
++                val active = current?.takeIf { unlocked && it.profile.id == profileId }
++                val manifest = active?.let { withContext(Dispatchers.Default) { it.encode(vault) } }
++                val reply = request(registered,"poll") { put("catalog",manifest ?: JSONObject.NULL) }
++                if (reply?.status == 200) {
++                    linked = reply.body.optBoolean("linked")
++                    if (linked && code != null) { code = null; message = null }
++                    val job = reply.body.optJSONObject("job")
++                    if (job != null && active != null && unlocked && current?.profile?.id == profileId) {
++                        val id = job.getString("id")
++                        val latest = current ?: active
++                        val ack = lastReceipt?.takeIf { it.first == id }?.second ?: try {
++                            val fresh = withContext(Dispatchers.Default) { latest.encode(vault) }
++                            if (!unlocked || current !== latest) null else
++                                runRemoteJob(registered, job, fresh, latest, settings, vault, profileTransfer, customization, restore, reload)
++                        } catch (e: CancellationException) { throw e }
++                          catch (_: Exception) { JSONObject().put("ok",false) }
++                        if (ack != null) {
++                            // Keep the receipt in memory if the network drops after applying a command.
++                            lastReceipt = id to ack
++                            if (request(registered,"complete") { put("jobId",id); ack.keys().forEach { put(it,ack.get(it)) } }?.status == 200)
++                                lastReceipt = null
++                        }
++                    }
++                }
++                delay(if (code != null) 3000 else if (linked) 12000 else 45000)
++            }
++        }
++    }
++
++    return TvSettingsUi(linked,code,busy,message,qr = true, requestCode = {
++        if (!busy && profileId != null && unlocked) scope.launch {
++            busy = true; message = null
++            try {
++                val local = withContext(Dispatchers.IO) { checkNotNull(RemoteIdentity.load(vault,profileId,create=true)) }
++                val reply = request(local,"pair") {
++                    put("name",(Build.MANUFACTURER+" "+Build.MODEL).trim().take(80).ifEmpty { "Android" })
++                    put("kind",if (isTv) "tv" else "mobile")
++                    put("edition",if (BuildConfig.BETA_ACCESS_ENABLED) "show-plus" else "vyro")
++                    put("publicKey",local.publicKey)
++                }
++                if (current?.profile?.id != profileId || !unlocked) return@launch
++                identity = local
++                val proof = reply?.body?.optString("proof")?.takeIf(proofFormat::matches)
++                if (reply?.status == 200 && proof != null) {
++                    expires = SystemClock.elapsedRealtime()+300_000
++                    code = proof
++                } else message = if (reply?.status == 409) "Appareil déjà associé à un compte VYRO."
++                    else "Impossible de créer le QR code. Réessayez dans quelques instants."
++            } catch (e: CancellationException) { throw e }
++              catch (_: Exception) { message = "Impossible de créer le QR code." }
++            finally { busy = false }
++        }
++    })
++}
++
++internal suspend fun runRemoteJob(
++    identity: RemoteIdentity, job: JSONObject, manifest: JSONObject, snapshot: RemoteCatalogInput,
++    settings: SettingsStore, vault: CredentialVault, profileTransfer: TvProfileTransfer,
++    customization: PlaylistCustomizationStore, restored: () -> Unit, playlistsChanged: () -> Unit,
++): JSONObject? {
++    val id = UUID.fromString(job.getString("id")).toString()
++    val payload = job.getJSONObject("payload")
++    val phase = job.getString("kind")
++    val binding = snapshot.binding
++    val ok = JSONObject().put("ok",true)
++    val fail = JSONObject().put("ok",false)
++    val receiptKey = "remote_applied:${snapshot.profile.id}"
++    if (phase == "layout" || phase == "playlist") {
++        if (vault.loadIntegrationSecret(receiptKey) == id) return ok
++        if (job.getString("context") != manifest.getString("context")) return fail
++    }
++    return when (phase) {
++        "backup" -> {
++            val requested = payload.optString("playlist").takeIf { !payload.isNull("playlist") }
++            if (requested != null && requested != binding?.playlist) return fail
++            applyTvSettingsCommand(JSONObject().put("id",id).put("phase","capture")
++                .put("scope",if (requested == null) "settings" else "profile")
++                .put("playlist",binding?.playlist).put("viewer",binding?.viewer),
++                settings,listOf(snapshot.profile.id),binding,profileTransfer,restored)
++        }
++        "restore" -> {
++            val profile = payload.optJSONObject("profile")
++            if (profile != null && profile.getString("playlist") != binding?.playlist) return fail
++            applyTvSettingsCommand(JSONObject().put("id",id).put("phase","apply")
++                .put("settings",payload.getJSONObject("settings")).put("profile",profile)
++                .put("scope",if (profile == null) "settings" else "profile")
++                .put("playlist",binding?.playlist).put("viewer",binding?.viewer),
++                settings,listOf(snapshot.profile.id),binding,profileTransfer,restored)
++        }
++        "layout" -> {
++            if (binding == null || binding.playlist != payload.getString("playlist") || !manifest.getBoolean("layoutComplete")) return fail
++            val layout = payload.getJSONObject("layout")
++            val groupArray = layout.getJSONArray("groups")
++            val groups = List(groupArray.length()) { idx -> groupArray.getJSONObject(idx).let { group ->
++                val channels = group.getJSONArray("channels")
++                CustomChannelGroup(group.getString("id"),group.getString("name"),
++                    List(channels.length()) { channels.getString(it) },pinned=group.getBoolean("pinned"))
++            } }
++            require(groups.size <= 80 && groups.map { it.id }.toSet().size == groups.size &&
++                groups.all { groupId.matches(it.id) && it.name.length in 1..80 && it.channelIds.size <= 2000 && it.channelIds.all(stable::matches) })
++            val visible = layout.optJSONArray("visible")?.let { array -> List(array.length()) { array.getString(it) }.toSet() }
++            val categories = snapshot.catalog?.categories.orEmpty().mapTo(hashSetOf()) { it.storageKey() }
++            require(visible?.all { it in categories } != false)
++            withContext(NonCancellable) {
++                if (!withContext(Dispatchers.IO) {
++                    customization.replaceForBackup(binding.scope,groups,visible).also {
++                        if (it) vault.persistRemoteIdentity(receiptKey,id)
++                    }
++                }) null else { restored();ok }
++            }
++        }
++        "playlist" -> {
++            if (BuildConfig.BETA_ACCESS_ENABLED) return fail
++            val target = payload.optString("playlist").takeIf { !payload.isNull("playlist") }
++            val name = payload.getString("name").trim()
++            if (name.length !in 1..80) return fail
++            val updated = withContext(NonCancellable + Dispatchers.IO) {
++                val url = payload.optJSONObject("sealed")?.let(identity::open)
++                vault.applyRemotePlaylist(snapshot.profile.id,target,name,url,receiptKey,id)
++            }
++            if (updated) { playlistsChanged(); ok } else fail
++        }
++        else -> fail
++    }
++}
+diff --git a/app/src/main/java/com/vyro/tv/TvSettingsSync.kt b/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
+--- a/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
++++ b/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
+@@ -25,6 +25,8 @@
+     val code: String?,
+     val busy: Boolean,
+     val message: String?,
++    val qr: Boolean = false,
++    val legacy: TvSettingsUi? = null,
+     val requestCode: () -> Unit,
+ )
+ 
+diff --git a/app/src/main/java/com/vyro/tv/data/CredentialVault.kt b/app/src/main/java/com/vyro/tv/data/CredentialVault.kt
+--- a/app/src/main/java/com/vyro/tv/data/CredentialVault.kt
++++ b/app/src/main/java/com/vyro/tv/data/CredentialVault.kt
+@@ -201,6 +201,33 @@
+         is M3uSource -> stableId("m3u:${source.playlistUrl.trim()}")
+     }
+ 
++    internal fun persistRemoteIdentity(name: String, value: String) {
++        check(preferences.edit().putString("$KEY_INTEGRATION_PREFIX$name",encrypt(value)).commit())
++    }
++
++    /** Commit a source and its retry receipt together; do not move credentials between profiles. */
++    internal fun applyRemotePlaylist(profileId: String, target: String?, name: String, url: String?, receipt: String, job: String): Boolean {
++        val profiles = loadStoredProfiles()
++        val profile = profiles.firstOrNull { it.id == profileId } ?: return false
++        val existing = profile.playlists.firstOrNull { tvPlaylistReference(it) == target }
++        if (target != null && existing == null) return false
++        val oldKey = existing?.let(::playlistId)
++        if (oldKey != null && profiles.any { it.id != profileId && it.playlists.any { source -> playlistId(source) == oldKey } }) return false
++        val source = when (existing) {
++            is XtreamSource -> if (url == null) existing.copy(profileName=name) else return false
++            is M3uSource -> existing.copy(profileName=name,playlistUrl=url ?: existing.playlistUrl,
++                epgUrl=existing.epgUrl.takeIf { url == null || url == existing.playlistUrl })
++            null -> M3uSource(name,url ?: return false)
++        }
++        val key = playlistId(source)
++        if (oldKey != key && profiles.any { it.playlists.any { other -> playlistId(other) == key } }) return false
++        if (target == null && profile.playlists.size >= 40) return false
++        val sources = if (existing == null) profile.playlists + source else profile.playlists.map { if (playlistId(it) == oldKey) source else it }
++        val selected = if (profile.activePlaylistId == null || profile.activePlaylistId == oldKey) key else profile.activePlaylistId
++        val updated = profiles.map { if (it.id == profileId) it.copy(playlists=sources,activePlaylistId=selected) else it }
++        return writeProfiles(updated,preferences.getString(KEY_ACTIVE_USER_PROFILE,null),listOf(source),receipt to job)
++    }
++
+     fun clear() {
+         preferences.edit()
+             .remove(KEY_USER_PROFILES)
+@@ -331,11 +358,12 @@
+         return runCatching { listOfNotNull(legacyFromJson(JSONObject(decrypt(single)))) }.getOrDefault(emptyList())
+     }
+ 
+-    private fun writeProfiles(profiles: List<StoredUserProfile>, activeProfileId: String?, overrides: List<PlaylistSource> = emptyList()) {
++    private fun writeProfiles(profiles: List<StoredUserProfile>, activeProfileId: String?, overrides: List<PlaylistSource> = emptyList(),
++        receipt: Pair<String,String>? = null): Boolean {
+         val editor = preferences.edit()
+         if (profiles.isEmpty()) {
+             editor.remove(KEY_USER_PROFILES).remove(KEY_ACTIVE_USER_PROFILE).apply()
+-            return
++            return true
+         }
+         val array = JSONArray()
+         profiles.forEach { array.put(profileToJson(it)) }
+@@ -348,7 +376,12 @@
+         editor.putString(KEY_USER_PROFILES, encrypt(document.toString()))
+         if (activeProfileId == null) editor.remove(KEY_ACTIVE_USER_PROFILE)
+         else editor.putString(KEY_ACTIVE_USER_PROFILE, activeProfileId)
+-        editor.apply()
++        if (receipt == null) {
++            editor.apply()
++            return true
++        }
++        editor.putString("$KEY_INTEGRATION_PREFIX${receipt.first}",encrypt(receipt.second))
++        return editor.commit()
+     }
+ 
+     private fun profileToJson(profile: StoredUserProfile): JSONObject = JSONObject()
+diff --git a/app/src/main/java/com/vyro/tv/ui/IptvApp.kt b/app/src/main/java/com/vyro/tv/ui/IptvApp.kt
+--- a/app/src/main/java/com/vyro/tv/ui/IptvApp.kt
++++ b/app/src/main/java/com/vyro/tv/ui/IptvApp.kt
+@@ -362,28 +362,30 @@
+     var playlistInfoById by remember { mutableStateOf(emptyMap<String, PlaylistAccountInfo>()) }
+     var lastQuotaWarningAt by remember { mutableStateOf(0L) }
+     var playbackHistory by remember { mutableStateOf(emptyMap<String, PlaybackProgress>()) }
+-    val tvSettings = if (BuildConfig.BETA_ACCESS_ENABLED) {
+-        val profileTransfer = remember {
+-            com.vyro.tv.data.TvProfileTransfer(context.applicationContext,favoriteStore,watchlistStore,
+-                playbackHistoryStore,customizationStore)
+-        }
+-        val binding = remember(activeProfile?.id,source,favoriteScope) {
+-            val active = activeProfile?.id
+-            source?.takeIf { active != null && favoriteScope == "$active:${vault.playlistId(it)}" }
+-                ?.let { com.vyro.tv.data.TvProfileBinding(favoriteScope,com.vyro.tv.data.tvPlaylistReference(it),
+-                    com.vyro.tv.data.tvViewerReference(checkNotNull(active))) }
+-        }
+-        com.vyro.tv.rememberTvSettingsSync(settingsStore, activeProfile?.id, profiles.map { it.id },profileTransfer,binding,isTv) {
+-            settings = settingsStore.load(activeTmdbToken)
+-            tvSettingsRevision++
+-            if (favoriteScope != "none") {
+-                favorites = favoriteStore.ids(favoriteScope)
+-                watchlist = watchlistStore.ids(favoriteScope)
+-                playbackHistory = playbackHistoryStore.load(favoriteScope)
+-                customization = customizationStore.load(favoriteScope)
+-            }
+-        }
+-    } else null
++    val profileTransfer = remember {
++        com.vyro.tv.data.TvProfileTransfer(context.applicationContext,favoriteStore,watchlistStore,
++            playbackHistoryStore,customizationStore)
++    }
++    val settingsBinding = remember(activeProfile?.id,source,favoriteScope) {
++        val active = activeProfile?.id
++        source?.takeIf { active != null && favoriteScope == "$active:${vault.playlistId(it)}" }
++            ?.let { com.vyro.tv.data.TvProfileBinding(favoriteScope,com.vyro.tv.data.tvPlaylistReference(it),
++                com.vyro.tv.data.tvViewerReference(checkNotNull(active))) }
++    }
++    fun reloadRestoredSettings() {
++        settings = settingsStore.load(activeTmdbToken)
++        tvSettingsRevision++
++        if (favoriteScope != "none") {
++            favorites = favoriteStore.ids(favoriteScope)
++            watchlist = watchlistStore.ids(favoriteScope)
++            playbackHistory = playbackHistoryStore.load(favoriteScope)
++            customization = customizationStore.load(favoriteScope)
++        }
++    }
++    val legacyTvSettings = if (BuildConfig.BETA_ACCESS_ENABLED)
++        com.vyro.tv.rememberTvSettingsSync(settingsStore, activeProfile?.id, profiles.map { it.id },
++            profileTransfer,settingsBinding,isTv,::reloadRestoredSettings)
++    else null
+     var selectedItem by remember { mutableStateOf<CatalogItem?>(null) }
+     var details by remember { mutableStateOf<ContentDetails?>(null) }
+     var episodes by remember { mutableStateOf<List<CatalogItem>>(emptyList()) }
+@@ -958,6 +960,26 @@
+         playlistInfoById = playlistInfoById + (playlistKey to merged)
+         warnIfConnectionQuotaReached(merged)
+     }
++
++    val remoteCatalog = remember(activeProfile,profiles,settingsBinding,catalog,customization) {
++        activeProfile?.let { com.vyro.tv.RemoteCatalogInput(it,profiles,settingsBinding,catalog,customization) }
++    }
++    val tvSettings = if (!BuildConfig.BETA_ACCESS_ENABLED || BuildConfig.PARTNER_APP_ID in setOf("","show-plus"))
++        com.vyro.tv.rememberRemoteWorkspace(vault,settingsStore,remoteCatalog,profileTransfer,
++        customizationStore,isTv,page != AppPage.PIN && page != AppPage.STARTUP,::reloadRestoredSettings) {
++        val profileId = activeProfile?.id
++        profiles = vault.loadProfiles()
++        activeProfile = profiles.firstOrNull { it.id == profileId }
++        val refreshed = activeProfile?.let(vault::activePlaylist)
++        if (profileId != null && refreshed != null) {
++            val currentSource = source
++            if (currentSource != null && vault.playlistId(currentSource) == vault.playlistId(refreshed)) {
++                source = refreshed
++            } else {
++                connect(profileId,refreshed,backgroundRefresh = true)
++            }
++        }
++    }.copy(legacy=legacyTvSettings) else legacyTvSettings
+ 
+     LaunchedEffect(betaRemoteRevision) {
+         if (betaRemoteRevision <= 0) return@LaunchedEffect
+diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
+--- a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
++++ b/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
+@@ -8,6 +8,7 @@
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.compose.BackHandler
+ import androidx.activity.result.contract.ActivityResultContracts
++import androidx.compose.foundation.Image
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.focusGroup
+@@ -1684,12 +1685,29 @@
+     val uriHandler = LocalUriHandler.current
+     var feedback by remember(sync.code,sync.linked) { mutableStateOf<String?>(null) }
+     SettingsCard {
+-        SettingsInfoRow("Sauvegardes", if (sync.linked) "Appareil associé" else "Appareil à associer")
+-        if (!mobile) SettingsInfoRow("Compte", "vyro-player.app → Sauvegardes")
++        SettingsInfoRow(if (sync.qr) "Gestion à distance" else "Sauvegardes", if (sync.linked) "Appareil associé" else "Appareil à associer")
++        if (!mobile) SettingsInfoRow("Compte", if (sync.qr) "vyro-player.app → Gestion à distance" else "vyro-player.app → Sauvegardes")
+         if (!sync.linked) {
+             sync.code?.let { code ->
+-                SettingsInfoRow("Code de liaison (5 min)", code)
+-                if (mobile) {
++                if (sync.qr) {
++                    val url = "https://vyro-player.app/associer#$code"
++                    val qr = remember(url) {
++                        val size = 320
++                        val bits = com.google.zxing.qrcode.QRCodeWriter().encode(url,com.google.zxing.BarcodeFormat.QR_CODE,size,size)
++                        val pixels = IntArray(size*size) { offset ->
++                            if (bits[offset%size,offset/size]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
++                        }
++                        android.graphics.Bitmap.createBitmap(pixels,size,size,android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
++                    }
++                    Image(qr,"QR code d’association VYRO, valable cinq minutes",modifier=Modifier.size(if (mobile) 172.dp else 148.dp))
++                    Text("Scannez ce QR code et confirmez dans votre compte VYRO.",style=MaterialTheme.typography.bodySmall)
++                    if (mobile) SettingAction("ASSOCIER DANS LE NAVIGATEUR",Icons.Default.Language,primary=false) {
++                        try { uriHandler.openUri(url) } catch (_: IllegalArgumentException) { feedback="Navigateur indisponible." }
++                    }
++                } else {
++                    SettingsInfoRow("Code de liaison (5 min)", code)
++                }
++                if (mobile && !sync.qr) {
+                     SettingAction("COPIER LE CODE", Icons.Default.ContentCopy, primary = false) {
+                         val clip = ClipData.newPlainText("Code de liaison SHOW+", code)
+                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+@@ -1706,6 +1724,7 @@
+             SettingAction(when {
+                 sync.busy -> "CRÉATION DU CODE…"
+                 sync.code != null -> "RENOUVELER LE CODE"
++                sync.qr -> "AFFICHER LE QR CODE"
+                 else -> "AFFICHER UN CODE DE LIAISON"
+             },
+                 Icons.Default.Devices, primary = false, onClick = sync.requestCode)
+@@ -1713,7 +1732,7 @@
+         if (mobile) {
+             SettingAction("OUVRIR L’ESPACE CLIENT", Icons.Default.Language, primary = false) {
+                 try {
+-                    uriHandler.openUri("https://vyro-player.app/account/sauvegardes")
++                    uriHandler.openUri(if (sync.qr) "https://vyro-player.app/account/gestion" else "https://vyro-player.app/account/sauvegardes")
+                 } catch (_: IllegalArgumentException) {
+                     feedback = "Ouvrez vyro-player.app dans votre navigateur."
+                 }
+@@ -1721,6 +1740,7 @@
+             feedback?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+         }
+     }
++    sync.legacy?.let { DeviceBackupCard(it) }
+ }
+ 
+ @Composable
+diff --git a/app/src/androidTest/java/com/vyro/tv/RemoteWorkspaceTest.kt b/app/src/androidTest/java/com/vyro/tv/RemoteWorkspaceTest.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/androidTest/java/com/vyro/tv/RemoteWorkspaceTest.kt
+@@ -0,0 +1,109 @@
++package com.vyro.tv
++
++import android.content.Context
++import android.content.ContextWrapper
++import android.util.Base64
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import com.vyro.tv.data.*
++import com.vyro.tv.domain.*
++import kotlinx.coroutines.runBlocking
++import org.json.JSONArray
++import org.json.JSONObject
++import org.junit.Assert.*
++import org.junit.Test
++import org.junit.runner.RunWith
++import java.security.KeyFactory
++import java.security.SecureRandom
++import java.security.spec.MGF1ParameterSpec
++import java.security.spec.X509EncodedKeySpec
++import java.util.UUID
++import javax.crypto.Cipher
++import javax.crypto.spec.GCMParameterSpec
++import javax.crypto.spec.OAEPParameterSpec
++import javax.crypto.spec.PSource
++import javax.crypto.spec.SecretKeySpec
++
++@RunWith(AndroidJUnit4::class)
++class RemoteWorkspaceTest {
++    @Test fun encryptedPlaylistLayoutAndRestorePersistOnAndroid() = runBlocking {
++        val base = InstrumentationRegistry.getInstrumentation().targetContext
++        val nonce = UUID.randomUUID()
++        fun isolated(side: String): Context = object : ContextWrapper(base) {
++            override fun getApplicationContext(): Context = this
++            override fun getSharedPreferences(name: String, mode: Int) =
++                super.getSharedPreferences("remote_test_${nonce}_${side}_$name",mode)
++        }
++        val tv = stores(isolated("tv"))
++        val phone = stores(isolated("phone"))
++        val source = M3uSource("Original","https://example.com/demo.m3u?token=fictitious")
++        val envelope = seal(tv.identity,source.playlistUrl)
++        val empty = tv.snapshot(null,null)
++        assertTrue(tv.run("playlist",empty,JSONObject().put("playlist",JSONObject.NULL).put("name","Original").put("sealed",envelope)).getBoolean("ok"))
++        assertEquals(source,CredentialVault(tv.context).activeProfile()?.playlists?.single())
++        assertTrue(runCatching { phone.identity.open(envelope) }.isFailure)
++        val catalog = Catalog(listOf(Category("42","Infos",ContentKind.LIVE)),listOf(CatalogItem("live:12","Fiction",ContentKind.LIVE,"42")))
++        val bound = tv.binding(source)
++        val layout = JSONObject().put("visible",JSONArray(listOf("LIVE:42"))).put("groups",JSONArray(listOf(
++            JSONObject().put("id","group-"+UUID.randomUUID()).put("name","Infos").put("pinned",true)
++                .put("channels",JSONArray(listOf("live:12")))
++        )))
++        tv.favorites.toggle(bound.scope,"live:12")
++        tv.history.save(bound.scope,PlaybackProgress("movie:4",27_000,120_000,42_000))
++        assertTrue(tv.run("layout",tv.snapshot(bound,catalog),JSONObject().put("playlist",bound.playlist).put("layout",layout)).getBoolean("ok"))
++        assertEquals("Infos",tv.custom.load(bound.scope).groups.single().name)
++        assertTrue("live:12" in tv.favorites.ids(bound.scope))
++        tv.settings.save(tv.settings.load().copy(theme=AppThemeChoice.CYAN))
++        val capture = tv.run("backup",tv.snapshot(bound,catalog),JSONObject().put("playlist",bound.playlist))
++        assertTrue(capture.getBoolean("ok"))
++        assertFalse(capture.toString().contains("token=fictitious"))
++        val restore = JSONObject().put("settings",capture.getJSONObject("settings")).put("profile",capture.getJSONObject("profile"))
++        val mismatched = phone.binding(M3uSource("Autre","https://example.com/other.m3u"))
++        assertFalse(phone.run("restore",phone.snapshot(mismatched,catalog),restore).getBoolean("ok"))
++        phone.vault.addPlaylist(phone.profileId,source)
++        val target = phone.binding(source)
++        assertTrue(phone.run("restore",phone.snapshot(target,catalog),restore).getBoolean("ok"))
++        assertEquals(AppThemeChoice.CYAN,phone.settings.load().theme)
++        assertTrue("live:12" in FavoriteStore(phone.context).ids(target.scope))
++        assertEquals("Infos",PlaylistCustomizationStore(phone.context).load(target.scope).groups.single().name)
++        assertEquals(27_000L,PlaybackHistoryStore(phone.context).load(target.scope)["movie:4"]?.positionMillis)
++    }
++
++    private class Stores(val context: Context) {
++        val vault = CredentialVault(context)
++        val profileId = vault.createProfile("Profil d’essai",0).id
++        val identity = checkNotNull(RemoteIdentity.load(vault,profileId,true))
++        val settings = SettingsStore(context).also { it.useProfile(profileId) }
++        val favorites = FavoriteStore(context)
++        val history = PlaybackHistoryStore(context)
++        val custom = PlaylistCustomizationStore(context)
++        private val transfer = TvProfileTransfer(context,favorites,WatchlistStore(context),history,custom)
++        fun binding(source: PlaylistSource) = TvProfileBinding("$profileId:${vault.playlistId(source)}",tvPlaylistReference(source),tvViewerReference(profileId))
++        fun snapshot(binding: TvProfileBinding?,catalog: Catalog?) = RemoteCatalogInput(
++            checkNotNull(vault.activeProfile()),vault.loadProfiles(),binding,catalog,binding?.let { custom.load(it.scope) } ?: PlaylistCustomization())
++        suspend fun run(kind: String, data: RemoteCatalogInput, payload: JSONObject): JSONObject {
++            val manifest = data.encode(vault)
++            return checkNotNull(runRemoteJob(identity,JSONObject().put("id",UUID.randomUUID().toString()).put("kind",kind)
++                .put("context",manifest.getString("context")).put("payload",payload),manifest,data,
++                settings,vault,transfer,custom,{},{ }))
++        }
++    }
++    private fun stores(context: Context) = Stores(context)
++    private fun seal(identity: RemoteIdentity, url: String): JSONObject {
++        val random = SecureRandom()
++        val key = ByteArray(32).also(random::nextBytes)
++        val iv = ByteArray(12).also(random::nextBytes)
++        val data = Cipher.getInstance("AES/GCM/NoPadding").run {
++            init(Cipher.ENCRYPT_MODE,SecretKeySpec(key,"AES"),GCMParameterSpec(128,iv))
++            updateAAD(identity.id.toByteArray(Charsets.UTF_8))
++            doFinal(url.toByteArray(Charsets.UTF_8))
++        }
++        val publicKey = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.decode(identity.publicKey,Base64.NO_WRAP)))
++        val encrypted = Cipher.getInstance("RSA/ECB/OAEPPadding").run {
++            init(Cipher.ENCRYPT_MODE,publicKey,OAEPParameterSpec("SHA-256","MGF1",MGF1ParameterSpec.SHA256,PSource.PSpecified.DEFAULT))
++            doFinal(key)
++        }
++        fun b64(bytes: ByteArray) = Base64.encodeToString(bytes,Base64.NO_WRAP)
++        return JSONObject().put("key",b64(encrypted)).put("iv",b64(iv)).put("data",b64(data))
++    }
++}

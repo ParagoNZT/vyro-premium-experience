@@ -12,6 +12,7 @@ import {
   Menu,
   MonitorSmartphone,
   Package,
+  RadioTower,
   ShieldCheck,
   UserRound,
   X,
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/account")({
 const NAV = [
   { to: "/account", label: "Tableau de bord", icon: LayoutDashboard },
   { to: "/account/appareils", label: "Mes appareils", icon: MonitorSmartphone },
+  { to: "/account/gestion", label: "Gestion à distance", icon: RadioTower },
   { to: "/account/abonnement", label: "Mon abonnement", icon: CreditCard },
   { to: "/account/profil", label: "Mon profil", icon: UserRound },
 ] as const;

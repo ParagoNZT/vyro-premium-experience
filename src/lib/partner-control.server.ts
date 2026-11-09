@@ -17,6 +17,12 @@ const schema = z.discriminatedUnion("action", [
       .trim()
       .max(140)
       .regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}$/),
+    brief: z.string().trim().max(900).optional(),
+    accent: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .optional(),
+    updates: z.boolean().optional(),
   }),
   z.object({ action: z.literal("renew"), app: appId }),
   z.object({
@@ -74,6 +80,11 @@ export type PartnerOrder = {
   cents: number;
   status: "pending" | "paid" | "cancelled";
   createdAt: string;
+  brief: string | null;
+  accent: string | null;
+  wantsUpdates: number;
+  stage: "pending" | "preparing" | "delivered" | "covered" | "cancelled";
+  deliveredAt: string | null;
 };
 export type PartnerOverview = { apps: PartnerApp[]; orders: PartnerOrder[]; hasMore?: boolean };
 export type PartnerActivity = {
@@ -151,10 +162,18 @@ export const partnerControlRequest = api(async (request) => {
         coalesce(a.server_url,CASE WHEN a.id='show-plus' THEN (SELECT server_url FROM beta_settings WHERE id=1) END) AS serverUrl,
         (SELECT max(p.ends_at) FROM partner_update_periods p WHERE p.app_id=a.id) AS coveredUntil,
         (a.id='show-plus' OR EXISTS(SELECT 1 FROM partner_update_periods p WHERE p.app_id=a.id AND p.starts_at<=? AND p.ends_at>?)) AS canPublish,
-        (SELECT r.apk_url FROM partner_releases r WHERE r.app_id=a.id ORDER BY r.version_code DESC LIMIT 1) AS apkUrl,
-        coalesce((SELECT r.version_name FROM partner_releases r WHERE r.app_id=a.id ORDER BY r.version_code DESC LIMIT 1),
+        release.apk_url AS apkUrl,
+        coalesce(release.version_name,
           CASE WHEN a.id='show-plus' THEN (SELECT version_name FROM beta_updates WHERE id=1) END) AS version
-        FROM partner_apps a WHERE ${
+        FROM partner_apps a LEFT JOIN partner_releases release ON release.app_id=a.id AND release.version_code=(
+          SELECT max(r.version_code) FROM partner_releases r WHERE r.app_id=a.id AND ${
+            admin
+              ? "1=1"
+              : `(a.id='show-plus' OR r.initial=1 OR EXISTS(
+              SELECT 1 FROM partner_update_periods p WHERE p.app_id=a.id
+              AND r.published_at>=p.starts_at AND r.published_at<p.ends_at))`
+          }
+        ) WHERE ${
           admin
             ? "1=1"
             : `a.enabled=1 AND (a.owner_id=? OR (a.id='show-plus' AND EXISTS(
@@ -167,7 +186,12 @@ export const partnerControlRequest = api(async (request) => {
       db
         .prepare(
           `SELECT o.id,${admin ? "o.email," : ""}o.kind,coalesce(o.name,a.name) AS name,
-        coalesce(o.package_name,a.package_name) AS packageName,o.cents,o.status,o.created_at AS createdAt
+        coalesce(o.package_name,a.package_name) AS packageName,o.cents,o.status,o.created_at AS createdAt,
+        o.brief,o.accent,o.wants_updates AS wantsUpdates,
+        (SELECT min(r.published_at) FROM partner_releases r WHERE r.app_id=o.app_id AND r.initial=1) AS deliveredAt,
+        CASE WHEN o.status<>'paid' THEN o.status WHEN o.kind='updates' THEN 'covered'
+          WHEN EXISTS(SELECT 1 FROM partner_releases r WHERE r.app_id=o.app_id AND r.initial=1) THEN 'delivered'
+          ELSE 'preparing' END AS stage
         FROM partner_orders o LEFT JOIN partner_apps a ON a.id=o.app_id WHERE ${admin ? "1=1" : "o.owner_id=?"}
         ORDER BY (o.status='pending') DESC,o.created_at DESC,o.id LIMIT 26 OFFSET ?`,
         )
@@ -190,11 +214,23 @@ export const partnerControlRequest = api(async (request) => {
     const written = await db
       .prepare(
         `INSERT OR IGNORE INTO partner_orders
-      (id,owner_id,email,kind,name,package_name,cents,created_at)
-      SELECT ?,?,?,'app',?,?,10000,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
+      (id,owner_id,email,kind,name,package_name,cents,created_at,brief,accent,wants_updates)
+      SELECT ?,?,?,'app',?,?,10000,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
       AND (SELECT count(*) FROM partner_orders WHERE owner_id=? AND kind='app' AND status='pending')<3`,
       )
-      .bind(id, user.id, user.email, value.name, value.packageName, now, value.packageName, user.id)
+      .bind(
+        id,
+        user.id,
+        user.email,
+        value.name,
+        value.packageName,
+        now,
+        value.brief || null,
+        value.accent ?? null,
+        value.updates ? 1 : 0,
+        value.packageName,
+        user.id,
+      )
       .run();
     if (!written.meta.changes)
       throw new ApiError(
@@ -242,6 +278,14 @@ export const partnerControlRequest = api(async (request) => {
           FROM partner_orders o WHERE id=? AND status='paid' AND kind='updates' AND paid_at=? )`,
               )
               .bind(now, now, value.id, now),
+            db
+              .prepare(
+                `INSERT OR IGNORE INTO partner_orders(id,owner_id,email,kind,app_id,cents,created_at)
+              SELECT ?,o.owner_id,o.email,'updates',o.app_id,2000,? FROM partner_orders o
+              WHERE o.id=? AND o.kind='app' AND o.status='paid' AND o.app_id=?
+                AND o.wants_updates=1 AND o.paid_at=?`,
+              )
+              .bind(crypto.randomUUID(), now, value.id, id, now),
           ]
         : [update],
     );

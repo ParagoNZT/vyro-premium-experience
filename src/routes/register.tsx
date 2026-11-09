@@ -9,6 +9,7 @@ const searchSchema = z.object({
   redirect: z
     .enum([
       "/admin",
+      "/associer",
       "/account/abonnement",
       "/account/appareils",
       "/account/sauvegardes",

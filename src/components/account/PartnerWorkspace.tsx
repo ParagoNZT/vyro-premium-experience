@@ -17,7 +17,9 @@ const textArea =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground";
 const orderStatus = {
   pending: "En attente de règlement",
-  paid: "Règlement confirmé",
+  preparing: "Règlement confirmé · En préparation",
+  delivered: "APK livré",
+  covered: "Mises à jour activées",
   cancelled: "Annulée",
 };
 const commandStatus = {
@@ -55,6 +57,9 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wantUpdates, setWantUpdates] = useState(false);
+  const [brandName, setBrandName] = useState("");
+  const [accent, setAccent] = useState("#8163db");
   const [order, setOrder] = useState<PartnerOrder>();
   const [device, setDevice] = useState<Device>();
   const [activity, setActivity] = useState<PartnerActivity>();
@@ -91,7 +96,7 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
     return () => controller.abort();
   }, [url, appId, deviceId, version]);
   async function save(body: Record<string, unknown>, success: string, reset?: HTMLFormElement) {
-    if (busy) return;
+    if (busy) return false;
     setBusy(true);
     setNotice("");
     setError("");
@@ -101,8 +106,10 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
       if (body["action"] === "decision") setOrder(undefined);
       setVersion((x) => x + 1);
       reset?.reset();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "L’action n’a pas pu être enregistrée.");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -317,26 +324,92 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
               const targetForm = event.currentTarget;
               const values = formValues(event);
               void save(
-                { action: "order", name: values["name"], packageName: values["packageName"] },
+                {
+                  action: "order",
+                  name: values["name"],
+                  packageName: values["packageName"],
+                  brief: values["brief"],
+                  accent,
+                  updates: wantUpdates,
+                },
                 "Demande enregistrée. Aucun paiement n’a été prélevé.",
                 targetForm,
-              );
+              ).then((saved) => {
+                if (saved) {
+                  setBrandName("");
+                  setWantUpdates(false);
+                  setAccent("#8163db");
+                }
+              });
             }}
           >
             <label className="grid gap-1 text-sm">
               Nom de l’application
-              <Input name="name" required minLength={2} maxLength={60} />
+              <Input
+                name="name"
+                required
+                minLength={2}
+                maxLength={60}
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+              />
             </label>
             <label className="grid gap-1 text-sm">
               Identifiant Android
-              <Input name="packageName" placeholder="com.votremarque.tv" required maxLength={140} />
+              <Input
+                name="packageName"
+                placeholder="com.votremarque.tv"
+                required
+                maxLength={140}
+                pattern="[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}"
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Couleur principale
+              <input
+                className="h-9 w-20 rounded-md border border-border bg-background p-1"
+                type="color"
+                value={accent}
+                onChange={(e) => setAccent(e.target.value)}
+              />
+            </label>
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <span
+                className="size-7 shrink-0 rounded-md"
+                style={{ backgroundColor: accent }}
+                aria-hidden
+              />
+              <span className="break-all font-medium">
+                {brandName.trim() || "Votre application"}
+              </span>
+            </div>
+            <label className="grid gap-1 text-sm sm:col-span-2">
+              Consignes de personnalisation
+              <textarea
+                name="brief"
+                className={textArea}
+                maxLength={900}
+                rows={3}
+                placeholder="Ex. reprendre le logo enregistré dans mon espace, préparer une version TV et mobile…"
+              />
+              <span className="text-muted-foreground">
+                Vous pouvez enregistrer votre logo dans « Identité de l’application » ci-dessous.
+              </span>
+            </label>
+            <label className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={wantUpdates}
+                onChange={(e) => setWantUpdates(e.target.checked)}
+              />
+              Ajouter un an de mises à jour (+20 €, règlement séparé)
             </label>
             <p className="text-sm text-muted-foreground sm:col-span-2">
               Le paiement en ligne est désactivé. L’équipe VYRO confirme le règlement avant de
               préparer l’application.
             </p>
             <Button size="sm" className="justify-self-start" disabled={busy}>
-              Demander l’application · 100 €
+              Envoyer ma demande · {wantUpdates ? "120 €" : "100 €"}
             </Button>
           </form>
         </section>
@@ -361,10 +434,32 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
                     {euro.format(item.cents / 100)}
                   </p>
                   <p className="break-words text-muted-foreground">
-                    {orderStatus[item.status]} · {shortDate(item.createdAt)}
+                    {orderStatus[item.stage]} · {shortDate(item.deliveredAt ?? item.createdAt)}
                     {item.email ? " · " + item.email : ""}
                   </p>
+                  {item.wantsUpdates === 1 && (
+                    <p className="text-muted-foreground">Option annuelle demandée · 20 €</p>
+                  )}
+                  {admin && item.brief && (
+                    <p className="max-w-prose whitespace-pre-wrap break-words">{item.brief}</p>
+                  )}
+                  {admin && item.accent && (
+                    <p className="text-muted-foreground">Couleur : {item.accent}</p>
+                  )}
                 </div>
+                {!admin &&
+                  item.stage === "delivered" &&
+                  data.apps.find((a) => a.packageName === item.packageName)?.apkUrl && (
+                    <Button size="sm" asChild>
+                      <a
+                        href={
+                          data.apps.find((a) => a.packageName === item.packageName)?.apkUrl ?? "#"
+                        }
+                      >
+                        Télécharger l’APK
+                      </a>
+                    </Button>
+                  )}
                 {admin && item.status === "pending" && (
                   <Button type="button" variant="outline" size="sm" onClick={() => setOrder(item)}>
                     Traiter
@@ -443,7 +538,7 @@ function AppSettings({
   app: PartnerApp;
   admin: boolean;
   busy: boolean;
-  save: (body: Record<string, unknown>, success: string, reset?: HTMLFormElement) => Promise<void>;
+  save: (body: Record<string, unknown>, success: string, reset?: HTMLFormElement) => Promise<boolean>;
   view: "server" | "release";
 }) {
   const initial = admin && app.id !== "show-plus" && !app.version;

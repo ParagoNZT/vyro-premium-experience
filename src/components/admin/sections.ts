@@ -1,5 +1,6 @@
 import {
   Activity,
+  CalendarClock,
   CreditCard,
   DownloadCloud,
   KeyRound,
@@ -42,6 +43,11 @@ export const adminSections = {
     title: "Applications partenaires",
     description: "Gérez les demandes d’applications et les périodes de mises à jour.",
     Icon: Package,
+  },
+  deadlines: {
+    title: "Échéances",
+    description: "Anticipez les fins de licences, d’accès TV et de couverture des mises à jour.",
+    Icon: CalendarClock,
   },
   vyro: {
     title: "Application VYRO",

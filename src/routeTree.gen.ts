@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppareilsRouteImport } from './routes/appareils'
+import { Route as AssocierRouteImport } from './routes/associer'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -24,6 +25,7 @@ import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as AccountAbonnementRouteImport } from './routes/account.abonnement'
 import { Route as AccountAppareilsRouteImport } from './routes/account.appareils'
+import { Route as AccountGestionRouteImport } from './routes/account.gestion'
 import { Route as AccountGuidesRouteImport } from './routes/account.guides'
 import { Route as AccountProfilRouteImport } from './routes/account.profil'
 import { Route as AccountResellerRouteImport } from './routes/account.reseller'
@@ -32,12 +34,15 @@ import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 import { Route as ApiAccountRouteImport } from './routes/api.account'
 import { Route as ApiAdminRouteImport } from './routes/api.admin'
+import { Route as ApiAdminDeadlinesRouteImport } from './routes/api.admin-deadlines'
 import { Route as ApiBetaRouteImport } from './routes/api.beta'
 import { Route as ApiBetaKeyRouteImport } from './routes/api.beta-key'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiDownloadRouteImport } from './routes/api.download'
 import { Route as ApiManageRouteImport } from './routes/api.manage'
 import { Route as ApiPartnerControlRouteImport } from './routes/api.partner-control'
+import { Route as ApiRemoteDeviceRouteImport } from './routes/api.remote-device'
+import { Route as ApiRemoteWorkspaceRouteImport } from './routes/api.remote-workspace'
 import { Route as ApiSettingsBackupsRouteImport } from './routes/api.settings-backups'
 import { Route as ApiShowDirectoryRouteImport } from './routes/api.show-directory'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
@@ -69,6 +74,11 @@ const AdminRoute = AdminRouteImport.update({
 const AppareilsRoute = AppareilsRouteImport.update({
   id: '/appareils',
   path: '/appareils',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssocierRoute = AssocierRouteImport.update({
+  id: '/associer',
+  path: '/associer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -126,6 +136,11 @@ const AccountAppareilsRoute = AccountAppareilsRouteImport.update({
   path: '/appareils',
   getParentRoute: () => AccountRoute,
 } as any)
+const AccountGestionRoute = AccountGestionRouteImport.update({
+  id: '/gestion',
+  path: '/gestion',
+  getParentRoute: () => AccountRoute,
+} as any)
 const AccountGuidesRoute = AccountGuidesRouteImport.update({
   id: '/guides',
   path: '/guides',
@@ -166,6 +181,11 @@ const ApiAdminRoute = ApiAdminRouteImport.update({
   path: '/api/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeadlinesRoute = ApiAdminDeadlinesRouteImport.update({
+  id: '/api/admin-deadlines',
+  path: '/api/admin-deadlines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBetaRoute = ApiBetaRouteImport.update({
   id: '/api/beta',
   path: '/api/beta',
@@ -194,6 +214,16 @@ const ApiManageRoute = ApiManageRouteImport.update({
 const ApiPartnerControlRoute = ApiPartnerControlRouteImport.update({
   id: '/api/partner-control',
   path: '/api/partner-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRemoteDeviceRoute = ApiRemoteDeviceRouteImport.update({
+  id: '/api/remote-device',
+  path: '/api/remote-device',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRemoteWorkspaceRoute = ApiRemoteWorkspaceRouteImport.update({
+  id: '/api/remote-workspace',
+  path: '/api/remote-workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSettingsBackupsRoute = ApiSettingsBackupsRouteImport.update({
@@ -262,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/associer': typeof AssocierRoute
   '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
@@ -272,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/gestion': typeof AccountGestionRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
@@ -280,12 +312,15 @@ export interface FileRoutesByFullPath {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
   '/api/beta-key': typeof ApiBetaKeyRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/partner-control': typeof ApiPartnerControlRoute
+  '/api/remote-device': typeof ApiRemoteDeviceRoute
+  '/api/remote-workspace': typeof ApiRemoteWorkspaceRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -304,6 +339,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/associer': typeof AssocierRoute
   '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
@@ -314,6 +350,7 @@ export interface FileRoutesByTo {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/gestion': typeof AccountGestionRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
@@ -322,12 +359,15 @@ export interface FileRoutesByTo {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
   '/api/beta-key': typeof ApiBetaKeyRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/partner-control': typeof ApiPartnerControlRoute
+  '/api/remote-device': typeof ApiRemoteDeviceRoute
+  '/api/remote-workspace': typeof ApiRemoteWorkspaceRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -348,6 +388,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
   '/appareils': typeof AppareilsRoute
+  '/associer': typeof AssocierRoute
   '/checkout': typeof CheckoutRoute
   '/download': typeof DownloadRoute
   '/faq': typeof FaqRoute
@@ -358,6 +399,7 @@ export interface FileRoutesById {
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
   '/account/appareils': typeof AccountAppareilsRoute
+  '/account/gestion': typeof AccountGestionRoute
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
@@ -366,12 +408,15 @@ export interface FileRoutesById {
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
   '/api/beta-key': typeof ApiBetaKeyRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/partner-control': typeof ApiPartnerControlRoute
+  '/api/remote-device': typeof ApiRemoteDeviceRoute
+  '/api/remote-workspace': typeof ApiRemoteWorkspaceRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
@@ -393,6 +438,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/appareils'
+    | '/associer'
     | '/checkout'
     | '/download'
     | '/faq'
@@ -403,6 +449,7 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/gestion'
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
@@ -411,12 +458,15 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/admin-deadlines'
     | '/api/beta'
     | '/api/beta-key'
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
     | '/api/partner-control'
+    | '/api/remote-device'
+    | '/api/remote-workspace'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
@@ -435,6 +485,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/appareils'
+    | '/associer'
     | '/checkout'
     | '/download'
     | '/faq'
@@ -445,6 +496,7 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/gestion'
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
@@ -453,12 +505,15 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/admin-deadlines'
     | '/api/beta'
     | '/api/beta-key'
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
     | '/api/partner-control'
+    | '/api/remote-device'
+    | '/api/remote-workspace'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
@@ -478,6 +533,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/appareils'
+    | '/associer'
     | '/checkout'
     | '/download'
     | '/faq'
@@ -488,6 +544,7 @@ export interface FileRouteTypes {
     | '/tarifs'
     | '/account/abonnement'
     | '/account/appareils'
+    | '/account/gestion'
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
@@ -496,12 +553,15 @@ export interface FileRouteTypes {
     | '/account/telechargement'
     | '/api/account'
     | '/api/admin'
+    | '/api/admin-deadlines'
     | '/api/beta'
     | '/api/beta-key'
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
     | '/api/partner-control'
+    | '/api/remote-device'
+    | '/api/remote-workspace'
     | '/api/settings-backups'
     | '/api/show-directory'
     | '/api/stripe-webhook'
@@ -522,6 +582,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRouteWithChildren
   AdminRoute: typeof AdminRoute
   AppareilsRoute: typeof AppareilsRoute
+  AssocierRoute: typeof AssocierRoute
   CheckoutRoute: typeof CheckoutRoute
   DownloadRoute: typeof DownloadRoute
   FaqRoute: typeof FaqRoute
@@ -532,12 +593,15 @@ export interface RootRouteChildren {
   TarifsRoute: typeof TarifsRoute
   ApiAccountRoute: typeof ApiAccountRoute
   ApiAdminRoute: typeof ApiAdminRoute
+  ApiAdminDeadlinesRoute: typeof ApiAdminDeadlinesRoute
   ApiBetaRoute: typeof ApiBetaRoute
   ApiBetaKeyRoute: typeof ApiBetaKeyRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiDownloadRoute: typeof ApiDownloadRoute
   ApiManageRoute: typeof ApiManageRoute
   ApiPartnerControlRoute: typeof ApiPartnerControlRoute
+  ApiRemoteDeviceRoute: typeof ApiRemoteDeviceRoute
+  ApiRemoteWorkspaceRoute: typeof ApiRemoteWorkspaceRoute
   ApiSettingsBackupsRoute: typeof ApiSettingsBackupsRoute
   ApiShowDirectoryRoute: typeof ApiShowDirectoryRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
@@ -580,6 +644,13 @@ declare module '@tanstack/react-router' {
       path: '/appareils'
       fullPath: '/appareils'
       preLoaderRoute: typeof AppareilsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/associer': {
+      id: '/associer'
+      path: '/associer'
+      fullPath: '/associer'
+      preLoaderRoute: typeof AssocierRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -659,6 +730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountAppareilsRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/account/gestion': {
+      id: '/account/gestion'
+      path: '/gestion'
+      fullPath: '/account/gestion'
+      preLoaderRoute: typeof AccountGestionRouteImport
+      parentRoute: typeof AccountRoute
+    }
     '/account/guides': {
       id: '/account/guides'
       path: '/guides'
@@ -715,6 +793,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin-deadlines': {
+      id: '/api/admin-deadlines'
+      path: '/api/admin-deadlines'
+      fullPath: '/api/admin-deadlines'
+      preLoaderRoute: typeof ApiAdminDeadlinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/beta': {
       id: '/api/beta'
       path: '/api/beta'
@@ -755,6 +840,20 @@ declare module '@tanstack/react-router' {
       path: '/api/partner-control'
       fullPath: '/api/partner-control'
       preLoaderRoute: typeof ApiPartnerControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/remote-device': {
+      id: '/api/remote-device'
+      path: '/api/remote-device'
+      fullPath: '/api/remote-device'
+      preLoaderRoute: typeof ApiRemoteDeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/remote-workspace': {
+      id: '/api/remote-workspace'
+      path: '/api/remote-workspace'
+      fullPath: '/api/remote-workspace'
+      preLoaderRoute: typeof ApiRemoteWorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/settings-backups': {
@@ -847,6 +946,7 @@ declare module '@tanstack/react-router' {
 interface AccountRouteChildren {
   AccountAbonnementRoute: typeof AccountAbonnementRoute
   AccountAppareilsRoute: typeof AccountAppareilsRoute
+  AccountGestionRoute: typeof AccountGestionRoute
   AccountGuidesRoute: typeof AccountGuidesRoute
   AccountProfilRoute: typeof AccountProfilRoute
   AccountResellerRoute: typeof AccountResellerRoute
@@ -859,6 +959,7 @@ interface AccountRouteChildren {
 const AccountRouteChildren: AccountRouteChildren = {
   AccountAbonnementRoute: AccountAbonnementRoute,
   AccountAppareilsRoute: AccountAppareilsRoute,
+  AccountGestionRoute: AccountGestionRoute,
   AccountGuidesRoute: AccountGuidesRoute,
   AccountProfilRoute: AccountProfilRoute,
   AccountResellerRoute: AccountResellerRoute,
@@ -876,6 +977,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRouteWithChildren,
   AdminRoute: AdminRoute,
   AppareilsRoute: AppareilsRoute,
+  AssocierRoute: AssocierRoute,
   CheckoutRoute: CheckoutRoute,
   DownloadRoute: DownloadRoute,
   FaqRoute: FaqRoute,
@@ -886,12 +988,15 @@ const rootRouteChildren: RootRouteChildren = {
   TarifsRoute: TarifsRoute,
   ApiAccountRoute: ApiAccountRoute,
   ApiAdminRoute: ApiAdminRoute,
+  ApiAdminDeadlinesRoute: ApiAdminDeadlinesRoute,
   ApiBetaRoute: ApiBetaRoute,
   ApiBetaKeyRoute: ApiBetaKeyRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiDownloadRoute: ApiDownloadRoute,
   ApiManageRoute: ApiManageRoute,
   ApiPartnerControlRoute: ApiPartnerControlRoute,
+  ApiRemoteDeviceRoute: ApiRemoteDeviceRoute,
+  ApiRemoteWorkspaceRoute: ApiRemoteWorkspaceRoute,
   ApiSettingsBackupsRoute: ApiSettingsBackupsRoute,
   ApiShowDirectoryRoute: ApiShowDirectoryRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
