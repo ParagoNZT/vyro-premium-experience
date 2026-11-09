@@ -99,6 +99,20 @@ export type DownloadTarget = {
 
 export const DOWNLOADS: DownloadTarget[] = [
   {
+    id: "androidmobile",
+    platform: "Android mobile et tablette",
+    subtitle: "SHOW+ Player pour téléphones et tablettes Android compatibles.",
+    version: "1.0.44",
+    updatedAt: "",
+    size: "52 Mo",
+    file: "vyro-premium-androidmobile.apk",
+    steps: [
+      "Téléchargez l’APK depuis votre espace client sur le téléphone ou la tablette.",
+      "Ouvrez le fichier. Si Android le demande, autorisez l’installation pour cette source.",
+      "Dans SHOW+, ouvrez Paramètres → Informations et maintenance → Sauvegardes pour associer l’appareil.",
+    ],
+  },
+  {
     id: "androidtv",
     platform: "Android TV / Google TV",
     subtitle: "Boîtiers, TV Sony, Philips, TCL, Nvidia Shield, Chromecast avec Google TV.",
@@ -141,11 +155,11 @@ export const FAQ = [
   },
   {
     q: "De quoi ai-je besoin ?",
-    a: "Un appareil compatible (Android TV, Google TV ou Amazon Fire TV) et une source multimédia que vous êtes légalement autorisé à utiliser.",
+    a: "Un téléphone ou une tablette Android compatible, ou un appareil Android TV, Google TV ou Amazon Fire TV, ainsi qu’une source multimédia que vous êtes autorisé à utiliser.",
   },
   {
     q: "Quels appareils sont compatibles ?",
-    a: "Android TV, Google TV et Amazon Fire TV.",
+    a: "Téléphones et tablettes Android compatibles, Android TV, Google TV et Amazon Fire TV.",
   },
   {
     q: "Puis-je installer VYRO sur plusieurs appareils ?",

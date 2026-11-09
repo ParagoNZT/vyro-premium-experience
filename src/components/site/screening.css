@@ -190,6 +190,32 @@
   background: #d0a2ff;
   box-shadow: 0 0 0.7rem #c085ffb3;
 }
+.screening-formats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+.screening-formats button {
+  min-height: 2.5rem;
+  padding: 0 0.72rem;
+  border: 1px solid #d5b1ff45;
+  border-radius: 0.65rem;
+  color: #e3d4f3;
+  background: #180f27;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.02em;
+}
+.screening-formats button[aria-pressed="true"] {
+  border-color: #e2c7ff;
+  color: #180b2b;
+  background: #e2c7ff;
+}
+.screening-formats button:focus-visible {
+  outline: 2px solid #e2c7ff;
+  outline-offset: 2px;
+}
 
 .screening-intro h1 {
   margin: 1.1rem auto 0.84rem;
@@ -329,6 +355,27 @@
 }
 .screening-film > [hidden] {
   display: none;
+}
+.screening-film[data-format="telephone"] {
+  aspect-ratio: 4 / 3;
+  background: radial-gradient(ellipse at center, #21162f, #08060d 75%);
+}
+.screening-film[data-format="tablette"] {
+  aspect-ratio: 16 / 10;
+}
+.screening-film:not([data-format="tv"]) > [role="tabpanel"]:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0.4rem;
+}
+.screening-film:not([data-format="tv"]) .screening-film-frame {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 .screening-expand,
 .screening-lightbox button {
@@ -474,6 +521,16 @@
   border-radius: 0.55rem;
   height: auto;
   width: 100%;
+}
+.screening-lightbox[data-format="telephone"] {
+  width: min(calc(100% - 1.5rem), 42rem);
+}
+.screening-lightbox:not([data-format="tv"]) img {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 8rem);
+  margin-inline: auto;
+  object-fit: contain;
 }
 .screening-lightbox p {
   padding: 0.6rem 0.25rem 0;
@@ -903,5 +960,17 @@
   }
   .screening-room-label {
     font-size: 0.61rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .screening-room-label {
+    flex-wrap: wrap;
+  }
+  .screening-formats {
+    justify-content: flex-start;
+  }
+  .screening-film[data-format="telephone"] {
+    aspect-ratio: 5 / 7;
   }
 }

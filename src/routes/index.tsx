@@ -7,6 +7,7 @@ import {
   KeyRound,
   Monitor,
   Play,
+  Smartphone,
   Tv2,
 } from "lucide-react";
 import { FaqSection, PricingSection } from "@/components/site/sections";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "VYRO Premium réunit votre direct, vos films et vos séries dans un lecteur conçu pour Android TV, Google TV et Fire TV.",
+          "VYRO Premium réunit votre direct, vos films et vos séries sur Android TV, Google TV, Fire TV, téléphone et tablette Android.",
       },
       { property: "og:title", content: title },
       {
@@ -41,6 +42,7 @@ const platforms = [
   { label: "Android TV", icon: Tv2 },
   { label: "Google TV", icon: Monitor },
   { label: "Fire TV", icon: Flame },
+  { label: "Android mobile et tablette", icon: Smartphone },
 ] as const;
 
 const features = [
@@ -65,8 +67,8 @@ const features = [
 
 const steps = [
   {
-    label: "Vérifiez votre télé",
-    description: "Repérez votre téléviseur ou boîtier dans la liste des appareils compatibles.",
+    label: "Vérifiez votre appareil",
+    description: "Vérifiez que votre téléviseur, téléphone ou tablette est compatible.",
     to: "/appareils",
     icon: Monitor,
   },
@@ -92,14 +94,14 @@ function Home() {
         <div className="screening-hero-inner">
           <div className="screening-intro">
             <p className="screening-edition">
-              <i aria-hidden /> LE LECTEUR POUR VOTRE TV
+              <i aria-hidden /> SUR TV, TÉLÉPHONE ET TABLETTE
             </p>
             <h1 id="screening-title">
               La soirée <span>est à vous.</span>
             </h1>
             <p className="screening-lead">
-              Votre direct, vos films et vos séries dans un lecteur pensé pour le grand écran et la
-              télécommande.
+              Votre direct, vos films et vos séries sur le grand écran, votre téléphone et votre
+              tablette Android.
             </p>
             <div className="screening-actions">
               <a className="screening-button screening-button-primary" href="#projection">
@@ -115,7 +117,7 @@ function Home() {
       </section>
       <section className="screening-devices" aria-label="Appareils compatibles">
         <div className="screening-wrap">
-          <p className="screening-kicker">SUR VOTRE TÉLÉ</p>
+          <p className="screening-kicker">SUR VOS APPAREILS</p>
           <ul>
             {platforms.map(({ label, icon: Icon }) => (
               <li key={label}>

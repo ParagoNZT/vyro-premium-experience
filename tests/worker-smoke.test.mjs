@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { DatabaseSync } from "node:sqlite";
@@ -19,13 +19,17 @@ function sqliteBinding(sqlite) {
   return {
     prepare(sql) {
       const statement = sqlite.prepare(sql);
+      const numbered = [...new Set([...sql.matchAll(/\?(\d+)/g)].map((match) => match[1]))];
       return {
         bind(...values) {
+          const args = numbered.length
+            ? [Object.fromEntries(numbered.map((n) => ["?" + n, values[Number(n) - 1]]))]
+            : values;
           return {
-            first: async () => statement.get(...values) ?? null,
-            all: async () => ({ results: statement.all(...values) }),
-            run: async () => ({ meta: { changes: statement.run(...values).changes } }),
-            execute: () => ({ meta: { changes: statement.run(...values).changes } }),
+            first: async () => statement.get(...args) ?? null,
+            all: async () => ({ results: statement.all(...args) }),
+            run: async () => ({ meta: { changes: statement.run(...args).changes } }),
+            execute: () => ({ meta: { changes: statement.run(...args).changes } }),
           };
         },
       };
@@ -51,6 +55,9 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "./fixtures/beta-schema.sql",
     "../migrations/d1/0001_management.sql",
     "../migrations/d1/0002_shared_beta_access.sql",
+    "../migrations/d1/0004_tv_settings.sql",
+    "../migrations/d1/0005_tv_profiles.sql",
+    "../migrations/d1/0006_backup_device_kind.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -127,12 +134,12 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
 
   const { default: worker } = await import("../.output/server/index.mjs");
   const ctx = { waitUntil() {}, passThroughOnException() {} };
-  async function call(path, { token, body, signature } = {}) {
+  async function call(path, { token, body, signature, native } = {}) {
     const headers = new Headers();
     if (token) headers.set("authorization", "Bearer " + token);
     if (body !== undefined) {
       headers.set("content-type", "application/json");
-      if (!signature) headers.set("origin", origin);
+      if (!signature && !native) headers.set("origin", origin);
     }
     if (signature) headers.set("stripe-signature", signature);
     const request = new Request(origin + path, {
@@ -204,7 +211,12 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.match(first.licenseKey, /^VYRO-[A-F0-9]{24}$/);
   assert.equal((await call("/api/account", { token: "second" })).json.licenseKey, "");
   assert.equal((await call("/api/download", { token: "second" })).status, 403);
-  assert.deepEqual((await call("/api/download", { token: "first" })).json, { platforms: [] });
+  const officialPublicRelease =
+    "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v1.0.44/SHOWPlayer.apk";
+  assert.deepEqual((await call("/api/download", { token: "first" })).json, {
+    platforms: [],
+    officialPublicRelease,
+  });
   assert.equal((await call("/api/download?platform=androidtv", { token: "first" })).status, 404);
   const fixtureBytes = new TextEncoder().encode("local APK fixture");
   env.VYRO_RELEASES = {
@@ -217,6 +229,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   };
   assert.deepEqual((await call("/api/download", { token: "first" })).json, {
     platforms: ["androidtv"],
+    officialPublicRelease,
   });
   assert.equal((await call("/api/download?platform=androidtv", { token: "second" })).status, 403);
   const apk = await worker.fetch(
@@ -230,6 +243,39 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.match(apk.headers.get("content-disposition") ?? "", /attachment;.*androidtv\.apk/);
   assert.match(apk.headers.get("cache-control") ?? "", /no-store/);
   assert.deepEqual(new Uint8Array(await apk.arrayBuffer()), fixtureBytes);
+  assert.equal(
+    (await call("/api/download?platform=androidmobile", { token: "first" })).status,
+    404,
+  );
+  assert.equal(
+    (await call("/api/download?platform=androidmobile", { token: "second" })).status,
+    403,
+  );
+  const tvRelease = env.VYRO_RELEASES;
+  env.VYRO_RELEASES = {
+    head: async (key) =>
+      key === "vyro-premium-androidmobile.apk"
+        ? { size: fixtureBytes.length }
+        : tvRelease.head(key),
+    get: async (key) =>
+      key === "vyro-premium-androidmobile.apk"
+        ? { size: fixtureBytes.length, body: new Response(fixtureBytes).body }
+        : tvRelease.get(key),
+  };
+  assert.deepEqual((await call("/api/download", { token: "first" })).json.platforms.sort(), [
+    "androidmobile",
+    "androidtv",
+  ]);
+  const mobileApk = await worker.fetch(
+    new Request(origin + "/api/download?platform=androidmobile", {
+      headers: { Authorization: "Bearer first" },
+    }),
+    env,
+    ctx,
+  );
+  assert.equal(mobileApk.status, 200);
+  assert.match(mobileApk.headers.get("content-disposition"), /androidmobile\.apk/);
+  assert.deepEqual(new Uint8Array(await mobileApk.arrayBuffer()), fixtureBytes);
   const granted = (await call("/api/manage", { token: "admin" })).json.licenses[0];
   assert.equal(Object.hasOwn(granted, "license_key"), false);
   const code = (await post("/api/beta-key", "admin", { id: granted.id, action: "reveal" })).json
@@ -297,4 +343,424 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   }
   await checkout(false);
   await checkout(true);
+
+  const backupPath = "/api/settings-backups";
+  const nativePath = "/api/tv-settings";
+  const digest = (value) => createHash("sha256").update(value).digest("hex");
+  const firstPage = () => call(backupPath, { token: "first" }).then(({ json }) => json);
+  function installation(digit) {
+    const id = digit.repeat(64);
+    const token = "SHOWP-" + digit.toUpperCase().repeat(64);
+    const deviceHash = digest(id);
+    const codeHash = digest("synthetic-" + digit);
+    sqlite
+      .prepare("INSERT INTO codes(id,code_hash,name,created_at) VALUES(?,?,?,?)")
+      .run(randomUUID(), codeHash, "Fixture SHOW+", "2026-01-01");
+    sqlite
+      .prepare(
+        "INSERT INTO show_installations(device_hash,token_hash,code_hash,created_at) VALUES(?,?,?,?)",
+      )
+      .run(deviceHash, digest(token), codeHash, "2026-01-01");
+    return { deviceHash, id, token, codeHash };
+  }
+  const tv = (install, action, fields = {}, native = true) =>
+    call(nativePath, {
+      native,
+      body: JSON.stringify({
+        version: 1,
+        token: install.token,
+        deviceId: install.id,
+        action,
+        ...fields,
+      }),
+    });
+  const salon = installation("a");
+  const chambre = installation("b");
+  const other = installation("c");
+  assert.equal((await call(backupPath)).status, 401);
+  assert.deepEqual((await tv(salon, "poll")).json, { linked: false, command: null });
+  assert.equal((await tv(salon, "poll", { token: chambre.token })).status, 403);
+  assert.equal((await tv(salon, "poll", {}, false)).status, 403);
+  for (const [install, owner, name, kind] of [
+    [salon, "first", "Salon", "tv"],
+    [chambre, "first", "Téléphone", "mobile"],
+    [other, "second", "Autre", undefined],
+  ]) {
+    const pair = await tv(install, "pair", { name: "Fixture", kind });
+    assert.equal(pair.status, 200, JSON.stringify(pair));
+    assert.match(pair.json.pairingCode, /^[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/);
+    assert.equal(
+      (await post(backupPath, owner, { action: "pair", pairingCode: pair.json.pairingCode, name }))
+        .status,
+      200,
+    );
+    assert.equal(
+      (await post(backupPath, "second", { action: "pair", pairingCode: pair.json.pairingCode }))
+        .status,
+      409,
+    );
+  }
+  assert.equal((await tv(salon, "pair", { name: "Fixture" })).status, 409);
+  assert.equal((await firstPage()).devices.length, 2);
+  assert.deepEqual((await firstPage()).devices.map((d) => d.kind).sort(), ["mobile", "tv"]);
+  await tv(other, "poll", { kind: "mobile", version: 2 });
+  await tv(other, "poll");
+  assert.equal((await call(backupPath, { token: "second" })).json.devices[0].kind, "mobile");
+  assert.equal(
+    (
+      await post(backupPath, "second", {
+        action: "backup",
+        sourceId: salon.deviceHash,
+        name: "Vol",
+      })
+    ).status,
+    409,
+  );
+
+  const settings = {
+    version: 1,
+    theme: "OCEAN",
+    appearanceMode: "DARK",
+    customAccentHex: "#A820CE",
+    vodPlayerStyle: "MODERN",
+    audioLanguage: "FRENCH",
+    subtitlePreference: "FORCED",
+    subtitleSize: "LARGE",
+    subtitleTextColor: "CYAN",
+    subtitleFont: "SERIF",
+    subtitleBackground: "BLACK",
+    interfaceScale: "STANDARD",
+    animationLevel: "REDUCED",
+    sidebarStyle: "SIMPLE",
+    metadataLanguage: "SYSTEM",
+    posterSource: "PROVIDER",
+    vodPosterColumns: 8,
+    showLivePreview: true,
+    showNextProgramme: true,
+    resumePlayback: true,
+    autoplayNextEpisode: false,
+    vodFullscreen: true,
+    hideWatched: false,
+    favoritesFirst: true,
+    oledMode: false,
+    categoriesVisible: true,
+    compactLandscape: true,
+    homeContinueWatching: true,
+    homeNewMovies: true,
+    homeNewSeries: true,
+    homeSeriesUpdates: true,
+    homeTopTmdb: true,
+    tmdbLogos: true,
+    tmdbBackdrops: false,
+    tmdbSynopsis: true,
+  };
+  async function queue(payload) {
+    const response = await post(backupPath, "first", payload);
+    assert.equal(response.status, 202, JSON.stringify(response));
+  }
+  await queue({ action: "backup", sourceId: salon.deviceHash, name: "Avant changement" });
+  assert.equal((await firstPage()).backups.length, 0);
+  assert.equal((await tv(chambre, "poll")).json.command, null);
+  const capture = (await tv(salon, "poll")).json.command;
+  assert.equal(capture.phase, "capture");
+  const ackCapture = { jobId: capture.id, phase: capture.phase, ok: true, settings };
+  assert.equal(
+    (
+      await tv(salon, "complete", {
+        ...ackCapture,
+        settings: { ...settings, playlistUrl: "private" },
+      })
+    ).status,
+    400,
+  );
+  assert.equal((await tv(salon, "complete", ackCapture)).status, 200);
+  assert.equal((await tv(salon, "complete", ackCapture)).status, 200);
+  const saved = (await firstPage()).backups;
+  assert.equal(saved.length, 1);
+  assert.deepEqual(Object.keys(saved[0]).sort(), [
+    "createdAt",
+    "fullProfile",
+    "id",
+    "name",
+    "sourceName",
+  ]);
+  assert.equal(
+    (
+      await post(backupPath, "second", {
+        action: "restore",
+        backupId: saved[0].id,
+        targetId: other.deviceHash,
+      })
+    ).status,
+    409,
+  );
+
+  await queue({ action: "copy", sourceId: salon.deviceHash, targetId: chambre.deviceHash });
+  assert.equal(
+    (
+      await post(backupPath, "first", {
+        action: "backup",
+        sourceId: chambre.deviceHash,
+        name: "En parallèle",
+      })
+    ).status,
+    409,
+  );
+  assert.equal((await tv(chambre, "poll")).json.command, null);
+  const fresh = { ...settings, theme: "ROSE" };
+  const copy = (await tv(salon, "poll")).json.command;
+  assert.equal(
+    (await tv(salon, "complete", { jobId: copy.id, phase: "capture", ok: true, settings: fresh }))
+      .status,
+    200,
+  );
+  assert.equal((await firstPage()).jobs.find((j) => j.id === copy.id).status, "waiting_target");
+  const apply = (await tv(chambre, "poll")).json.command;
+  assert.deepEqual(apply, { id: copy.id, phase: "apply", settings: fresh });
+  const ackApply = { jobId: copy.id, phase: "apply", ok: true };
+  assert.equal((await tv(salon, "complete", ackApply)).status, 404);
+  assert.equal((await tv(chambre, "complete", ackApply)).status, 200);
+  assert.equal((await tv(chambre, "complete", ackApply)).status, 200);
+  assert.equal((await firstPage()).jobs.find((j) => j.id === copy.id).status, "done");
+  assert.equal((await firstPage()).backups.length, 1);
+
+  await queue({ action: "restore", backupId: saved[0].id, targetId: chambre.deviceHash });
+  const restore = (await tv(chambre, "poll")).json.command;
+  assert.deepEqual(restore.settings, settings);
+  assert.equal(
+    (await tv(chambre, "complete", { jobId: restore.id, phase: "apply", ok: true })).status,
+    200,
+  );
+  assert.equal((await firstPage()).jobs.find((j) => j.id === restore.id).status, "done");
+
+  const playlist = digest("synthetic playlist");
+  const v2 = (install, action, fields = {}) => tv(install, action, { version: 2, ...fields });
+  const viewer = (install) => digest("viewer:" + install.id);
+  const poll2 = (install, ref = playlist, localViewer = viewer(install)) =>
+    v2(install, "poll", { playlist: ref, viewer: localViewer });
+  const bundle = {
+    version: 1,
+    playlist,
+    visible: ["LIVE:1"],
+    favorites: ["live:10"],
+    watchlist: ["movie:1"],
+    groups: [
+      {
+        id: "group-" + randomUUID(),
+        name: "Chaînes du salon",
+        channels: ["live:10"],
+        pinned: false,
+      },
+    ],
+    history: [
+      {
+        id: "episode:123",
+        position: 21000,
+        duration: 90000,
+        updated: 120000,
+        series: "series:10",
+        season: 1,
+        episode: 2,
+      },
+    ],
+  };
+  await poll2(salon);
+  await poll2(chambre, digest("different playlist"));
+  assert.equal(
+    (
+      await post(backupPath, "first", {
+        action: "copy",
+        sourceId: salon.deviceHash,
+        targetId: chambre.deviceHash,
+        scope: "profile",
+      })
+    ).status,
+    409,
+  );
+  await poll2(chambre);
+  await queue({
+    action: "backup",
+    sourceId: salon.deviceHash,
+    name: "Profil du salon",
+    scope: "profile",
+  });
+  const full = (await poll2(salon)).json.command;
+  assert.deepEqual(full, {
+    id: full.id,
+    phase: "capture",
+    scope: "profile",
+    playlist,
+    viewer: viewer(salon),
+  });
+  assert.equal(
+    (await v2(salon, "complete", { jobId: full.id, phase: "capture", ok: true, settings })).status,
+    409,
+  );
+  assert.equal(
+    (
+      await v2(salon, "complete", {
+        jobId: full.id,
+        phase: "capture",
+        ok: true,
+        settings,
+        profile: { ...bundle, favorites: ["http://private"] },
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await v2(salon, "complete", {
+        jobId: full.id,
+        phase: "capture",
+        ok: true,
+        settings,
+        profile: bundle,
+      })
+    ).status,
+    200,
+  );
+  const savedProfile = (await firstPage()).backups.find((b) => b.id === full.id);
+  assert.equal(savedProfile.fullProfile, 1);
+  const readProfile = (token) => call(backupPath + "?backup=" + full.id, { token });
+  assert.equal((await readProfile("second")).status, 404);
+  const file = (await readProfile("first")).json;
+  assert.deepEqual(file.profile, bundle);
+  const edited = [{ id: bundle.groups[0].id, name: "Mes chaînes", pinned: true }];
+  assert.equal(
+    (await post(backupPath, "second", { action: "edit-groups", backupId: full.id, groups: edited }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (await post(backupPath, "first", { action: "edit-groups", backupId: full.id, groups: edited }))
+      .status,
+    200,
+  );
+  assert.deepEqual((await readProfile("first")).json.profile.groups[0], {
+    ...bundle.groups[0],
+    ...edited[0],
+  });
+  assert.equal(
+    (await post(backupPath, "first", { action: "import", name: "Import", file })).status,
+    200,
+  );
+  const imported = (await firstPage()).backups.find((b) => b.name === "Import");
+  assert.equal(imported.fullProfile, 1);
+  await queue({ action: "restore", backupId: full.id, targetId: chambre.deviceHash });
+  assert.equal((await tv(chambre, "poll")).json.command, null);
+  assert.equal((await poll2(chambre, digest("different playlist"))).json.command, null);
+  assert.equal((await poll2(chambre, playlist, digest("different profile"))).json.command, null);
+  const restoreFull = (await poll2(chambre)).json.command;
+  assert.deepEqual(restoreFull.profile.groups[0], { ...bundle.groups[0], ...edited[0] });
+  assert.equal(
+    (await v2(chambre, "complete", { jobId: restoreFull.id, phase: "apply", ok: true })).status,
+    200,
+  );
+
+  // The phone can be the source, not just the recipient of a TV backup.
+  await queue({
+    action: "copy",
+    scope: "profile",
+    sourceId: chambre.deviceHash,
+    targetId: salon.deviceHash,
+  });
+  const phoneCapture = (await poll2(chambre)).json.command;
+  const phoneProfile = { ...bundle, favorites: ["live:77"] };
+  assert.equal(
+    (
+      await v2(chambre, "complete", {
+        jobId: phoneCapture.id,
+        phase: "capture",
+        ok: true,
+        settings,
+        profile: phoneProfile,
+      })
+    ).status,
+    200,
+  );
+  const tvRestore = (await poll2(salon)).json.command;
+  assert.equal(tvRestore.id, phoneCapture.id);
+  assert.deepEqual(tvRestore.profile, phoneProfile);
+  assert.equal(
+    (await v2(salon, "complete", { jobId: tvRestore.id, phase: "apply", ok: true })).status,
+    200,
+  );
+  assert.equal((await firstPage()).jobs.find((job) => job.id === tvRestore.id).status, "done");
+
+  const sync = await post(backupPath, "first", {
+    action: "sync-on",
+    sourceId: salon.deviceHash,
+    targetId: chambre.deviceHash,
+  });
+  assert.equal(sync.status, 200, JSON.stringify(sync));
+  assert.equal((await firstPage()).sync.sourceId, salon.deviceHash);
+  const syncCapture = (await poll2(salon)).json.command;
+  assert.equal(syncCapture.scope, "profile");
+  assert.equal(
+    (
+      await v2(salon, "complete", {
+        jobId: syncCapture.id,
+        phase: "capture",
+        ok: true,
+        settings,
+        profile: bundle,
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await poll2(chambre)).json.command.id, syncCapture.id);
+  assert.equal(
+    (await v2(chambre, "complete", { jobId: syncCapture.id, phase: "apply", ok: true })).status,
+    200,
+  );
+  sqlite.prepare("UPDATE tv_settings_sync SET next_at='2020-01-01'").run();
+  assert.equal(
+    (await poll2(salon, playlist, digest("different source profile"))).json.command,
+    null,
+  );
+  assert.equal((await firstPage()).sync.paused, 1);
+  const unchanged = (await poll2(salon)).json.command;
+  assert.equal(
+    (
+      await v2(salon, "complete", {
+        jobId: unchanged.id,
+        phase: "capture",
+        ok: true,
+        settings,
+        profile: bundle,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await poll2(chambre)).json.command,
+    null,
+    "An unchanged snapshot must not be reapplied",
+  );
+  assert.equal((await firstPage()).jobs.find((j) => j.id === unchanged.id).unchanged, 1);
+  sqlite.prepare("UPDATE tv_settings_sync SET next_at='2020-01-01'").run();
+  const pendingSync = (await poll2(salon)).json.command;
+  assert.ok(pendingSync);
+  assert.equal((await post(backupPath, "first", { action: "sync-off" })).status, 200);
+  assert.equal((await poll2(salon)).json.command, null);
+  assert.equal((await firstPage()).sync, null);
+  for (const backupId of [full.id, imported.id]) {
+    assert.equal((await post(backupPath, "first", { action: "delete", backupId })).status, 200);
+  }
+
+  await queue({ action: "restore", backupId: saved[0].id, targetId: chambre.deviceHash });
+  assert.equal(
+    (await post(backupPath, "second", { action: "unlink", deviceId: chambre.deviceHash })).status,
+    404,
+  );
+  assert.equal(
+    (await post(backupPath, "first", { action: "unlink", deviceId: chambre.deviceHash })).status,
+    200,
+  );
+  assert.deepEqual((await tv(chambre, "poll")).json, { linked: false, command: null });
+  assert.equal((await firstPage()).backups.length, 1);
+  sqlite.prepare("UPDATE clients SET status='suspended' WHERE id=?").run(clientId);
+  assert.equal((await call(backupPath, { token: "first" })).status, 403);
+  assert.deepEqual((await tv(salon, "poll")).json, { linked: false, command: null });
 });

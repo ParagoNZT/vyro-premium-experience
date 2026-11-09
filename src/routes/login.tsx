@@ -12,6 +12,7 @@ const searchSchema = z.object({
       "/admin",
       "/account/abonnement",
       "/account/appareils",
+      "/account/sauvegardes",
       "/account/telechargement",
       "/account/guides",
       "/account/profil",

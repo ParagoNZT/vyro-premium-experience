@@ -2,6 +2,7 @@ import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUpRight, Expand, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { captureCaption, scenes } from "./captures";
+import { handheldCaption, handheldCaptures } from "./handheld-captures";
 
 const sceneNotes = [
   "Films et séries",
@@ -11,12 +12,26 @@ const sceneNotes = [
 ];
 
 const number = (index: number) => String(index + 1).padStart(2, "0");
+const formats = [
+  { key: "tv", label: "TV", title: "VYRO sur TV" },
+  { key: "telephone", label: "Téléphone", title: "VYRO sur téléphone" },
+  { key: "tablette", label: "Tablette", title: "VYRO sur tablette" },
+] as const;
+const captures = {
+  tv: scenes.map((scene, index) => ({ ...scene, note: sceneNotes[index] })),
+  ...handheldCaptures,
+};
+type Format = (typeof formats)[number]["key"];
 
 export function ScreeningRoom() {
   const id = useId();
+  const [format, setFormat] = useState<Format>("tv");
   const [active, setActive] = useState(0);
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
-  const scene = scenes[active]!;
+  const frames = captures[format];
+  const scene = frames[active]!;
+  const title = formats.find((entry) => entry.key === format)!.title;
+  const caption = format === "tv" ? captureCaption : handheldCaption;
 
   function onTabKey(event: KeyboardEvent<HTMLButtonElement>) {
     const offset =
@@ -26,11 +41,11 @@ export function ScreeningRoom() {
           ? -1
           : 0;
     const next = offset
-      ? (active + offset + scenes.length) % scenes.length
+      ? (active + offset + frames.length) % frames.length
       : event.key === "Home"
         ? 0
         : event.key === "End"
-          ? scenes.length - 1
+          ? frames.length - 1
           : null;
     if (next === null) return;
     event.preventDefault();
@@ -39,18 +54,35 @@ export function ScreeningRoom() {
   }
 
   return (
-    <figure className="screening-room" id="projection" aria-label="Captures de VYRO sur TV">
+    <figure className="screening-room" id="projection" aria-label="Captures de VYRO et SHOW+">
       <div className="screening-room-label">
         <span>
-          <i aria-hidden /> VYRO SUR TV
+          <i aria-hidden /> {title}
         </span>
-        <span>4 ÉCRANS À EXPLORER</span>
+        <div className="screening-formats" role="group" aria-label="Appareil présenté">
+          {formats
+            .filter(({ key }) => captures[key].length)
+            .map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={format === key}
+                onClick={() => {
+                  if (format === key) return;
+                  setFormat(key);
+                  setActive(0);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+        </div>
       </div>
       <div className="screening-deck">
-        <div className="screening-film">
-          {scenes.map(({ id: key, image, alt }, index) => (
+        <div className="screening-film" data-format={format}>
+          {frames.map(({ id: key, image, alt }, index) => (
             <div
-              key={key}
+              key={format + "-" + key}
               role="tabpanel"
               aria-labelledby={id + "-tab-" + index}
               id={id + "-panel-" + index}
@@ -59,11 +91,11 @@ export function ScreeningRoom() {
               <img
                 src={image}
                 alt={alt}
-                width={1600}
-                height={900}
+                width={format === "tv" ? 1600 : undefined}
+                height={format === "tv" ? 900 : undefined}
                 decoding="async"
-                fetchPriority={index === 0 ? "high" : "auto"}
-                loading={index === 0 ? "eager" : "lazy"}
+                fetchPriority={format === "tv" && index === 0 ? "high" : "auto"}
+                loading={index === active ? "eager" : "lazy"}
                 className="screening-film-frame"
               />
             </div>
@@ -76,15 +108,17 @@ export function ScreeningRoom() {
             </Dialog.Trigger>
             <Dialog.Portal>
               <Dialog.Overlay className="screening-lightbox-backdrop" />
-              <Dialog.Content className="screening-lightbox">
+              <Dialog.Content className="screening-lightbox" data-format={format}>
                 <div>
-                  <Dialog.Title>VYRO sur TV · {scene.label}</Dialog.Title>
+                  <Dialog.Title>
+                    {title} · {scene.label}
+                  </Dialog.Title>
                   <Dialog.Close type="button" aria-label="Fermer la capture">
                     <X size={21} aria-hidden />
                   </Dialog.Close>
                 </div>
-                <img src={scene.image} alt={scene.alt} width={1600} height={900} decoding="async" />
-                <Dialog.Description>{captureCaption}</Dialog.Description>
+                <img src={scene.image} alt={scene.alt} decoding="async" />
+                <Dialog.Description>{caption}</Dialog.Description>
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
@@ -94,7 +128,7 @@ export function ScreeningRoom() {
             Explorer le lecteur <ArrowUpRight size={14} aria-hidden />
           </p>
           <div className="screening-tabs" role="tablist" aria-label="Écrans de l’application">
-            {scenes.map(({ id: key, label, icon: Icon }, index) => (
+            {frames.map(({ id: key, label, icon: Icon, note }, index) => (
               <button
                 key={key}
                 ref={(element) => {
@@ -112,7 +146,7 @@ export function ScreeningRoom() {
                 <Icon size={18} aria-hidden />
                 <span>
                   <strong>{label}</strong>
-                  <small>{sceneNotes[index]}</small>
+                  <small>{note}</small>
                 </span>
                 <span aria-hidden className="screening-tab-number">
                   {number(index)}
@@ -121,11 +155,11 @@ export function ScreeningRoom() {
             ))}
           </div>
           <p className="screening-selector-index" aria-hidden>
-            <span /> {number(active)} / {number(scenes.length - 1)}
+            <span /> {number(active)} / {number(frames.length - 1)}
           </p>
         </div>
       </div>
-      <figcaption>{captureCaption}</figcaption>
+      <figcaption>{caption}</figcaption>
     </figure>
   );
 }

@@ -47,6 +47,11 @@ CREATE TABLE device_profiles (  code_hash TEXT NOT NULL,  device_hash TEXT NOT N
 CREATE TABLE watch_events (  id TEXT PRIMARY KEY,  code_hash TEXT NOT NULL,  device_hash TEXT NOT NULL,  title TEXT NOT NULL,  kind TEXT NOT NULL,  season INTEGER,  episode INTEGER,  started_at TEXT NOT NULL,  ended_at TEXT,  FOREIGN KEY (code_hash, device_hash) REFERENCES bindings(code_hash, device_hash) ON DELETE CASCADE);
 CREATE TABLE beta_settings (id INTEGER PRIMARY KEY CHECK (id = 1), server_url TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE beta_sessions (token_hash TEXT PRIMARY KEY, code_hash TEXT NOT NULL, device_hash TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (code_hash, device_hash) REFERENCES bindings(code_hash, device_hash) ON DELETE CASCADE);
+CREATE TABLE show_installations (
+  device_hash TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, code_hash TEXT NOT NULL UNIQUE, legacy_code_hash TEXT, created_at TEXT NOT NULL,
+  FOREIGN KEY (code_hash) REFERENCES codes(code_hash) ON DELETE CASCADE,
+  FOREIGN KEY (legacy_code_hash) REFERENCES codes(code_hash) ON DELETE SET NULL
+);
 CREATE TABLE login_attempts (identity_hash TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_start TEXT NOT NULL);
 CREATE TABLE message_settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),

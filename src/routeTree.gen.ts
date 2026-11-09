@@ -27,6 +27,7 @@ import { Route as AccountAppareilsRouteImport } from './routes/account.appareils
 import { Route as AccountGuidesRouteImport } from './routes/account.guides'
 import { Route as AccountProfilRouteImport } from './routes/account.profil'
 import { Route as AccountResellerRouteImport } from './routes/account.reseller'
+import { Route as AccountSauvegardesRouteImport } from './routes/account.sauvegardes'
 import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 import { Route as ApiAccountRouteImport } from './routes/api.account'
@@ -36,7 +37,9 @@ import { Route as ApiBetaKeyRouteImport } from './routes/api.beta-key'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiDownloadRouteImport } from './routes/api.download'
 import { Route as ApiManageRouteImport } from './routes/api.manage'
+import { Route as ApiSettingsBackupsRouteImport } from './routes/api.settings-backups'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
+import { Route as ApiTvSettingsRouteImport } from './routes/api.tv-settings'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
@@ -132,6 +135,11 @@ const AccountResellerRoute = AccountResellerRouteImport.update({
   path: '/reseller',
   getParentRoute: () => AccountRoute,
 } as any)
+const AccountSauvegardesRoute = AccountSauvegardesRouteImport.update({
+  id: '/sauvegardes',
+  path: '/sauvegardes',
+  getParentRoute: () => AccountRoute,
+} as any)
 const AccountSupportRoute = AccountSupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -177,9 +185,19 @@ const ApiManageRoute = ApiManageRouteImport.update({
   path: '/api/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSettingsBackupsRoute = ApiSettingsBackupsRouteImport.update({
+  id: '/api/settings-backups',
+  path: '/api/settings-backups',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe-webhook',
   path: '/api/stripe-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTvSettingsRoute = ApiTvSettingsRouteImport.update({
+  id: '/api/tv-settings',
+  path: '/api/tv-settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalConditionsRoute = LegalConditionsRouteImport.update({
@@ -221,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
+  '/account/sauvegardes': typeof AccountSauvegardesRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
@@ -230,7 +249,9 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -254,6 +275,7 @@ export interface FileRoutesByTo {
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
+  '/account/sauvegardes': typeof AccountSauvegardesRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
@@ -263,7 +285,9 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -289,6 +313,7 @@ export interface FileRoutesById {
   '/account/guides': typeof AccountGuidesRoute
   '/account/profil': typeof AccountProfilRoute
   '/account/reseller': typeof AccountResellerRoute
+  '/account/sauvegardes': typeof AccountSauvegardesRoute
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
@@ -298,7 +323,9 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
+  '/api/settings-backups': typeof ApiSettingsBackupsRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -325,6 +352,7 @@ export interface FileRouteTypes {
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
+    | '/account/sauvegardes'
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
@@ -334,7 +362,9 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/settings-backups'
     | '/api/stripe-webhook'
+    | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -358,6 +388,7 @@ export interface FileRouteTypes {
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
+    | '/account/sauvegardes'
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
@@ -367,7 +398,9 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/settings-backups'
     | '/api/stripe-webhook'
+    | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -392,6 +425,7 @@ export interface FileRouteTypes {
     | '/account/guides'
     | '/account/profil'
     | '/account/reseller'
+    | '/account/sauvegardes'
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
@@ -401,7 +435,9 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/download'
     | '/api/manage'
+    | '/api/settings-backups'
     | '/api/stripe-webhook'
+    | '/api/tv-settings'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -429,7 +465,9 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiDownloadRoute: typeof ApiDownloadRoute
   ApiManageRoute: typeof ApiManageRoute
+  ApiSettingsBackupsRoute: typeof ApiSettingsBackupsRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiTvSettingsRoute: typeof ApiTvSettingsRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
   LegalMentionsRoute: typeof LegalMentionsRoute
@@ -564,6 +602,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountResellerRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/account/sauvegardes': {
+      id: '/account/sauvegardes'
+      path: '/sauvegardes'
+      fullPath: '/account/sauvegardes'
+      preLoaderRoute: typeof AccountSauvegardesRouteImport
+      parentRoute: typeof AccountRoute
+    }
     '/account/support': {
       id: '/account/support'
       path: '/support'
@@ -627,11 +672,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiManageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/settings-backups': {
+      id: '/api/settings-backups'
+      path: '/api/settings-backups'
+      fullPath: '/api/settings-backups'
+      preLoaderRoute: typeof ApiSettingsBackupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stripe-webhook': {
       id: '/api/stripe-webhook'
       path: '/api/stripe-webhook'
       fullPath: '/api/stripe-webhook'
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tv-settings': {
+      id: '/api/tv-settings'
+      path: '/api/tv-settings'
+      fullPath: '/api/tv-settings'
+      preLoaderRoute: typeof ApiTvSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal/conditions': {
@@ -671,6 +730,7 @@ interface AccountRouteChildren {
   AccountGuidesRoute: typeof AccountGuidesRoute
   AccountProfilRoute: typeof AccountProfilRoute
   AccountResellerRoute: typeof AccountResellerRoute
+  AccountSauvegardesRoute: typeof AccountSauvegardesRoute
   AccountSupportRoute: typeof AccountSupportRoute
   AccountTelechargementRoute: typeof AccountTelechargementRoute
   AccountIndexRoute: typeof AccountIndexRoute
@@ -682,6 +742,7 @@ const AccountRouteChildren: AccountRouteChildren = {
   AccountGuidesRoute: AccountGuidesRoute,
   AccountProfilRoute: AccountProfilRoute,
   AccountResellerRoute: AccountResellerRoute,
+  AccountSauvegardesRoute: AccountSauvegardesRoute,
   AccountSupportRoute: AccountSupportRoute,
   AccountTelechargementRoute: AccountTelechargementRoute,
   AccountIndexRoute: AccountIndexRoute,
@@ -710,7 +771,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiDownloadRoute: ApiDownloadRoute,
   ApiManageRoute: ApiManageRoute,
+  ApiSettingsBackupsRoute: ApiSettingsBackupsRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiTvSettingsRoute: ApiTvSettingsRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,
   LegalMentionsRoute: LegalMentionsRoute,

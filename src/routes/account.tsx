@@ -13,6 +13,7 @@ import {
   MonitorSmartphone,
   Package,
   ShieldCheck,
+  SlidersHorizontal,
   UserRound,
   X,
 } from "lucide-react";
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/account")({
 const NAV = [
   { to: "/account", label: "Tableau de bord", icon: LayoutDashboard },
   { to: "/account/appareils", label: "Mes appareils", icon: MonitorSmartphone },
+  { to: "/account/sauvegardes", label: "Sauvegardes", icon: SlidersHorizontal },
   { to: "/account/abonnement", label: "Mon abonnement", icon: CreditCard },
   { to: "/account/profil", label: "Mon profil", icon: UserRound },
 ] as const;
@@ -130,6 +132,7 @@ function AccountLayout() {
   const current = [...NAV, ...RESOURCES].find(({ to }) => to === pathname);
   const open = openPath === pathname;
   const closeMenu = () => setOpenPath(null);
+  // Pass only destinations currently accepted by the login route.
   const redirect =
     current && current.to !== "/account" && current.to !== "/account/reseller"
       ? current.to
@@ -137,10 +140,10 @@ function AccountLayout() {
   const loginSearch = { redirect };
 
   useEffect(() => {
-    if (ready && !user && !accountError && (pathname === "/account" || redirect)) {
+    if (ready && !user && !accountError && current && !reseller) {
       void navigate({ to: "/login", search: { redirect }, replace: true });
     }
-  }, [ready, user, pathname, accountError, navigate, redirect]);
+  }, [ready, user, current, reseller, accountError, navigate, redirect]);
 
   async function logout() {
     setSigningOut(true);

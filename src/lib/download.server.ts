@@ -2,9 +2,14 @@ import { ApiError, api, identity, json } from "./access.server";
 import { database } from "./management.server";
 
 const releases = {
+  androidmobile: "vyro-premium-androidmobile.apk",
   androidtv: "vyro-premium-androidtv.apk",
   firetv: "vyro-premium-firetv.apk",
 } as const;
+
+// The same signed SHOW+ build supports Android phones, tablets, and TV.
+const officialPublicRelease =
+  "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v1.0.44/SHOWPlayer.apk";
 
 type ObjectMetadata = { size: number };
 type ReleaseBucket = {
@@ -39,7 +44,7 @@ export const downloadRequest = api(async (request) => {
     /* Development preview without R2. */
   }
   const platform = new URL(request.url).searchParams.get("platform");
-  if (platform !== null && platform !== "androidtv" && platform !== "firetv") {
+  if (platform !== null && !Object.hasOwn(releases, platform)) {
     throw new ApiError(400, "Plateforme inconnue.");
   }
   if (!platform) {
@@ -50,10 +55,10 @@ export const downloadRequest = api(async (request) => {
           ),
         )
       : [];
-    return json({ platforms: published.filter(Boolean) });
+    return json({ platforms: published.filter(Boolean), officialPublicRelease });
   }
   if (!bucket) throw new ApiError(404, "Ce fichier d’installation n’est pas publié.");
-  const key = releases[platform];
+  const key = releases[platform as keyof typeof releases];
   const object = await bucket.get(key);
   if (!object) throw new ApiError(404, "Ce fichier d’installation n’est pas publié.");
   if (!available(object)) {

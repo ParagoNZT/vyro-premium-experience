@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Tv, MonitorPlay, Flame } from "lucide-react";
+import { Tv, MonitorPlay, Flame, Smartphone } from "lucide-react";
 import { FinalCta, Lead, Section, Shot } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import { captureCaption, homeCapture } from "@/components/site/captures";
@@ -13,13 +13,13 @@ export const Route = createFileRoute("/appareils")({
       {
         name: "description",
         content:
-          "VYRO Premium fonctionne sur Android TV, Google TV et Amazon Fire TV. Découvrez les appareils compatibles et les prérequis d'installation.",
+          "VYRO Premium fonctionne sur Android TV, Google TV, Amazon Fire TV, téléphone et tablette Android.",
       },
       { property: "og:title", content: "Appareils compatibles – VYRO Premium" },
       {
         property: "og:description",
         content:
-          "Android TV, Google TV et Amazon Fire TV : les appareils compatibles VYRO Premium.",
+          "Téléviseurs, boîtiers, téléphones et tablettes Android compatibles avec VYRO Premium.",
       },
       { property: "og:url", content: "/appareils" },
     ],
@@ -44,6 +44,11 @@ const DETAILS = [
     name: "Amazon Fire TV",
     text: "Fire TV Stick, Fire TV Stick 4K, Fire TV Cube et téléviseurs intégrant Fire TV.",
   },
+  {
+    icon: Smartphone,
+    name: "Android mobile et tablette",
+    text: "Une interface tactile pour regarder votre direct, vos films et vos séries sur les téléphones et tablettes compatibles.",
+  },
 ];
 
 function DevicesPage() {
@@ -54,13 +59,13 @@ function DevicesPage() {
           <p className="vyro-kicker">
             <i /> COMPATIBILITÉ
           </p>
-          <h1 className="vyro-display-title">Une application, trois plateformes TV.</h1>
+          <h1 className="vyro-display-title">Du téléviseur au téléphone.</h1>
           <Lead className="mt-6 max-w-2xl">
-            VYRO Premium est conçu uniquement pour le grand écran. Aucune version mobile agrandie :
-            chaque écran est dessiné pour la télécommande.
+            Utilisez la télécommande sur TV ou le tactile sur téléphone et tablette Android.
+            Retrouvez vos réglages et votre profil sur vos appareils associés.
           </Lead>
         </Reveal>
-        <div className="mt-12 grid gap-3 md:grid-cols-3">
+        <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {DETAILS.map(({ icon: Icon, name, text }, i) => (
             <Reveal key={name} delay={i * 70} className="panel p-6">
               <Icon className="h-5 w-5 text-primary" aria-hidden />

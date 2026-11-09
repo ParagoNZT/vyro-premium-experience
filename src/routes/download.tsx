@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Tv, Flame } from "lucide-react";
+import { Download, Tv, Flame, Smartphone } from "lucide-react";
 import { Lead, Section } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import { Button } from "@/components/site/Button";
@@ -10,16 +10,17 @@ export const Route = createFileRoute("/download")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Télécharger VYRO Premium – Android TV, Google TV, Fire TV" },
+      { title: "Télécharger VYRO Premium – Android mobile, Android TV et Fire TV" },
       {
         name: "description",
         content:
-          "Téléchargez VYRO Premium pour Android TV, Google TV et Amazon Fire TV : version, taille, date de mise à jour et instructions d'installation.",
+          "Fichiers et instructions d’installation pour téléphone ou tablette Android, Android TV, Google TV et Amazon Fire TV.",
       },
       { property: "og:title", content: "Télécharger VYRO Premium" },
       {
         property: "og:description",
-        content: "Fichiers d'installation et guides pour Android TV, Google TV et Fire TV.",
+        content:
+          "Fichiers d’installation et guides pour Android mobile, Android TV, Google TV et Fire TV.",
       },
       { property: "og:url", content: "/download" },
     ],
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/download")({
   component: DownloadPage,
 });
 
-const ICONS = { androidtv: Tv, firetv: Flame } as const;
+const ICONS = { androidmobile: Smartphone, androidtv: Tv, firetv: Flame } as const;
 
 function DownloadPage() {
   return (

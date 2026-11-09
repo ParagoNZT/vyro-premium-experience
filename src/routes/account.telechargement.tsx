@@ -22,6 +22,7 @@ function AccountDownloadPage() {
 
 function DownloadPanel({ isActive }: { isActive: boolean }) {
   const [published, setPublished] = useState<string[] | null>(null);
+  const [officialPublicRelease, setOfficialPublicRelease] = useState("");
   const [issue, setIssue] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -30,9 +31,13 @@ function DownloadPanel({ isActive }: { isActive: boolean }) {
   useEffect(() => {
     if (!isActive) return;
     const controller = new AbortController();
-    void portalApi<{ platforms: string[] }>("/api/download", { signal: controller.signal })
+    void portalApi<{ platforms: string[]; officialPublicRelease?: string }>("/api/download", {
+      signal: controller.signal,
+    })
       .then((result) => {
-        if (!controller.signal.aborted) setPublished(result.platforms);
+        if (controller.signal.aborted) return;
+        setPublished(result.platforms);
+        setOfficialPublicRelease(result.officialPublicRelease ?? "");
       })
       .catch(() => {
         if (!controller.signal.aborted)
@@ -83,7 +88,7 @@ function DownloadPanel({ isActive }: { isActive: boolean }) {
   return (
     <div className="portal-enter">
       <PortalHeading label="VYRO / Installation" title="Installer VYRO Premium">
-        Téléchargez le fichier officiel correspondant à votre téléviseur et suivez les étapes
+        Téléchargez le fichier officiel correspondant à votre appareil et suivez les étapes
         d’installation.
       </PortalHeading>
       <div className="portal-panel portal-glow mt-7 flex flex-wrap items-center gap-4 p-5 sm:p-7">
@@ -91,7 +96,7 @@ function DownloadPanel({ isActive }: { isActive: boolean }) {
         <p className="min-w-52 flex-1 text-sm text-muted-foreground" role="status">
           {!isActive
             ? "Une licence active est nécessaire pour accéder aux fichiers d’installation."
-            : published?.length === 0
+            : published?.length === 0 && !officialPublicRelease
               ? "Aucun fichier d’installation n’est publié pour le moment."
               : published
                 ? "Choisissez le fichier correspondant à votre plateforme."
@@ -143,13 +148,24 @@ function DownloadPanel({ isActive }: { isActive: boolean }) {
                 {busy === target.id ? "Téléchargement…" : "Télécharger l’APK"}
               </Button>
             )}
+            {isActive && !published?.includes(target.id) && officialPublicRelease && (
+              <Button className="mt-5" size="sm" to={officialPublicRelease}>
+                <Download className="size-4" aria-hidden />
+                Télécharger SHOW+ 1.0.44
+              </Button>
+            )}
           </section>
         ))}
       </div>
       {isActive && (
-        <Button to="/account/appareils" variant="secondary" size="sm" className="mt-6">
-          Associer mon appareil
-        </Button>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button to="/account/appareils" variant="secondary" size="sm">
+            Gérer les accès
+          </Button>
+          <Button to="/account/sauvegardes" variant="secondary" size="sm">
+            Associer aux sauvegardes
+          </Button>
+        </div>
       )}
     </div>
   );
