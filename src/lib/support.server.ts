@@ -3,7 +3,8 @@ import { api, ApiError, body, identity, json } from "./access.server";
 import { database } from "./management.server";
 
 const text = z.string().trim().min(2).max(4000);
-const statuses = z.enum(["open", "waiting", "closed"]);
+const statuses = z.enum(["open", "processing", "waiting", "closed"]);
+const ticketStatus = "CASE WHEN status='open' AND processing=1 THEN 'processing' ELSE status END";
 const categories = z.enum(["application", "account", "payment", "other"]);
 const action = z.discriminatedUnion("action", [
   z.object({
@@ -39,7 +40,9 @@ export const supportRequest = api(async (request) => {
   const db = await database();
   const scope = admin ? "1=1" : "owner_id=?";
   const args = admin ? [] : [user.id];
-  const columns = "id,subject,category,status,updated_at AS updatedAt" + (admin ? ",email" : "");
+  const columns =
+    `id,subject,category,${ticketStatus} AS status,updated_at AS updatedAt` +
+    (admin ? ",email" : "");
   if (request.method === "GET") {
     const id = query.get("id");
     if (id !== null) {
@@ -63,7 +66,7 @@ export const supportRequest = api(async (request) => {
     const { results } = await db
       .prepare(
         `SELECT ${columns} FROM support_tickets WHERE ${scope}
-      ${filter.success ? "AND status=?" : ""} ORDER BY updated_at DESC,id LIMIT 26 OFFSET ?`,
+      ${filter.success ? `AND (${ticketStatus})=?` : ""} ORDER BY updated_at DESC,id LIMIT 26 OFFSET ?`,
       )
       .bind(...args, ...(filter.success ? [filter.data] : []), page * 25)
       .all<Ticket>();
@@ -95,10 +98,19 @@ export const supportRequest = api(async (request) => {
     return json({ id }, 201);
   }
   if (value.action === "status") {
-    if (!admin) throw new ApiError(403, "Seul le support peut modifier le statut.");
+    if (!admin && value.status !== "closed")
+      throw new ApiError(403, "Seul le support peut modifier ce statut.");
     const result = await db
-      .prepare("UPDATE support_tickets SET status=?,updated_at=? WHERE id=?")
-      .bind(value.status, now, value.id)
+      .prepare(
+        `UPDATE support_tickets SET status=?,processing=?,updated_at=? WHERE id=? AND ${scope}`,
+      )
+      .bind(
+        value.status === "processing" ? "open" : value.status,
+        Number(value.status === "processing"),
+        now,
+        value.id,
+        ...args,
+      )
       .run();
     if (!result.meta.changes) throw new ApiError(404, "Ticket introuvable.");
     return json({ id: value.id });
@@ -122,10 +134,11 @@ export const supportRequest = api(async (request) => {
       ),
     db
       .prepare(
-        `UPDATE support_tickets SET status=?,updated_at=? WHERE id=?
+        `UPDATE support_tickets SET processing=CASE WHEN ?='open' AND status='open' THEN processing ELSE 0 END,
+      status=?,updated_at=? WHERE id=?
       AND EXISTS(SELECT 1 FROM support_replies WHERE id=? AND ticket_id=support_tickets.id)`,
       )
-      .bind(admin ? "waiting" : "open", now, value.id, replyId),
+      .bind(admin ? "waiting" : "open", admin ? "waiting" : "open", now, value.id, replyId),
   ]);
   if (!written?.meta.changes)
     throw new ApiError(409, "Impossible de répondre à ce ticket. Vérifiez son statut.");

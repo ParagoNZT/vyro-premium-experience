@@ -62,6 +62,8 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0007_show_reseller_memberships.sql",
     "../migrations/d1/0008_partner_control.sql",
     "../migrations/d1/0009_support_tickets.sql",
+    "../migrations/d1/0010_support_processing.sql",
+    "../migrations/d1/0011_vyro_app_console.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -95,9 +97,27 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   });
 
   const sessions = new Map();
+  let hasReleasePin = false;
   t.mock.method(globalThis, "fetch", async (input, init) => {
     const url = new URL(input);
     const headers = new Headers(init?.headers);
+    if (url.href === "https://raw.githubusercontent.com/ParagoNZT/VYRO-Updates/main/latest.json") {
+      assert.equal(init.redirect, "manual");
+      return Response.json({
+        versionCode: 154,
+        versionName: "0.23.8",
+        apkUrl: "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v0.23.8/VYRO.apk",
+        changelog: "",
+      });
+    }
+    if (
+      url.href ===
+      "https://raw.githubusercontent.com/ParagoNZT/VYRO-Updates/main/trusted-signer.sha256"
+    ) {
+      return new Response(hasReleasePin ? "a".repeat(64) : "", {
+        status: hasReleasePin ? 200 : 404,
+      });
+    }
     if (url.href === authOrigin + "/auth/v1/user") {
       assert.equal(headers.get("apikey"), "sb_publishable_fixture");
       const account = accounts[headers.get("authorization")?.replace(/^Bearer /, "")];
@@ -370,6 +390,30 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.equal(ticket.status, 201);
   assert.equal((await call(support + "?id=" + ticket.json.id, { token: "first" })).status, 404);
   assert.equal(
+    (await post(support, "first", { action: "status", id: ticket.json.id, status: "closed" }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (await post(support, "second", { action: "status", id: ticket.json.id, status: "processing" }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await post(support + "?view=admin", "admin", {
+        action: "status",
+        id: ticket.json.id,
+        status: "processing",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(support + "?status=processing", { token: "second" })).json.tickets[0].status,
+    "processing",
+  );
+  assert.equal(
     (
       await post(support + "?view=admin", "admin", {
         action: "reply",
@@ -385,6 +429,59 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     thread.json.replies.map((reply) => reply.author),
     ["customer", "support"],
   );
+
+  const official = "/api/vyro-console";
+  const releaseRequest = {
+    action: "release",
+    versionCode: 155,
+    versionName: "0.23.9",
+    sha256: "b".repeat(64),
+    confirmed: true,
+    apkUrl: "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v0.23.9/VYRO.apk",
+    changelog: "QA locale",
+  };
+  assert.equal((await call(official)).status, 401);
+  assert.equal((await post(official, "first", releaseRequest)).status, 403);
+  assert.equal((await post(official, "admin", releaseRequest)).status, 503);
+  assert.equal((await call("/api/vyro-release-queue")).json.release, null);
+  hasReleasePin = true;
+  assert.equal(
+    (await post(official, "admin", { ...releaseRequest, versionCode: 154 })).status,
+    409,
+  );
+  assert.equal(
+    (
+      await post(official, "admin", {
+        ...releaseRequest,
+        apkUrl: "https://other.example.test/test.apk",
+      })
+    ).status,
+    400,
+  );
+  assert.equal((await post(official, "admin", releaseRequest)).status, 202);
+  assert.equal((await call("/api/vyro-release-queue")).json.release.versionCode, 155);
+  assert.equal(
+    (await post(official, "admin", { action: "withdraw", versionCode: 155 })).status,
+    200,
+  );
+  assert.equal((await call("/api/vyro-release-queue")).json.release, null);
+  assert.equal(
+    (
+      await post(official, "admin", {
+        action: "announce",
+        title: "Test privé",
+        body: "Annonce de fixture isolée",
+        days: 7,
+        confirmed: true,
+      })
+    ).status,
+    201,
+  );
+  const feed = (await call("/api/vyro-announcements")).json.announcements;
+  assert.equal(feed[0].title, "Test privé");
+  assert.equal(Object.hasOwn(feed[0], "actorId"), false);
+  assert.equal((await post(official, "admin", { action: "revoke", id: feed[0].id })).status, 200);
+  assert.deepEqual((await call("/api/vyro-announcements")).json.announcements, []);
   assert.equal(
     (
       await post(support + "?view=admin", "admin", {

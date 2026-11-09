@@ -1,10 +1,32 @@
+import { Check, Clock3, RotateCcw } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { portalApi } from "@/lib/portal-api";
 import type { Ticket, TicketDetail } from "@/lib/support.server";
 
-const labels = { open: "Ouvert", waiting: "En attente du client", closed: "Clôturé" } as const;
+const labels = {
+  open: "Ouvert",
+  processing: "En cours de traitement",
+  waiting: "En attente du client",
+  closed: "Clôturé",
+} as const;
+const badgeColors = {
+  open: "bg-secondary text-secondary-foreground",
+  processing: "bg-amber-100 text-amber-950",
+  waiting: "bg-sky-100 text-sky-950",
+  closed: "bg-muted text-muted-foreground",
+};
+
+function TicketStatus({ status }: { status: Ticket["status"] }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeColors[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+}
 const categories = {
   application: "Application",
   account: "Compte",
@@ -27,13 +49,16 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     void portalApi<{ tickets: Ticket[]; hasMore: boolean }>(
       `${prefix}&page=${page}&status=${filter}`,
       { signal: controller.signal },
     )
-      .then(setList)
+      .then((value) => {
+        if (!controller.signal.aborted) setList(value);
+      })
       .catch((err: unknown) => {
         if (!controller.signal.aborted)
           setError(err instanceof Error ? err.message : "Liste indisponible.");
@@ -56,11 +81,13 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
   async function save(data: Record<string, string>) {
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const result = await portalApi<{ id: string }>(prefix, { method: "POST", body: data });
       setActive(result.id);
       setCreating(false);
-      setMessage("");
+      if (data["action"] !== "status") setMessage("");
+      if (data["action"] === "status") setNotice("Statut du ticket mis à jour.");
       setVersion((x) => x + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible d’enregistrer la demande.");
@@ -109,6 +136,14 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
       {error && (
         <p role="alert" className="my-4 text-sm text-destructive">
           {error}
+        </p>
+      )}
+      {notice && (
+        <p
+          role="status"
+          className="mt-4 rounded-md bg-secondary p-3 text-sm text-secondary-foreground"
+        >
+          {notice}
         </p>
       )}
       {creating ? (
@@ -180,8 +215,8 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
                 }}
               >
                 <strong>{item.subject}</strong>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {labels[item.status]} · {date(item.updatedAt)}
+                <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <TicketStatus status={item.status} /> {date(item.updatedAt)}
                 </span>
               </button>
             ))}
@@ -218,11 +253,50 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
               </p>
             ) : (
               <>
-                <h3 className="break-words text-lg font-semibold">{ticket.subject}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="break-words text-lg font-semibold">{ticket.subject}</h3>
+                  <TicketStatus status={ticket.status} />
+                </div>
                 <p className="mb-4 break-words text-xs text-muted-foreground">
-                  {categories[ticket.category]} · {labels[ticket.status]}
+                  {categories[ticket.category]}
                   {ticket.email ? " · " + ticket.email : ""}
                 </p>
+                <div className="mb-4 flex flex-wrap gap-2 border-b border-border pb-4">
+                  {admin && ticket.status !== "closed" && ticket.status !== "processing" && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        void save({ action: "status", id: ticket.id, status: "processing" })
+                      }
+                    >
+                      <Clock3 aria-hidden /> Mettre en cours
+                    </Button>
+                  )}
+                  {ticket.status !== "closed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        void save({ action: "status", id: ticket.id, status: "closed" })
+                      }
+                    >
+                      <Check aria-hidden /> Clôturer le ticket
+                    </Button>
+                  )}
+                  {admin && ticket.status === "closed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void save({ action: "status", id: ticket.id, status: "open" })}
+                    >
+                      <RotateCcw aria-hidden /> Rouvrir le ticket
+                    </Button>
+                  )}
+                </div>
                 <div className="max-h-[25rem] space-y-3 overflow-y-auto">
                   {detail?.replies.map((reply) => (
                     <article key={reply.id} className="rounded-lg border border-border p-3">
@@ -260,23 +334,6 @@ export function SupportDesk({ admin = false }: { admin?: boolean }) {
                       Répondre
                     </Button>
                   </form>
-                )}
-                {admin && (
-                  <Button
-                    className="mt-3"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() =>
-                      void save({
-                        action: "status",
-                        id: ticket.id,
-                        status: ticket.status === "closed" ? "open" : "closed",
-                      })
-                    }
-                  >
-                    {ticket.status === "closed" ? "Rouvrir" : "Clôturer le ticket"}
-                  </Button>
                 )}
               </>
             )}

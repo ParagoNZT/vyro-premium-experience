@@ -1,6 +1,7 @@
 import {
   Activity,
   CreditCard,
+  DownloadCloud,
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
@@ -41,6 +42,11 @@ export const adminSections = {
     title: "Applications partenaires",
     description: "Gérez les demandes d’applications et les périodes de mises à jour.",
     Icon: Package,
+  },
+  vyro: {
+    title: "Application VYRO",
+    description: "Publiez les mises à jour et les messages de l’application VYRO originale.",
+    Icon: DownloadCloud,
   },
   support: {
     title: "Support",

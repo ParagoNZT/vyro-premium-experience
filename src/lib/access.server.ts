@@ -99,7 +99,10 @@ export function expectedOrigin(request: Request) {
   return url.origin;
 }
 
-export async function limitedBody(request: Request, limit: number): Promise<Uint8Array> {
+export async function limitedBody(
+  request: Pick<Request, "headers" | "body">,
+  limit: number,
+): Promise<Uint8Array> {
   const declared = request.headers.get("content-length");
   if (declared && (!/^\d+$/.test(declared) || Number(declared) > limit)) {
     throw new ApiError(413, "Requête trop volumineuse.");

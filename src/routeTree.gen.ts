@@ -43,6 +43,9 @@ import { Route as ApiShowDirectoryRouteImport } from './routes/api.show-director
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as ApiSupportTicketsRouteImport } from './routes/api.support-tickets'
 import { Route as ApiTvSettingsRouteImport } from './routes/api.tv-settings'
+import { Route as ApiVyroAnnouncementsRouteImport } from './routes/api.vyro-announcements'
+import { Route as ApiVyroConsoleRouteImport } from './routes/api.vyro-console'
+import { Route as ApiVyroReleaseQueueRouteImport } from './routes/api.vyro-release-queue'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
 import { Route as LegalMentionsRouteImport } from './routes/legal.mentions'
@@ -218,6 +221,21 @@ const ApiTvSettingsRoute = ApiTvSettingsRouteImport.update({
   path: '/api/tv-settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVyroAnnouncementsRoute = ApiVyroAnnouncementsRouteImport.update({
+  id: '/api/vyro-announcements',
+  path: '/api/vyro-announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVyroConsoleRoute = ApiVyroConsoleRouteImport.update({
+  id: '/api/vyro-console',
+  path: '/api/vyro-console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVyroReleaseQueueRoute = ApiVyroReleaseQueueRouteImport.update({
+  id: '/api/vyro-release-queue',
+  path: '/api/vyro-release-queue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalConditionsRoute = LegalConditionsRouteImport.update({
   id: '/legal/conditions',
   path: '/legal/conditions',
@@ -273,6 +291,9 @@ export interface FileRoutesByFullPath {
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
+  '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
+  '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -312,6 +333,9 @@ export interface FileRoutesByTo {
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
+  '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
+  '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -353,6 +377,9 @@ export interface FileRoutesById {
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/support-tickets': typeof ApiSupportTicketsRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
+  '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
+  '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
   '/legal/mentions': typeof LegalMentionsRoute
@@ -395,6 +422,9 @@ export interface FileRouteTypes {
     | '/api/stripe-webhook'
     | '/api/support-tickets'
     | '/api/tv-settings'
+    | '/api/vyro-announcements'
+    | '/api/vyro-console'
+    | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -434,6 +464,9 @@ export interface FileRouteTypes {
     | '/api/stripe-webhook'
     | '/api/support-tickets'
     | '/api/tv-settings'
+    | '/api/vyro-announcements'
+    | '/api/vyro-console'
+    | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -474,6 +507,9 @@ export interface FileRouteTypes {
     | '/api/stripe-webhook'
     | '/api/support-tickets'
     | '/api/tv-settings'
+    | '/api/vyro-announcements'
+    | '/api/vyro-console'
+    | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
     | '/legal/mentions'
@@ -507,6 +543,9 @@ export interface RootRouteChildren {
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiSupportTicketsRoute: typeof ApiSupportTicketsRoute
   ApiTvSettingsRoute: typeof ApiTvSettingsRoute
+  ApiVyroAnnouncementsRoute: typeof ApiVyroAnnouncementsRoute
+  ApiVyroConsoleRoute: typeof ApiVyroConsoleRoute
+  ApiVyroReleaseQueueRoute: typeof ApiVyroReleaseQueueRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
   LegalMentionsRoute: typeof LegalMentionsRoute
@@ -753,6 +792,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTvSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/vyro-announcements': {
+      id: '/api/vyro-announcements'
+      path: '/api/vyro-announcements'
+      fullPath: '/api/vyro-announcements'
+      preLoaderRoute: typeof ApiVyroAnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/vyro-console': {
+      id: '/api/vyro-console'
+      path: '/api/vyro-console'
+      fullPath: '/api/vyro-console'
+      preLoaderRoute: typeof ApiVyroConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/vyro-release-queue': {
+      id: '/api/vyro-release-queue'
+      path: '/api/vyro-release-queue'
+      fullPath: '/api/vyro-release-queue'
+      preLoaderRoute: typeof ApiVyroReleaseQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/conditions': {
       id: '/legal/conditions'
       path: '/legal/conditions'
@@ -837,6 +897,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiSupportTicketsRoute: ApiSupportTicketsRoute,
   ApiTvSettingsRoute: ApiTvSettingsRoute,
+  ApiVyroAnnouncementsRoute: ApiVyroAnnouncementsRoute,
+  ApiVyroConsoleRoute: ApiVyroConsoleRoute,
+  ApiVyroReleaseQueueRoute: ApiVyroReleaseQueueRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,
   LegalMentionsRoute: LegalMentionsRoute,

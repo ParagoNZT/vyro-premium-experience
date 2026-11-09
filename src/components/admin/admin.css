@@ -40,6 +40,35 @@
   line-height: 1.3;
 }
 
+/* Shared account controls use semantic colors. Resolve them against the
+   console palette inside the work area, including native select menus. */
+.va-content {
+  --background: var(--va-soft);
+  --foreground: var(--va-ink);
+  --card: #fff;
+  --card-foreground: var(--va-ink);
+  --popover: #fff;
+  --popover-foreground: var(--va-ink);
+  --primary: var(--va-accent);
+  --primary-foreground: #fff;
+  --secondary: var(--va-tint);
+  --secondary-foreground: var(--va-accent-deep);
+  --muted: var(--va-soft);
+  --muted-foreground: var(--va-muted);
+  --accent: var(--va-tint);
+  --accent-foreground: var(--va-accent-deep);
+  --border: var(--va-line);
+  --input: #c8c5d8;
+  --ring: var(--va-accent);
+  --destructive: #a02c46;
+  --destructive-foreground: #fff;
+}
+
+.va-theme :where(textarea):focus-visible {
+  outline: 2px solid #8466de;
+  outline-offset: 3px;
+}
+
 .va-workspace {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);

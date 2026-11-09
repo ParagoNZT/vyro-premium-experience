@@ -20,6 +20,7 @@ import type { AdminSection } from "./sections";
 import { TvPanelLink } from "./TvPanelLink";
 import { SupportDesk } from "@/components/account/SupportDesk";
 import { PartnerWorkspace } from "@/components/account/PartnerWorkspace";
+import { VyroAppPanel } from "./VyroAppPanel";
 
 type OnDenied = (status: 401 | 403) => void;
 type Action =
@@ -199,6 +200,8 @@ export function ManagementPanel({
     <SupportDesk admin />
   ) : section === "partners" ? (
     <PartnerWorkspace admin />
+  ) : section === "vyro" ? (
+    <VyroAppPanel onAccessDenied={onAccessDenied} />
   ) : (
     <ManagementSection section={section} onAccessDenied={onAccessDenied} />
   );
@@ -208,7 +211,7 @@ function ManagementSection({
   section,
   onAccessDenied,
 }: {
-  section: Exclude<AdminSection, "beta" | "support" | "partners">;
+  section: Exclude<AdminSection, "beta" | "support" | "partners" | "vyro">;
   onAccessDenied: OnDenied;
 }) {
   const [page, setPage] = useState(0);
