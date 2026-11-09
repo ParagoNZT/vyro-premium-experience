@@ -24,6 +24,7 @@ type Access = {
   deviceCount: number;
   lastSeen: string | null;
   resellerName: string | null;
+  needsReview: number;
   clientEmail: string | null;
   hasRecoverableKey: number;
   managedOnSite: number;
@@ -33,6 +34,7 @@ export type BetaPage = {
   codes: Access[];
   hasMore: boolean;
   stats: { accesses: number; activeAccesses: number; devices: number };
+  resellers: { id: string; name: string }[];
 };
 type DialogState = { kind: "edit" | "reveal"; access: Access };
 
@@ -51,7 +53,9 @@ function origin(access: Access) {
     ? "VYRO"
     : access.resellerName
       ? "Revendeur · " + access.resellerName
-      : "Bêta";
+      : access.needsReview
+        ? "SHOW+ · À vérifier"
+        : "Client direct";
 }
 
 function accessStatus(access: Access) {
@@ -69,10 +73,12 @@ function AccessStatus({ access }: { access: Access }) {
 }
 
 export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 403) => void }) {
-  const [data, setData] = useState<{ result: BetaPage; search: string } | null>(null);
+  const [data, setData] = useState<{ result: BetaPage; key: string } | null>(null);
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState("all");
+  const [sort, setSort] = useState("recent");
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -90,15 +96,16 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
   const [enabled, setEnabled] = useState(true);
   const [note, setNote] = useState("");
 
+  const params = new URLSearchParams({ page: String(page), q: search, scope, sort }).toString();
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    void portalApi<BetaPage>(`/api/beta?page=${page}&q=${encodeURIComponent(search)}`, {
+    void portalApi<BetaPage>(`/api/beta?${params}`, {
       signal: controller.signal,
     })
       .then((result) => {
-        if (!controller.signal.aborted) setData({ result, search });
+        if (!controller.signal.aborted) setData({ result, key: params });
       })
       .catch((issue: unknown) => {
         if (controller.signal.aborted) return;
@@ -114,7 +121,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [page, search, version, onAccessDenied]);
+  }, [params, version, onAccessDenied]);
 
   useEffect(() => {
     if (dialog?.kind !== "reveal") return;
@@ -213,7 +220,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
     }
   }
 
-  const result = data?.search === search && data.result.page === page ? data.result : null;
+  const result = data?.key === params ? data.result : null;
   const stats = data?.result.stats;
   const selected = result?.codes.find((access) => access.id === selectedId) ?? result?.codes[0];
 
@@ -238,7 +245,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
           <div className="va-card-head">
             <div>
               <h2 id="va-access-list-title">Liste des accès TV</h2>
-              <p>Recherchez par nom ou adresse e-mail.</p>
+              <p>Filtrez vos clients directs et les accès des revendeurs.</p>
             </div>
             <button
               className="va-button va-button-secondary va-refresh"
@@ -250,6 +257,44 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
             >
               <RefreshCw size={17} aria-hidden />
             </button>
+          </div>
+          <div className="va-toolbar">
+            <label className="va-field">
+              <span>Périmètre</span>
+              <select
+                value={scope}
+                onChange={(event) => {
+                  setScope(event.target.value);
+                  setPage(0);
+                  setSelectedId(null);
+                }}
+              >
+                <option value="all">Tous les accès</option>
+                <option value="direct">Clients directs</option>
+                <option value="show-plus">Revendeur · SHOW+</option>
+                <option value="review">SHOW+ · À vérifier</option>
+                {data?.result.resellers.map((partner) => (
+                  <option key={partner.id} value={`reseller:${partner.id}`}>
+                    Revendeur · {partner.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="va-field">
+              <span>Trier par</span>
+              <select
+                value={sort}
+                onChange={(event) => {
+                  setSort(event.target.value);
+                  setPage(0);
+                  setSelectedId(null);
+                }}
+              >
+                <option value="recent">Ajouts récents</option>
+                <option value="name">Nom du client</option>
+                <option value="reseller">Revendeur, puis nom</option>
+              </select>
+            </label>
           </div>
           <form
             className="va-toolbar"

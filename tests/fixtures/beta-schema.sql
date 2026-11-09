@@ -53,6 +53,14 @@ CREATE TABLE show_installations (
   FOREIGN KEY (legacy_code_hash) REFERENCES codes(code_hash) ON DELETE SET NULL
 );
 CREATE TABLE login_attempts (identity_hash TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_start TEXT NOT NULL);
+CREATE TABLE show_management_accounts (
+  id TEXT PRIMARY KEY, support_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
+);
+CREATE TABLE show_management_installations (
+  device_hash TEXT PRIMARY KEY REFERENCES show_installations(device_hash) ON DELETE CASCADE,
+  installation_id TEXT NOT NULL UNIQUE, device_id TEXT NOT NULL UNIQUE,
+  account_id TEXT NOT NULL REFERENCES show_management_accounts(id), linked_at TEXT NOT NULL
+);
 CREATE TABLE message_settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   sender TEXT NOT NULL DEFAULT 'SHOW+'

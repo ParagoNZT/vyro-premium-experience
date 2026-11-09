@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { api, identity, json, body, ApiError } from "./access.server";
 import { database, logIfChanged, changed } from "./management.server";
+import { showRegistration, showNeedsReview } from "./show-directory.server";
 
 const change = z.object({
   id: z.string().uuid(),
@@ -60,20 +61,43 @@ export const betaRequest = api(async (request) => {
   const url = new URL(request.url);
   const search = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
   const page = Math.floor(Math.max(0, Math.min(100000, Number(url.searchParams.get("page")) || 0)));
-  const [codes, stats] = await Promise.all([
+  const scope = url.searchParams.get("scope") ?? "all";
+  const sort = url.searchParams.get("sort") ?? "recent";
+  const partnerId = scope.startsWith("reseller:") ? scope.slice(9) : null;
+  let scopeSql = "1=1";
+  const scopeArgs: string[] = [];
+  if (scope === "show-plus") scopeSql = showRegistration;
+  else if (scope === "review") scopeSql = showNeedsReview;
+  else if (scope === "direct")
+    scopeSql = `c.reseller_id IS NULL AND NOT (${showRegistration}) AND NOT (${showNeedsReview})`;
+  else if (partnerId && z.string().uuid().safeParse(partnerId).success) {
+    scopeSql = "c.reseller_id=?";
+    scopeArgs.push(partnerId);
+  } else if (scope !== "all") throw new ApiError(400, "Filtre revendeur invalide.");
+  if (sort !== "recent" && sort !== "name" && sort !== "reseller")
+    throw new ApiError(400, "Tri invalide.");
+  const order =
+    sort === "reseller"
+      ? "resellerName COLLATE NOCASE, c.name COLLATE NOCASE"
+      : sort === "name"
+        ? "c.name COLLATE NOCASE"
+        : "c.created_at DESC";
+  const [codes, stats, resellers] = await Promise.all([
     db
       .prepare(
         `SELECT c.id,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
-      r.name AS resellerName,u.email AS clientEmail,
+      CASE WHEN ${showRegistration} THEN 'SHOW+' ELSE r.name END AS resellerName,
+      CASE WHEN ${showNeedsReview} THEN 1 ELSE 0 END AS needsReview,u.email AS clientEmail,
       CASE WHEN l.license_key IS NOT NULL THEN 1 ELSE 0 END AS hasRecoverableKey,
       CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
       (SELECT count(*) FROM bindings WHERE code_hash=c.code_hash) AS deviceCount,
       (SELECT max(last_seen) FROM device_profiles WHERE code_hash=c.code_hash) AS lastSeen
       FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash
       LEFT JOIN clients u ON u.id=l.client_id
-      WHERE instr(lower(c.name||' '||coalesce(u.email,'')),lower(?))>0 ORDER BY c.created_at DESC,c.id LIMIT 51 OFFSET ?`,
+      WHERE ${scopeSql} AND instr(lower(c.name||' '||coalesce(u.email,'')),lower(?))>0
+      ORDER BY ${order},c.id LIMIT 51 OFFSET ?`,
       )
-      .bind(search, page * 50)
+      .bind(...scopeArgs, search, page * 50)
       .all(),
     db
       .prepare(
@@ -84,11 +108,13 @@ export const betaRequest = api(async (request) => {
       )
       .bind(new Date().toISOString())
       .first(),
+    db.prepare("SELECT id,name FROM resellers ORDER BY name COLLATE NOCASE,id").all(),
   ]);
   return json({
     codes: codes.results.slice(0, 50),
     hasMore: codes.results.length > 50,
     page,
     stats,
+    resellers: resellers.results,
   });
 });

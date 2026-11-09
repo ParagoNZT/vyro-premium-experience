@@ -38,6 +38,7 @@ import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiDownloadRouteImport } from './routes/api.download'
 import { Route as ApiManageRouteImport } from './routes/api.manage'
 import { Route as ApiSettingsBackupsRouteImport } from './routes/api.settings-backups'
+import { Route as ApiShowDirectoryRouteImport } from './routes/api.show-directory'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as ApiTvSettingsRouteImport } from './routes/api.tv-settings'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
@@ -190,6 +191,11 @@ const ApiSettingsBackupsRoute = ApiSettingsBackupsRouteImport.update({
   path: '/api/settings-backups',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiShowDirectoryRoute = ApiShowDirectoryRouteImport.update({
+  id: '/api/show-directory',
+  path: '/api/show-directory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe-webhook',
   path: '/api/stripe-webhook',
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
+  '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
+  '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/api/download': typeof ApiDownloadRoute
   '/api/manage': typeof ApiManageRoute
   '/api/settings-backups': typeof ApiSettingsBackupsRoute
+  '/api/show-directory': typeof ApiShowDirectoryRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/legal/conditions': typeof LegalConditionsRoute
@@ -363,6 +372,7 @@ export interface FileRouteTypes {
     | '/api/download'
     | '/api/manage'
     | '/api/settings-backups'
+    | '/api/show-directory'
     | '/api/stripe-webhook'
     | '/api/tv-settings'
     | '/legal/conditions'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/api/download'
     | '/api/manage'
     | '/api/settings-backups'
+    | '/api/show-directory'
     | '/api/stripe-webhook'
     | '/api/tv-settings'
     | '/legal/conditions'
@@ -436,6 +447,7 @@ export interface FileRouteTypes {
     | '/api/download'
     | '/api/manage'
     | '/api/settings-backups'
+    | '/api/show-directory'
     | '/api/stripe-webhook'
     | '/api/tv-settings'
     | '/legal/conditions'
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   ApiDownloadRoute: typeof ApiDownloadRoute
   ApiManageRoute: typeof ApiManageRoute
   ApiSettingsBackupsRoute: typeof ApiSettingsBackupsRoute
+  ApiShowDirectoryRoute: typeof ApiShowDirectoryRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTvSettingsRoute: typeof ApiTvSettingsRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
@@ -679,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSettingsBackupsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/show-directory': {
+      id: '/api/show-directory'
+      path: '/api/show-directory'
+      fullPath: '/api/show-directory'
+      preLoaderRoute: typeof ApiShowDirectoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stripe-webhook': {
       id: '/api/stripe-webhook'
       path: '/api/stripe-webhook'
@@ -772,6 +792,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDownloadRoute: ApiDownloadRoute,
   ApiManageRoute: ApiManageRoute,
   ApiSettingsBackupsRoute: ApiSettingsBackupsRoute,
+  ApiShowDirectoryRoute: ApiShowDirectoryRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTvSettingsRoute: ApiTvSettingsRoute,
   LegalConditionsRoute: LegalConditionsRoute,

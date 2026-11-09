@@ -17,6 +17,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/site/Button";
 import { Button as IconButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ShowDirectory } from "@/components/account/ShowDirectory";
 import { resellerSchema, exportResellerConfig, type ResellerConfig } from "@/lib/reseller";
 
 export const Route = createFileRoute("/account/reseller")({
@@ -271,7 +272,7 @@ function ResellerPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="flex min-w-0 items-center gap-2 text-sm">
               <LockKeyhole className="size-4 shrink-0 text-primary" />
-              <span className="break-all">Compte revendeur · {identity.email}</span>
+              <span className="break-all">Compte connecté · {identity.email}</span>
             </p>
             <IconButton
               variant="ghost"
@@ -335,6 +336,7 @@ function ResellerPage() {
           </>
         )}
       </section>
+      {identity && <ShowDirectory key={identity.id + ":" + identity.email} />}
       {error && (
         <p role="alert" className="mt-4 text-sm text-destructive">
           {error}

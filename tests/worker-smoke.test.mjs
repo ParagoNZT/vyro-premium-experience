@@ -21,6 +21,7 @@ function sqliteBinding(sqlite) {
       const statement = sqlite.prepare(sql);
       const numbered = [...new Set([...sql.matchAll(/\?(\d+)/g)].map((match) => match[1]))];
       return {
+        all: async () => ({ results: statement.all() }),
         bind(...values) {
           const args = numbered.length
             ? [Object.fromEntries(numbered.map((n) => ["?" + n, values[Number(n) - 1]]))]
@@ -58,6 +59,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0004_tv_settings.sql",
     "../migrations/d1/0005_tv_profiles.sql",
     "../migrations/d1/0006_backup_device_kind.sql",
+    "../migrations/d1/0007_show_reseller_memberships.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -153,6 +155,70 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     return { status: response.status, json: await response.json() };
   }
   const post = (path, token, payload) => call(path, { token, body: JSON.stringify(payload) });
+
+  const resellerCode = randomUUID();
+  const showFixture = randomUUID();
+  const directFixture = randomUUID();
+  const reviewFixture = randomUUID();
+  const partnerFixture = randomUUID();
+  const fixtureDate = "2026-11-09T12:00:00Z";
+  sqlite
+    .prepare(
+      "INSERT INTO resellers VALUES (?, 'Other reseller', 'fixture-hash', 'fixture-token', 1, ?)",
+    )
+    .run(resellerCode, fixtureDate);
+  const insertAccess = sqlite.prepare(
+    "INSERT INTO codes (id,code_hash,name,created_at,reseller_id) VALUES (?,?,?,?,?)",
+  );
+  insertAccess.run(showFixture, "show-fixture", "SHOW+ · Native installation", fixtureDate, null);
+  insertAccess.run(directFixture, "direct-fixture", "Direct client", fixtureDate, null);
+  insertAccess.run(reviewFixture, "review-fixture", "SHOW+ · Unconfirmed label", fixtureDate, null);
+  insertAccess.run(
+    partnerFixture,
+    "partner-fixture",
+    "Other reseller client",
+    fixtureDate,
+    resellerCode,
+  );
+  sqlite
+    .prepare(
+      "INSERT INTO show_installations VALUES ('show-device','show-token','show-fixture',NULL,?)",
+    )
+    .run(fixtureDate);
+  sqlite
+    .prepare("INSERT INTO show_reseller_memberships VALUES (?,?,?,1)")
+    .run(accounts.first.id, accounts.first.email, fixtureDate);
+
+  assert.equal((await call("/api/show-directory")).status, 401);
+  assert.equal((await call("/api/show-directory", { token: "second" })).status, 403);
+  assert.equal((await call("/api/beta?scope=show-plus", { token: "first" })).status, 403);
+  const resellerDirectory = await call("/api/show-directory?scope=all&reseller=other", {
+    token: "first",
+  });
+  assert.equal(resellerDirectory.status, 200);
+  assert.deepEqual(
+    resellerDirectory.json.devices.map((device) => device.id),
+    [showFixture],
+  );
+  for (const [scope, expected] of [
+    ["all", [directFixture, reviewFixture, partnerFixture, showFixture]],
+    ["direct", [directFixture]],
+    ["show-plus", [showFixture]],
+    ["review", [reviewFixture]],
+    ["reseller:" + resellerCode, [partnerFixture]],
+  ]) {
+    const beta = await call("/api/beta?sort=reseller&scope=" + encodeURIComponent(scope), {
+      token: "admin",
+    });
+    assert.equal(beta.status, 200);
+    assert.deepEqual(
+      beta.json.codes.map((code) => code.id),
+      expected,
+    );
+  }
+  sqlite.exec(
+    "DELETE FROM show_installations WHERE code_hash='show-fixture'; DELETE FROM codes WHERE code_hash IN ('show-fixture','direct-fixture','review-fixture','partner-fixture');",
+  );
   assert.equal((await call("/api/account")).status, 401);
   assert.equal((await call("/api/manage", { token: "first" })).status, 403);
   assert.equal((await call("/api/admin", { token: "admin" })).status, 200);
