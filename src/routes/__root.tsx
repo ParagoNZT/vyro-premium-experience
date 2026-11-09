@@ -12,6 +12,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import screeningCss from "../components/site/screening.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth";
 import { Header } from "@/components/site/Header";
@@ -99,6 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: screeningCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -146,6 +148,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const bare = pathname.startsWith("/account") || pathname.startsWith("/admin");
+  const authPage = pathname === "/login" || pathname === "/register";
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -153,12 +156,16 @@ function RootComponent() {
         <a className="vyro-skip" href="#main">
           Aller au contenu
         </a>
-        {bare ? null : <Header />}
-        <main id="main" tabIndex={-1} className={bare ? "" : "vyro-public"}>
+        {bare || authPage ? null : <Header />}
+        <main
+          id="main"
+          tabIndex={-1}
+          className={bare || authPage ? "" : "vyro-public screening-public"}
+        >
           {/* Required: nested routes render here. */}
           <Outlet />
         </main>
-        {bare ? null : <Footer />}
+        {bare || authPage ? null : <Footer />}
         <Toaster position="top-center" />
       </AuthProvider>
     </QueryClientProvider>

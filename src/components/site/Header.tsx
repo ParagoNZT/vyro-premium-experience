@@ -29,7 +29,7 @@ export function Header() {
   }, [open]);
 
   return (
-    <header className="vyro-header">
+    <header className="vyro-header screening-header">
       <div className="vyro-wrap vyro-header-inner">
         <Logo />
         <nav aria-label="Navigation principale" className="vyro-main-nav">

@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
-import { AuthShell, Field, PortalNotice } from "@/components/site/AuthShell";
-import { Button } from "@/components/site/Button";
+import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/site/ScreeningAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -128,13 +128,15 @@ function LoginPage() {
   }
 
   return (
-    <AuthShell
+    <ScreeningAuth
+      admin={redirect === "/admin"}
+      label={redirect === "/admin" ? "Administration" : "Espace client"}
       title={
         mode === "forgot"
-          ? "Réinitialiser votre accès."
+          ? "Mot de passe oublié"
           : mode === "reset"
-            ? "Nouveau mot de passe."
-            : "Heureux de vous retrouver."
+            ? "Nouveau mot de passe"
+            : "Connexion"
       }
       subtitle={
         mode === "forgot"
@@ -143,30 +145,27 @@ function LoginPage() {
             ? "Choisissez un mot de passe que vous n’utilisez sur aucun autre site."
             : redirect === "/admin"
               ? "Connectez-vous avec le compte autorisé à administrer VYRO."
-              : "Retrouvez votre licence VYRO et gérez vos appareils."
+              : "Connectez-vous pour accéder à votre espace VYRO."
       }
-      footer={
+      action={
         mode === "login" && !recoveryPending && redirect !== "/admin" ? (
-          <p className="text-sm text-muted-foreground">
-            Pas encore de compte ?{" "}
-            <Link
-              to="/register"
-              search={{ redirect, plan }}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Créer un compte
+          <>
+            <p>Pas encore de compte ?</p>
+            <Link to="/register" search={{ redirect, plan }} className="screening-auth__cta">
+              Créer un compte <ArrowRight size={16} aria-hidden />
             </Link>
-          </p>
+          </>
         ) : undefined
       }
     >
       {recoveryPending ? (
-        <PortalNotice>Vérification du lien de réinitialisation…</PortalNotice>
+        <ScreeningNotice>Vérification du lien de réinitialisation…</ScreeningNotice>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
+        <form method="post" onSubmit={onSubmit} className="screening-auth__form" aria-busy={busy}>
           {mode !== "reset" && (
-            <Field
+            <ScreeningField
               label="Adresse e-mail"
+              name="email"
               type="email"
               value={email}
               onChange={setEmail}
@@ -176,8 +175,10 @@ function LoginPage() {
             />
           )}
           {mode !== "forgot" && (
-            <Field
+            <ScreeningField
+              key={mode}
               label={mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+              name="password"
               type="password"
               value={password}
               onChange={setPassword}
@@ -189,8 +190,9 @@ function LoginPage() {
             />
           )}
           {mode === "reset" && (
-            <Field
+            <ScreeningField
               label="Confirmer le mot de passe"
+              name="confirmation"
               type="password"
               value={confirmation}
               onChange={setConfirmation}
@@ -200,9 +202,9 @@ function LoginPage() {
               required
             />
           )}
-          {error && <PortalNotice error>{error}</PortalNotice>}
-          {notice && <PortalNotice>{notice}</PortalNotice>}
-          <Button type="submit" disabled={!ready || busy} className="w-full">
+          {error && <ScreeningNotice error>{error}</ScreeningNotice>}
+          {notice && <ScreeningNotice>{notice}</ScreeningNotice>}
+          <button type="submit" disabled={!ready || busy} className="screening-auth__submit">
             {busy
               ? "Veuillez patienter…"
               : mode === "login"
@@ -210,12 +212,12 @@ function LoginPage() {
                 : mode === "forgot"
                   ? "Demander un lien"
                   : "Enregistrer le mot de passe"}
-          </Button>
+          </button>
           {mode !== "reset" && (
             <button
               type="button"
               disabled={!ready || busy}
-              className="min-h-10 text-sm text-primary underline-offset-4 hover:underline"
+              className="screening-auth__text-button"
               onClick={() => switchMode(mode === "login" ? "forgot" : "login")}
             >
               {mode === "login" ? "Mot de passe oublié ?" : "Revenir à la connexion"}
@@ -223,6 +225,6 @@ function LoginPage() {
           )}
         </form>
       )}
-    </AuthShell>
+    </ScreeningAuth>
   );
 }

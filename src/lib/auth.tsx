@@ -21,7 +21,14 @@ export type Subscription = {
   devicesUsed: number;
   devicesAllowed: number | null;
 };
-export type Device = { id: string; name: string; platform: string; lastSeen: string };
+export type Device = {
+  id: string;
+  name: string;
+  platform: string;
+  lastSeen: string;
+  androidVersion?: string | null;
+  appVersion?: string | null;
+};
 export type Order = { id: string; date: string; planName: string; amount: string; status: "paid" };
 export type User = {
   id: string;

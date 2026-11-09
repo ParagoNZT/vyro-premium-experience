@@ -241,6 +241,21 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   sqlite
     .prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,?)")
     .run(hash, device, "2026-01-01");
+  sqlite
+    .prepare(
+      `INSERT INTO device_profiles(code_hash,device_hash,manufacturer,model,android_version,app_version,last_seen)
+    VALUES(?,?,?,?,?,?,?)`,
+    )
+    .run(hash, device, "Fixture", "TV", "12", "1.2.3", "2026-01-02");
+  assert.deepEqual((await call("/api/account", { token: "first" })).json.devices[0], {
+    id: device,
+    name: "Fixture TV",
+    platform: "Android / TV",
+    lastSeen: "2026-01-02",
+    androidVersion: "12",
+    appVersion: "1.2.3",
+  });
+  assert.deepEqual((await call("/api/account", { token: "second" })).json.devices, []);
   assert.equal(
     (await post("/api/account", "second", { action: "remove", id: device })).status,
     404,

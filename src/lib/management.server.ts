@@ -277,7 +277,9 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
     db
       .prepare(
         `SELECT b.device_hash AS id,coalesce(nullif(trim(coalesce(p.manufacturer,'')||' '||coalesce(p.model,'')),''),'Appareil TV') AS name,
-      'Android / TV' AS platform,coalesce(p.last_seen,b.created_at) AS lastSeen FROM bindings b
+      'Android / TV' AS platform,coalesce(p.last_seen,b.created_at) AS lastSeen,
+      nullif(trim(p.android_version),'') AS androidVersion,nullif(trim(p.app_version),'') AS appVersion
+      FROM bindings b
       JOIN licenses l ON l.beta_code_hash=b.code_hash LEFT JOIN device_profiles p ON p.code_hash=b.code_hash AND p.device_hash=b.device_hash
       WHERE l.client_id=? ORDER BY lastSeen DESC`,
       )

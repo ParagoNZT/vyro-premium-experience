@@ -34,18 +34,20 @@ export const Route = createFileRoute("/tarifs")({
 function PricingPage() {
   return (
     <>
-      <Section className="pb-0 pt-20 text-center md:pt-28">
-        <Reveal className="mx-auto max-w-2xl">
-          <p className="vyro-kicker">
-            <i /> LES OFFRES
-          </p>
-          <h1 className="vyro-display-title">Choisissez votre accès VYRO.</h1>
-          <Lead className="mt-5">
-            Les mêmes fonctionnalités, avec 3, 6 ou 12 mois d’accès au lecteur.
-          </Lead>
-        </Reveal>
-      </Section>
-      <PricingSection withHeading={false} />
+      <div className="screening-price-page">
+        <Section className="pb-0 pt-20 text-center md:pt-28">
+          <Reveal className="mx-auto max-w-2xl">
+            <p className="vyro-kicker">
+              <i /> LES OFFRES
+            </p>
+            <h1 className="vyro-display-title">Choisissez votre accès VYRO.</h1>
+            <Lead className="mt-5">
+              Les mêmes fonctionnalités, avec 3, 6 ou 12 mois d’accès au lecteur.
+            </Lead>
+          </Reveal>
+        </Section>
+        <PricingSection withHeading={false} />
+      </div>
       <DisclaimerSection />
       <FaqSection />
     </>

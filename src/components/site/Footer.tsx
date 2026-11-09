@@ -34,7 +34,7 @@ const groups = [
 
 export function Footer() {
   return (
-    <footer className="vyro-footer">
+    <footer className="vyro-footer screening-footer">
       <div className="vyro-wrap">
         <div className="vyro-footer-grid">
           <div>

@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { MailCheck } from "lucide-react";
+import { ArrowRight, MailCheck } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/site/Button";
-import { AuthShell, Field, PortalNotice } from "@/components/site/AuthShell";
+import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/site/ScreeningAuth";
 
 const searchSchema = z.object({
   redirect: z
@@ -69,60 +68,58 @@ function RegisterPage() {
   }
 
   return (
-    <AuthShell
+    <ScreeningAuth
       label="Nouveau compte"
-      title={awaitingEmail ? "Confirmez votre adresse." : "Créez votre compte VYRO."}
+      title={awaitingEmail ? "Confirmez votre adresse" : "Créer un compte"}
       subtitle={
         awaitingEmail
           ? "La confirmation de votre adresse est nécessaire avant de vous connecter."
-          : "Votre compte vous permet de retrouver votre accès et les appareils liés à votre licence."
+          : "Retrouvez votre licence et les appareils qui y sont associés."
       }
-      footer={
+      action={
         !awaitingEmail && (
-          <p className="text-sm text-muted-foreground">
-            Déjà un compte ?{" "}
-            <Link
-              to="/login"
-              search={{ redirect, plan }}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Se connecter
+          <>
+            <p>Déjà un compte ?</p>
+            <Link to="/login" search={{ redirect, plan }} className="screening-auth__cta">
+              Se connecter <ArrowRight size={16} aria-hidden />
             </Link>
-          </p>
+          </>
         )
       }
     >
       {awaitingEmail ? (
-        <div className="space-y-4">
-          <MailCheck aria-hidden className="size-7 text-primary" />
-          <p role="status" className="break-words text-sm leading-relaxed text-muted-foreground">
+        <div className="screening-auth__confirmation">
+          <MailCheck size={28} aria-hidden />
+          <ScreeningNotice>
             Si cette adresse peut être utilisée, un lien vous sera envoyé à{" "}
-            <strong className="text-foreground">{email.trim()}</strong>. Pensez à vérifier les
-            courriers indésirables. Si vous avez déjà un compte, connectez-vous.
-          </p>
-          <Button to="/login" search={{ redirect, plan }} size="sm">
+            <strong>{email.trim()}</strong>. Pensez à vérifier les courriers indésirables. Si vous
+            avez déjà un compte, connectez-vous.
+          </ScreeningNotice>
+          <Link to="/login" search={{ redirect, plan }} className="screening-auth__submit">
             Aller à la connexion
-          </Button>
+          </Link>
           <button
             type="button"
             onClick={() => setAwaitingEmail(false)}
-            className="block min-h-10 text-sm text-primary hover:underline"
+            className="screening-auth__text-button"
           >
             Corriger mon adresse
           </button>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4" aria-busy={busy}>
-          <Field
+        <form method="post" onSubmit={onSubmit} className="screening-auth__form" aria-busy={busy}>
+          <ScreeningField
             label="Prénom"
+            name="firstName"
             value={firstName}
             onChange={setFirstName}
             autoComplete="given-name"
             maxLength={80}
             required
           />
-          <Field
+          <ScreeningField
             label="Adresse e-mail"
+            name="email"
             type="email"
             value={email}
             onChange={setEmail}
@@ -130,8 +127,9 @@ function RegisterPage() {
             maxLength={254}
             required
           />
-          <Field
+          <ScreeningField
             label="Mot de passe"
+            name="password"
             type="password"
             value={password}
             onChange={setPassword}
@@ -141,29 +139,16 @@ function RegisterPage() {
             hint="12 caractères minimum."
             required
           />
-          {error && <PortalNotice error>{error}</PortalNotice>}
-          <Button type="submit" disabled={!ready || busy} className="w-full">
+          {error && <ScreeningNotice error>{error}</ScreeningNotice>}
+          <button type="submit" disabled={!ready || busy} className="screening-auth__submit">
             {busy ? "Création…" : "Créer mon compte"}
-          </Button>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Consultez les{" "}
-            <Link
-              to="/legal/conditions"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              conditions d’utilisation
-            </Link>{" "}
-            et la{" "}
-            <Link
-              to="/legal/confidentialite"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              politique de confidentialité
-            </Link>
-            .
+          </button>
+          <p className="screening-auth__fine-print">
+            Consultez les <Link to="/legal/conditions">conditions d’utilisation</Link> et la{" "}
+            <Link to="/legal/confidentialite">politique de confidentialité</Link>.
           </p>
         </form>
       )}
-    </AuthShell>
+    </ScreeningAuth>
   );
 }

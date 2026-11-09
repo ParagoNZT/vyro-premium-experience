@@ -60,22 +60,35 @@ const content = [
 function FeaturesPage() {
   return (
     <>
-      <section className="vyro-subhero">
-        <div className="vyro-wrap vyro-block">
-          <p className="vyro-kicker">
-            <i /> L’APPLICATION
-          </p>
-          <h1 className="vyro-display-title">Dans l’écran de VYRO.</h1>
-          <p className="vyro-subhero-lead">
-            Du premier choix au plein écran, explorez les vraies interfaces du lecteur.
-          </p>
-          <nav aria-label="Écrans à découvrir" className="vyro-section-links">
-            {scenes.map(({ id, label }) => (
-              <a key={id} href={"#" + id}>
-                {label} <ArrowUpRight size={15} aria-hidden />
-              </a>
-            ))}
-          </nav>
+      <section className="vyro-subhero screening-feature-intro">
+        <div className="vyro-wrap vyro-block screening-inner-grid">
+          <div>
+            <p className="vyro-kicker">
+              <i /> L’APPLICATION
+            </p>
+            <h1 className="vyro-display-title">Dans l’écran de VYRO.</h1>
+            <p className="vyro-subhero-lead">
+              Du premier choix au plein écran, explorez les vraies interfaces du lecteur.
+            </p>
+            <nav aria-label="Écrans à découvrir" className="vyro-section-links">
+              {scenes.map(({ id, label }) => (
+                <a key={id} href={"#" + id}>
+                  {label} <ArrowUpRight size={15} aria-hidden />
+                </a>
+              ))}
+            </nav>
+          </div>
+          <figure>
+            <img
+              src={homeCapture}
+              alt="Écran d’accueil de VYRO sur téléviseur"
+              width={1600}
+              height={900}
+              fetchPriority="high"
+              decoding="async"
+            />
+            <figcaption>{captureCaption}</figcaption>
+          </figure>
         </div>
       </section>
       <div className="vyro-wrap vyro-block vyro-detail-scenes">
