@@ -90,10 +90,6 @@ export type DownloadTarget = {
   id: string;
   platform: string;
   subtitle: string;
-  version: string;
-  updatedAt: string;
-  size: string;
-  file: string;
   steps: string[];
 };
 
@@ -101,25 +97,17 @@ export const DOWNLOADS: DownloadTarget[] = [
   {
     id: "androidmobile",
     platform: "Android mobile et tablette",
-    subtitle: "SHOW+ Player pour téléphones et tablettes Android compatibles.",
-    version: "1.0.44",
-    updatedAt: "",
-    size: "52 Mo",
-    file: "vyro-premium-androidmobile.apk",
+    subtitle: "VYRO Premium pour téléphones et tablettes Android compatibles.",
     steps: [
-      "Téléchargez l’APK depuis votre espace client sur le téléphone ou la tablette.",
+      "Vérifiez la disponibilité de l’APK VYRO dans votre espace client sur le téléphone ou la tablette.",
       "Ouvrez le fichier. Si Android le demande, autorisez l’installation pour cette source.",
-      "Dans SHOW+, ouvrez Paramètres → Informations et maintenance → Sauvegardes pour associer l’appareil.",
+      "Lancez VYRO Premium et connectez votre source compatible.",
     ],
   },
   {
     id: "androidtv",
     platform: "Android TV / Google TV",
     subtitle: "Boîtiers, TV Sony, Philips, TCL, Nvidia Shield, Chromecast avec Google TV.",
-    version: "1.0.0",
-    updatedAt: "01/09/2026",
-    size: "38 Mo",
-    file: "vyro-premium-androidtv-1.0.0.apk",
     steps: [
       "Autorisez l'installation d'applications depuis des sources inconnues.",
       "Téléchargez le fichier d'installation VYRO Premium.",
@@ -131,10 +119,6 @@ export const DOWNLOADS: DownloadTarget[] = [
     id: "firetv",
     platform: "Amazon Fire TV",
     subtitle: "Fire TV Stick, Fire TV Cube, téléviseurs Fire TV.",
-    version: "1.0.0",
-    updatedAt: "01/09/2026",
-    size: "38 Mo",
-    file: "vyro-premium-firetv-1.0.0.apk",
     steps: [
       "Activez « Applications de sources inconnues » dans les options développeur.",
       "Installez le fichier VYRO Premium via votre outil de transfert habituel.",

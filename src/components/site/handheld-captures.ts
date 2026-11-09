@@ -19,7 +19,7 @@ function forDevice(device: "telephone" | "tablette", label: string) {
   return sections.flatMap((section) => {
     const image = images[`/src/assets/vyro-mobile/${device}/${section.id}.jpg`];
     return image
-      ? [{ ...section, image, alt: `${section.label} de SHOW+ sur ${label} : ${section.note}.` }]
+      ? [{ ...section, image, alt: `${section.label} sur ${label} : ${section.note}.` }]
       : [];
   });
 }

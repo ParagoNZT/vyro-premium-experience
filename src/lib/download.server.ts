@@ -7,10 +7,6 @@ const releases = {
   firetv: "vyro-premium-firetv.apk",
 } as const;
 
-// The same signed SHOW+ build supports Android phones, tablets, and TV.
-const officialPublicRelease =
-  "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v1.0.44/SHOWPlayer.apk";
-
 type ObjectMetadata = { size: number };
 type ReleaseBucket = {
   head(key: string): Promise<ObjectMetadata | null>;
@@ -55,7 +51,7 @@ export const downloadRequest = api(async (request) => {
           ),
         )
       : [];
-    return json({ platforms: published.filter(Boolean), officialPublicRelease });
+    return json({ platforms: published.filter(Boolean) });
   }
   if (!bucket) throw new ApiError(404, "Ce fichier d’installation n’est pas publié.");
   const key = releases[platform as keyof typeof releases];

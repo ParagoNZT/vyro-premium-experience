@@ -61,7 +61,7 @@ function DownloadPage() {
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button to="/account/telechargement" variant="primary" size="sm">
                   <Download className="h-4 w-4" aria-hidden />
-                  Accéder au téléchargement
+                  Voir les téléchargements disponibles
                 </Button>
               </div>
 

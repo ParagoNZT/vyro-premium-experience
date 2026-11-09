@@ -211,11 +211,8 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.match(first.licenseKey, /^VYRO-[A-F0-9]{24}$/);
   assert.equal((await call("/api/account", { token: "second" })).json.licenseKey, "");
   assert.equal((await call("/api/download", { token: "second" })).status, 403);
-  const officialPublicRelease =
-    "https://github.com/ParagoNZT/VYRO-Updates/releases/download/v1.0.44/SHOWPlayer.apk";
   assert.deepEqual((await call("/api/download", { token: "first" })).json, {
     platforms: [],
-    officialPublicRelease,
   });
   assert.equal((await call("/api/download?platform=androidtv", { token: "first" })).status, 404);
   const fixtureBytes = new TextEncoder().encode("local APK fixture");
@@ -229,7 +226,6 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   };
   assert.deepEqual((await call("/api/download", { token: "first" })).json, {
     platforms: ["androidtv"],
-    officialPublicRelease,
   });
   assert.equal((await call("/api/download?platform=androidtv", { token: "second" })).status, 403);
   const apk = await worker.fetch(

@@ -54,7 +54,7 @@ export function ScreeningRoom() {
   }
 
   return (
-    <figure className="screening-room" id="projection" aria-label="Captures de VYRO et SHOW+">
+    <figure className="screening-room" id="projection" aria-label="Captures de VYRO">
       <div className="screening-room-label">
         <span>
           <i aria-hidden /> {title}
