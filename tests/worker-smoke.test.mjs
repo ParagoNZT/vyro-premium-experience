@@ -14,6 +14,7 @@ const accounts = {
   admin: { id: randomUUID(), email: "admin@example.test" },
   first: { id: randomUUID(), email: "first@example.test" },
   second: { id: randomUUID(), email: "second@example.test" },
+  collaborator: { id: randomUUID(), email: "collaborator@example.test" },
 };
 
 function sqliteBinding(sqlite) {
@@ -67,6 +68,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0011_vyro_app_console.sql",
     "../migrations/d1/0012_remote_workspace.sql",
     "../migrations/d1/0013_vyro_private_messages.sql",
+    "../migrations/d1/0014_admin_delegation_and_license_expiry.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -184,6 +186,106 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     return { status: response.status, json: await response.json() };
   }
   const post = (path, token, payload) => call(path, { token, body: JSON.stringify(payload) });
+
+  // Run the entire delegation and licence path against the Worker using disposable accounts.
+  const manage = "/api/manage";
+  const portal = "/api/account";
+  const adminEndpoint = "/api/admin";
+  assert.equal((await call(portal, { token: "admin" })).status, 200);
+  assert.equal((await call(portal, { token: "collaborator" })).status, 200);
+  assert.equal((await call(portal, { token: "second" })).status, 200);
+  const roleSearch = await call(manage + "?client=COLLABORATOR", { token: "admin" });
+  assert.equal(roleSearch.status, 200);
+  assert.equal(roleSearch.json.clients.length, 1);
+  const collaborator = roleSearch.json.clients[0];
+  assert.equal(collaborator.admin_role, null);
+  const owner = sqlite
+    .prepare("SELECT id FROM clients WHERE auth_user_id=?")
+    .get(accounts.admin.id);
+  const roleChange = {
+    action: "client-admin-role",
+    clientId: collaborator.id,
+    grant: true,
+    note: "Test delegation",
+  };
+  assert.equal((await call(adminEndpoint, { token: "admin" })).json.role, "owner");
+  assert.equal((await call(adminEndpoint, { token: "collaborator" })).status, 403);
+  assert.equal((await post(manage, "collaborator", roleChange)).status, 403);
+  assert.equal((await post(manage, "admin", { ...roleChange, clientId: owner.id })).status, 409);
+  assert.equal((await post(manage, "admin", roleChange)).status, 200);
+  assert.equal((await call(adminEndpoint, { token: "collaborator" })).json.role, "admin");
+  assert.equal((await call("/api/beta", { token: "collaborator" })).status, 200);
+  assert.equal((await post(manage, "collaborator", { ...roleChange, grant: false })).status, 403);
+  assert.equal(
+    (
+      await post(manage, "collaborator", {
+        action: "client-status",
+        clientId: owner.id,
+        status: "suspended",
+        note: "Test owner protection",
+      })
+    ).status,
+    409,
+  );
+  const secondClient = sqlite
+    .prepare("SELECT id FROM clients WHERE auth_user_id=?")
+    .get(accounts.second.id);
+  const exactGrant = {
+    action: "grant-license-until",
+    clientId: secondClient.id,
+    through: "2090-08-08",
+    deviceLimit: 5,
+    note: "Test exact expiry",
+  };
+  assert.equal((await post(manage, "second", exactGrant)).status, 403);
+  assert.equal(
+    (await post(manage, "collaborator", { ...exactGrant, through: "2001-08-08" })).status,
+    400,
+  );
+  assert.equal((await post(manage, "collaborator", exactGrant)).status, 200);
+  const beforeEdit = (await call(portal, { token: "second" })).json;
+  assert.match(beforeEdit.licenseKey, /^VYRO-/);
+  assert.equal(beforeEdit.subscription.expiresOn, exactGrant.through);
+  assert.equal(beforeEdit.subscription.devicesAllowed, 5);
+  const initial = sqlite
+    .prepare("SELECT id,beta_code_hash FROM licenses WHERE client_id=?")
+    .get(secondClient.id);
+  const tvCode = () =>
+    sqlite.prepare("SELECT expires_at,max_devices FROM codes WHERE id=?").get(initial.id);
+  assert.equal(tvCode().expires_at, "2090-08-08T22:00:00.000Z");
+  const modify = {
+    ...exactGrant,
+    through: "2090-12-20",
+    expectedLicenseId: initial.id,
+    deviceLimit: 1,
+  };
+  sqlite
+    .prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,?)")
+    .run(initial.beta_code_hash, "fixture-one", "2026-01-01");
+  sqlite
+    .prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,?)")
+    .run(initial.beta_code_hash, "fixture-two", "2026-01-01");
+  assert.equal((await post(manage, "collaborator", modify)).status, 409);
+  assert.equal(tvCode().max_devices, 5);
+  assert.equal((await post(manage, "collaborator", { ...modify, deviceLimit: 3 })).status, 200);
+  const afterEdit = (await call(portal, { token: "second" })).json;
+  assert.equal(afterEdit.licenseKey, beforeEdit.licenseKey);
+  assert.equal(afterEdit.subscription.expiresOn, modify.through);
+  assert.equal(tvCode().expires_at, "2090-12-20T23:00:00.000Z");
+  assert.equal(tvCode().max_devices, 3);
+  const log = (await call(manage, { token: "admin" })).json.audit;
+  assert.ok(
+    log.some(
+      (row) =>
+        row.action === "license-expiry-set" && row.actor_label === accounts.collaborator.email,
+    ),
+  );
+  assert.equal((await post(manage, "admin", { ...roleChange, grant: false })).status, 200);
+  assert.equal((await call(adminEndpoint, { token: "collaborator" })).status, 403);
+  assert.equal((await call("/api/beta", { token: "collaborator" })).status, 403);
+  assert.equal((await call(portal, { token: "collaborator" })).status, 200);
+  sqlite.prepare("DELETE FROM codes WHERE id=?").run(initial.id);
+  sqlite.prepare("DELETE FROM licenses WHERE id=?").run(initial.id);
 
   const resellerCode = randomUUID();
   const showFixture = randomUUID();

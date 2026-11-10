@@ -8,6 +8,9 @@ export type VerifiedIdentity = {
   last_sign_in_at?: string;
 };
 
+export type AdminRole = "owner" | "admin";
+export type AdminIdentity = VerifiedIdentity & { adminRole: AdminRole };
+
 // Pass only the current identity returned by the Supabase Auth server.
 export function isAdminIdentity(
   user: Partial<VerifiedIdentity>,

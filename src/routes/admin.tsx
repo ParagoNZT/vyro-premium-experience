@@ -7,6 +7,7 @@ import { ManagementPanel } from "@/components/admin/ManagementPanel";
 import { isAdminSection, type AdminSection } from "@/components/admin/sections";
 import { useAuth } from "@/lib/auth";
 import { portalApi, PortalApiError } from "@/lib/portal-api";
+import type { AdminRole } from "@/lib/admin-policy";
 import "@/components/admin/admin.css";
 
 export const Route = createFileRoute("/admin")({
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Admin = { id: string; email: string };
+type Admin = { id: string; email: string; role: AdminRole };
 type Gate =
   | { kind: "loading" | "signed-out" | "forbidden" }
   | { kind: "error"; message: string }
@@ -87,6 +88,7 @@ function AdminPage() {
       <AdminWorkspace
         section={section}
         email={admin.email}
+        role={admin.role}
         onSignOut={() => void logout()}
         signingOut={signingOut}
         logoutError={logoutError}
@@ -95,6 +97,7 @@ function AdminPage() {
           <ManagementPanel
             key={admin.id + ":" + section}
             section={section}
+            canManageRoles={admin.role === "owner"}
             onAccessDenied={accessDenied}
           />
         )}

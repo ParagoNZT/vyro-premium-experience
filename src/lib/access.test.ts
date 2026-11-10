@@ -29,11 +29,11 @@ test("the server validates a Supabase session before granting admin privileges",
   const request = new Request("https://site.example.test/api/manage", {
     headers: { authorization: "Bearer fixture" },
   });
-  await assert.rejects(identity(request, true), { status: 403 });
+  await assert.rejects(identity(request, "owner"), { status: 403 });
   user = { ...user, id: "immutable-admin", email_confirmed_at: "" };
   await assert.rejects(identity(request, true), { status: 401 });
   user = { ...user, email_confirmed_at: "2026-01-01" };
-  assert.equal((await identity(request, true)).id, "immutable-admin");
+  assert.equal((await identity(request, true)).adminRole, "owner");
   authRedirect = true;
   await assert.rejects(identity(request, true), { status: 503 });
   process.env["SUPABASE_PUBLISHABLE_KEY"] = "sb_secret_fixture";

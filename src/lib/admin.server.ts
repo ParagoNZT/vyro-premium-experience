@@ -5,6 +5,7 @@ export const adminResponse = api(async (request) => {
   return json({
     id: user.id,
     email: user.email,
+    role: user.adminRole,
     createdAt: user.created_at ?? null,
     lastSignInAt: user.last_sign_in_at ?? null,
   });

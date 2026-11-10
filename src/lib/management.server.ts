@@ -1,5 +1,6 @@
 import type { ManagementDB } from "./db-types";
 import type {
+  AdminClientRow,
   ClientRow,
   LicenseRow,
   AdminPaymentRow,
@@ -9,20 +10,13 @@ import type {
 import { ApiError, api, body, identity, json } from "./access.server";
 import type { VerifiedIdentity } from "./admin-policy";
 import { actionSchema, deviceSchema } from "./management-validation";
-import { licenseUpsertSql } from "./license-sql";
+import { licenseThroughSql, licenseUpsertSql } from "./license-sql";
+import { expiryAfterParisDay, lastIncludedParisDay, parisDateInput } from "./license-dates";
 import { stripeMode } from "./stripe-config.server";
 import { getPlan, formatPrice } from "@/config/site";
+import { database } from "./database.server";
 
-export async function database(): Promise<ManagementDB> {
-  let db: ManagementDB | undefined;
-  try {
-    db = (await import("cloudflare:workers")).env["VYRO_DB"] as ManagementDB | undefined;
-  } catch {
-    /* non-Worker preview */
-  }
-  if (!db) throw new ApiError(503, "La base de gestion n’est pas encore reliée.");
-  return db;
-}
+export { database } from "./database.server";
 
 export async function trackClient(db: ManagementDB, user: VerifiedIdentity) {
   const now = new Date().toISOString();
@@ -99,6 +93,19 @@ export async function requireLinkedActiveLicense(db: ManagementDB, clientId: str
     );
 }
 
+async function newLicenseKey() {
+  const key =
+    "VYRO-" +
+    Array.from(crypto.getRandomValues(new Uint8Array(12)), (n) => n.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+  const hash = Array.from(
+    new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key))),
+    (n) => n.toString(16).padStart(2, "0"),
+  ).join("");
+  return { key, hash };
+}
+
 export async function grantStatement(
   db: ManagementDB,
   clientId: string,
@@ -111,15 +118,7 @@ export async function grantStatement(
 ) {
   const plan = getPlan(planId);
   if (!plan) throw new ApiError(400, "Offre invalide.");
-  const key =
-    "VYRO-" +
-    Array.from(crypto.getRandomValues(new Uint8Array(12)), (n) => n.toString(16).padStart(2, "0"))
-      .join("")
-      .toUpperCase();
-  const hash = Array.from(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key))),
-    (n) => n.toString(16).padStart(2, "0"),
-  ).join("");
+  const { key, hash } = await newLicenseKey();
   return db
     .prepare(licenseUpsertSql)
     .bind(
@@ -148,19 +147,30 @@ export async function grantStatement(
 export const manageRequest = api(async (request) => {
   const user = await identity(request, true);
   const db = await database();
+  const ownerId = process.env["VYRO_ADMIN_USER_ID"]!.trim();
   if (request.method === "GET") {
-    const page = Math.floor(
-      Math.max(0, Math.min(100000, Number(new URL(request.url).searchParams.get("page")) || 0)),
-    );
+    const params = new URL(request.url).searchParams;
+    const page = Math.floor(Math.max(0, Math.min(100000, Number(params.get("page")) || 0)));
     const offset = page * 50;
+    const clientQuery = (params.get("client") ?? "").trim().slice(0, 254);
     const [clients, licenses, payments, audit, totals] = await Promise.all([
       db
-        .prepare("SELECT * FROM clients ORDER BY created_at DESC,id LIMIT 51 OFFSET ?")
-        .bind(offset)
-        .all<ClientRow>(),
+        .prepare(
+          `SELECT c.id,c.email,c.first_name,c.status,c.created_at,c.last_seen_at,
+          c.auth_user_id IS NOT NULL AS registered,
+          CASE WHEN c.auth_user_id=? THEN 'owner' WHEN m.auth_user_id IS NOT NULL THEN 'admin' END AS admin_role,
+          (EXISTS (SELECT 1 FROM show_reseller_memberships s WHERE s.auth_user_id=c.auth_user_id
+            AND s.verified_email=c.email AND s.enabled=1)
+            OR EXISTS (SELECT 1 FROM partner_apps a WHERE a.owner_id=c.auth_user_id AND a.enabled=1)) AS reseller
+          FROM clients c LEFT JOIN vyro_admin_memberships m ON m.client_id=c.id AND m.auth_user_id=c.auth_user_id
+          WHERE instr(lower(c.first_name||' '||c.email),lower(?))>0
+          ORDER BY c.created_at DESC,c.id LIMIT 51 OFFSET ?`,
+        )
+        .bind(ownerId, clientQuery, offset)
+        .all<AdminClientRow>(),
       db
         .prepare(
-          `SELECT l.id,l.client_id,c.email,l.plan_id,l.started_at,l.expires_at,l.device_limit,l.status,l.source_payment_id,l.updated_at
+          `SELECT l.id,l.client_id,c.email,l.plan_id,l.started_at,l.expires_at,l.manual_expiry,l.device_limit,l.status,l.source_payment_id,l.updated_at
         FROM licenses l JOIN clients c ON c.id=l.client_id ORDER BY l.updated_at DESC,l.id LIMIT 51 OFFSET ?`,
         )
         .bind(offset)
@@ -173,8 +183,13 @@ export const manageRequest = api(async (request) => {
         .bind(offset)
         .all<AdminPaymentRow>(),
       db
-        .prepare("SELECT * FROM audit_log ORDER BY created_at DESC,id LIMIT 51 OFFSET ?")
-        .bind(offset)
+        .prepare(
+          `SELECT a.*,CASE WHEN a.actor_id=? THEN 'Propriétaire' WHEN a.actor_id='stripe' THEN 'Stripe'
+          ELSE coalesce(c.email,'Administrateur') END AS actor_label
+          FROM audit_log a LEFT JOIN clients c ON c.auth_user_id=a.actor_id
+          ORDER BY a.created_at DESC,a.id LIMIT 51 OFFSET ?`,
+        )
+        .bind(ownerId, offset)
         .all<AuditRow>(),
       db
         .prepare(
@@ -197,6 +212,7 @@ export const manageRequest = api(async (request) => {
       stripe: { configured: stripe.enabled, live: stripe.live },
       page,
       hasMore: [clients, licenses, payments, audit].some((v) => v.results.length > 50),
+      hasMoreClients: clients.results.length > 50,
     });
   }
   const parsed = actionSchema.safeParse(await body(request));
@@ -222,6 +238,71 @@ export const manageRequest = api(async (request) => {
     ]);
     if (!changed(result[0]))
       throw new ApiError(409, "Le client doit avoir un compte confirmé et actif.");
+  } else if (data.action === "grant-license-until") {
+    const now = Date.now();
+    if (data.through < parisDateInput(now) || data.through > "9998-12-31")
+      throw new ApiError(400, "La date de fin doit être aujourd’hui ou dans le futur.");
+    const expiresAt = expiryAfterParisDay(data.through);
+    await requireLinkedActiveLicense(db, data.clientId);
+    const { key, hash } = await newLicenseKey();
+    const isoNow = new Date(now).toISOString();
+    const expected = data.expectedLicenseId ?? null;
+    const result = await db.batch([
+      db
+        .prepare(licenseThroughSql)
+        .bind(
+          crypto.randomUUID(),
+          data.clientId,
+          key,
+          isoNow,
+          expiresAt,
+          data.deviceLimit,
+          isoNow,
+          hash,
+          data.clientId,
+          expected,
+          expected,
+          data.clientId,
+        ),
+      logIfChanged(
+        db,
+        user.id,
+        "license-expiry-set",
+        data.clientId,
+        `Jusqu’au ${data.through} inclus · ${data.deviceLimit} appareil(s) · ${data.note}`,
+      ),
+    ]);
+    if (!changed(result[0]))
+      throw new ApiError(
+        409,
+        "Le compte doit être confirmé et actif, la licence modifiable et le quota suffisant pour les appareils déjà liés.",
+      );
+  } else if (data.action === "client-admin-role") {
+    if (user.adminRole !== "owner")
+      throw new ApiError(403, "Seul le propriétaire peut modifier les rôles.");
+    const statement = data.grant
+      ? db
+          .prepare(
+            `INSERT INTO vyro_admin_memberships(auth_user_id,client_id,granted_by,granted_at)
+          SELECT auth_user_id,id,?,? FROM clients WHERE id=? AND status='active'
+          AND auth_user_id IS NOT NULL AND auth_user_id<>? ON CONFLICT DO NOTHING`,
+          )
+          .bind(user.id, new Date().toISOString(), data.clientId, ownerId)
+      : db
+          .prepare("DELETE FROM vyro_admin_memberships WHERE client_id=? AND auth_user_id<>?")
+          .bind(data.clientId, ownerId);
+    const result = await db.batch([
+      statement,
+      logIfChanged(
+        db,
+        user.id,
+        data.grant ? "admin-role-granted" : "admin-role-revoked",
+        data.clientId,
+        data.note,
+      ),
+    ]);
+    if (!changed(result[0]))
+      throw new ApiError(409, "Aucun rôle modifié. Vérifiez l’état du compte et son rôle actuel.");
   } else if (data.action === "revoke-license") {
     const result = await db.batch([
       db
@@ -233,15 +314,15 @@ export const manageRequest = api(async (request) => {
   } else {
     const result = await db.batch([
       db
-        .prepare("UPDATE clients SET status=? WHERE id=? AND auth_user_id IS NOT ?")
-        .bind(data.status, data.clientId, user.id),
+        .prepare(
+          `UPDATE clients SET status=? WHERE id=? AND auth_user_id IS NOT ?
+          AND (?=1 OR NOT EXISTS (SELECT 1 FROM vyro_admin_memberships m WHERE m.client_id=clients.id))`,
+        )
+        .bind(data.status, data.clientId, ownerId, Number(user.adminRole === "owner")),
       logIfChanged(db, user.id, "client-" + data.status, data.clientId, data.note),
     ]);
     if (!changed(result[0]))
-      throw new ApiError(
-        409,
-        "Client introuvable ou modification de votre propre accès interdite.",
-      );
+      throw new ApiError(409, "Client introuvable ou droits insuffisants pour modifier ce compte.");
   }
   return json({ ok: true });
 });
@@ -300,6 +381,7 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
     license.tv_enabled === 1 &&
     license.expires_at > new Date().toISOString();
   const plan = license ? getPlan(license.plan_id) : undefined;
+  const expiresOn = license?.manual_expiry ? lastIncludedParisDay(license.expires_at) : undefined;
   return {
     id: user.id,
     email: client.email,
@@ -308,10 +390,12 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
     subscription: license
       ? {
           planId: license.plan_id,
-          planName: plan?.name ?? license.plan_id,
+          planName:
+            license.manual_expiry === 1 ? "Durée personnalisée" : (plan?.name ?? license.plan_id),
           status: active ? "active" : license.status === "revoked" ? "revoked" : "expired",
           startedAt: license.started_at,
           expiresAt: license.expires_at,
+          expiresOn,
           devicesUsed: devices.results.length,
           devicesAllowed: license.device_limit,
         }

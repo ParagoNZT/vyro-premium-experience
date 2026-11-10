@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AccountActivation, AccountDevices, AccountHero } from "@/components/site/AccountDevices";
 import { PortalNotice } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth";
+import { formatLastLicenseDay } from "@/lib/license-dates";
 
 export const Route = createFileRoute("/account/")({
   validateSearch: z.object({ payment: z.enum(["processing", "test"]).optional().catch(undefined) }),
@@ -23,7 +24,9 @@ function Dashboard() {
   const subscription = user?.subscription;
   const expiry =
     subscription && Number.isFinite(Date.parse(subscription.expiresAt))
-      ? formatDate.format(new Date(subscription.expiresAt))
+      ? subscription.expiresOn
+        ? formatLastLicenseDay(subscription.expiresAt)
+        : formatDate.format(new Date(subscription.expiresAt))
       : null;
   const status = isActive
     ? "Actif"

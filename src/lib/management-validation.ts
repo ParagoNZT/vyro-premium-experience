@@ -23,6 +23,20 @@ export const actionSchema = z.discriminatedUnion("action", [
     note: z.string().trim().min(1).max(300),
   }),
   z.object({
+    action: z.literal("grant-license-until"),
+    clientId: z.string().uuid(),
+    expectedLicenseId: z.string().uuid().optional(),
+    through: z.string().date("Choisissez une date de fin valide.").min(10).max(10),
+    deviceLimit: z.number().int().min(1).max(10),
+    note: z.string().trim().min(1).max(300),
+  }),
+  z.object({
+    action: z.literal("client-admin-role"),
+    clientId: z.string().uuid(),
+    grant: z.boolean(),
+    note: z.string().trim().min(1).max(300),
+  }),
+  z.object({
     action: z.literal("client-status"),
     clientId: z.string().uuid(),
     status: z.enum(["active", "suspended"]),

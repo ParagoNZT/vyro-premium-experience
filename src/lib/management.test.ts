@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { licenseUpsertSql } from "./license-sql.ts";
 import { verifyStripeSignature } from "./stripe-signature.ts";
 import { actionSchema } from "./management-validation.ts";
+import { expiryAfterParisDay, parisDateInput } from "./license-dates.ts";
 import {
   attachPaymentSql,
   suppressRefundedFulfillmentSql,
@@ -36,8 +37,32 @@ function setup() {
   db.prepare(
     "INSERT INTO clients(id,auth_user_id,email,first_name,created_at) VALUES(?,?,?,?,?)",
   ).run("client", "auth-client", "client@example.com", "Client", "2026-01-01T00:00:00.000Z");
+  db.exec(
+    readFileSync(
+      new URL("../../migrations/d1/0014_admin_delegation_and_license_expiry.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   return db;
 }
+
+test("a custom expiry includes the last day in Paris in winter, summer and after DST changes", () => {
+  assert.equal(expiryAfterParisDay("2026-11-10"), "2026-11-10T23:00:00.000Z");
+  assert.equal(expiryAfterParisDay("2026-08-02"), "2026-08-02T22:00:00.000Z");
+  assert.equal(expiryAfterParisDay("2026-03-29"), "2026-03-29T22:00:00.000Z");
+  assert.equal(expiryAfterParisDay("2026-10-25"), "2026-10-25T23:00:00.000Z");
+  assert.equal(parisDateInput(Date.parse("2026-11-10T23:00:00.000Z")), "2026-11-11");
+  assert.equal(
+    actionSchema.safeParse({
+      action: "grant-license-until",
+      clientId: crypto.randomUUID(),
+      through: "2026-02-29",
+      deviceLimit: 3,
+      note: "Essai",
+    }).success,
+    false,
+  );
+});
 function grant(db: DatabaseSync, now: string, months: number, payment: string | null = null) {
   return db
     .prepare(licenseUpsertSql)

@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLANS, formatPrice, getPlan } from "@/config/site";
-import type { AdminOverview, ClientRow, LicenseRow } from "@/lib/management-types";
+import type { AdminClientRow, AdminOverview, LicenseRow } from "@/lib/management-types";
+import { formatLastLicenseDay, lastIncludedParisDay, parisDateInput } from "@/lib/license-dates";
 import { portalApi, PortalApiError } from "@/lib/portal-api";
 import { AdminDialog, AdminField, AdminNotice } from "./AdminControls";
 import { AdminPagination, AdminStats, AdminStatus, AdminTable } from "./AdminTable";
@@ -26,8 +27,9 @@ import { VyroAppPanel } from "./VyroAppPanel";
 type OnDenied = (status: 401 | 403) => void;
 type Action =
   | { kind: "client" }
-  | { kind: "grant"; client: ClientRow }
-  | { kind: "status"; client: ClientRow }
+  | { kind: "grant"; client: Pick<AdminClientRow, "id" | "email">; license?: LicenseRow }
+  | { kind: "status"; client: AdminClientRow }
+  | { kind: "role"; client: AdminClientRow }
   | { kind: "revoke"; license: LicenseRow };
 
 const auditLabels: Record<string, string> = {
@@ -37,6 +39,9 @@ const auditLabels: Record<string, string> = {
   "beta-access-updated": "Accès TV modifié",
   "client-created": "Fiche client créée",
   "license-granted": "Licence attribuée ou prolongée",
+  "license-expiry-set": "Date de fin de licence définie",
+  "admin-role-granted": "Rôle administrateur attribué",
+  "admin-role-revoked": "Rôle administrateur retiré",
   "license-revoked": "Licence révoquée",
   "client-suspended": "Client suspendu",
   "client-active": "Client réactivé",
@@ -50,6 +55,11 @@ const paymentLabels: Record<string, string> = {
   failed: "Échoué",
   refunded: "Remboursé",
 };
+
+const licenseLabel = (license: LicenseRow) =>
+  license.manual_expiry
+    ? "Durée personnalisée"
+    : (getPlan(license.plan_id)?.name ?? license.plan_id);
 
 function date(value: string | null) {
   return value && Number.isFinite(Date.parse(value))
@@ -124,7 +134,7 @@ function Overview({
                   </span>
                   <div>
                     <strong>{auditLabels[row.action] ?? row.action}</strong>
-                    <p>{row.note || (row.actor_id === "stripe" ? "Stripe" : "Administrateur")}</p>
+                    <p>{row.note || row.actor_label}</p>
                   </div>
                   <time dateTime={row.created_at}>{date(row.created_at)}</time>
                 </li>
@@ -190,9 +200,11 @@ function Overview({
 
 export function ManagementPanel({
   section,
+  canManageRoles,
   onAccessDenied,
 }: {
   section: AdminSection;
+  canManageRoles: boolean;
   onAccessDenied: OnDenied;
 }) {
   return section === "beta" ? (
@@ -206,15 +218,21 @@ export function ManagementPanel({
   ) : section === "vyro" ? (
     <VyroAppPanel onAccessDenied={onAccessDenied} />
   ) : (
-    <ManagementSection section={section} onAccessDenied={onAccessDenied} />
+    <ManagementSection
+      section={section}
+      canManageRoles={canManageRoles}
+      onAccessDenied={onAccessDenied}
+    />
   );
 }
 
 function ManagementSection({
   section,
+  canManageRoles,
   onAccessDenied,
 }: {
   section: Exclude<AdminSection, "beta" | "support" | "partners" | "vyro" | "deadlines">;
+  canManageRoles: boolean;
   onAccessDenied: OnDenied;
 }) {
   const [page, setPage] = useState(0);
@@ -230,42 +248,57 @@ function ManagementSection({
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [planId, setPlanId] = useState("12m");
+  const [through, setThrough] = useState("");
   const [limit, setLimit] = useState("3");
   const [note, setNote] = useState("");
   const dialogTrigger = useRef<HTMLButtonElement | null>(null);
   const sectionHeading = useRef<HTMLHeadingElement>(null);
+  const clientQuery = section === "clients" ? query.trim().slice(0, 254) : "";
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    void portalApi<AdminOverview>(`/api/manage?page=${page}`, { signal: controller.signal })
-      .then((result) => {
-        if (!controller.signal.aborted) setData(result);
-      })
-      .catch((issue: unknown) => {
-        if (controller.signal.aborted) return;
-        setData(null);
-        if (issue instanceof PortalApiError && (issue.status === 401 || issue.status === 403))
-          onAccessDenied(issue.status);
-        else
-          setError(
-            issue instanceof PortalApiError ? issue.message : "Impossible de charger la gestion.",
-          );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [page, version, onAccessDenied]);
+    const params = new URLSearchParams({ page: String(page), client: clientQuery });
+    const timer = window.setTimeout(
+      () => {
+        void portalApi<AdminOverview>(`/api/manage?${params}`, { signal: controller.signal })
+          .then((result) => {
+            if (!controller.signal.aborted) setData(result);
+          })
+          .catch((issue: unknown) => {
+            if (controller.signal.aborted) return;
+            setData(null);
+            if (issue instanceof PortalApiError && (issue.status === 401 || issue.status === 403))
+              onAccessDenied(issue.status);
+            else
+              setError(
+                issue instanceof PortalApiError
+                  ? issue.message
+                  : "Impossible de charger la gestion.",
+              );
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setLoading(false);
+          });
+      },
+      clientQuery ? 220 : 0,
+    );
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [page, clientQuery, version, onAccessDenied]);
 
   function openForm(next: Action, trigger: HTMLButtonElement) {
     dialogTrigger.current = trigger;
     setFirstName("");
     setEmail("");
     setNote("");
-    setPlanId("12m");
-    setLimit("3");
+    const license = next.kind === "grant" ? next.license : undefined;
+    setPlanId(license ? "custom" : "12m");
+    setThrough(license?.manual_expiry ? (lastIncludedParisDay(license.expires_at) ?? "") : "");
+    setLimit(String(license?.device_limit ?? 3));
     setFormError("");
     setNotice("");
     setAction(next);
@@ -281,21 +314,37 @@ function ManagementSection({
         action.kind === "client"
           ? { action: "create-client", firstName, email }
           : action.kind === "grant"
-            ? {
-                action: "grant-license",
-                clientId: action.client.id,
-                planId,
-                deviceLimit: Number(limit),
-                note,
-              }
-            : action.kind === "status"
+            ? planId === "custom"
               ? {
-                  action: "client-status",
+                  action: "grant-license-until",
                   clientId: action.client.id,
-                  status: action.client.status === "active" ? "suspended" : "active",
+                  expectedLicenseId: action.license?.id,
+                  through,
+                  deviceLimit: Number(limit),
                   note,
                 }
-              : { action: "revoke-license", licenseId: action.license.id, note };
+              : {
+                  action: "grant-license",
+                  clientId: action.client.id,
+                  planId,
+                  deviceLimit: Number(limit),
+                  note,
+                }
+            : action.kind === "role"
+              ? {
+                  action: "client-admin-role",
+                  clientId: action.client.id,
+                  grant: !action.client.admin_role,
+                  note,
+                }
+              : action.kind === "status"
+                ? {
+                    action: "client-status",
+                    clientId: action.client.id,
+                    status: action.client.status === "active" ? "suspended" : "active",
+                    note,
+                  }
+                : { action: "revoke-license", licenseId: action.license.id, note };
       await portalApi<{ ok: true }>("/api/manage", { method: "POST", body });
       setAction(null);
       setNotice(
@@ -305,9 +354,13 @@ function ManagementSection({
             ? "Licence enregistrée."
             : action.kind === "revoke"
               ? "Licence révoquée."
-              : action.client.status === "active"
-                ? "Client suspendu."
-                : "Client réactivé.",
+              : action.kind === "role"
+                ? action.client.admin_role
+                  ? "Rôle administrateur retiré."
+                  : "Rôle administrateur attribué."
+                : action.client.status === "active"
+                  ? "Client suspendu."
+                  : "Client réactivé.",
       );
       if (action.kind === "client") {
         setPage(0);
@@ -330,11 +383,9 @@ function ManagementSection({
 
   const search = query.trim().toLocaleLowerCase("fr-FR");
   const match = (value: string) => value.toLocaleLowerCase("fr-FR").includes(search);
-  const clients = data?.clients.filter((row) => match(row.first_name + " " + row.email)) ?? [];
+  const clients = data?.clients ?? [];
   const licenses =
-    data?.licenses.filter((row) =>
-      match((row.email ?? "") + " " + (getPlan(row.plan_id)?.name ?? row.plan_id)),
-    ) ?? [];
+    data?.licenses.filter((row) => match((row.email ?? "") + " " + licenseLabel(row))) ?? [];
   const payments =
     data?.payments.filter((row) =>
       match((row.email ?? "") + " " + row.id + " " + (getPlan(row.plan_id)?.name ?? row.plan_id)),
@@ -342,17 +393,23 @@ function ManagementSection({
   const audit =
     data?.audit.filter((row) => match((auditLabels[row.action] ?? row.action) + " " + row.note)) ??
     [];
-  const empty = search ? "Aucun résultat sur cette page." : "Aucun enregistrement sur cette page.";
+  const empty = search ? "Aucun résultat trouvé." : "Aucun enregistrement sur cette page.";
   const formTitle =
     action?.kind === "client"
       ? "Créer une fiche client"
       : action?.kind === "grant"
-        ? "Attribuer ou prolonger une licence"
+        ? action.license
+          ? "Modifier la date de fin"
+          : "Attribuer ou prolonger une licence"
         : action?.kind === "revoke"
           ? "Révoquer cette licence"
-          : action?.kind === "status" && action.client.status === "active"
-            ? "Suspendre l’accès client"
-            : "Réactiver l’accès client";
+          : action?.kind === "role"
+            ? action.client.admin_role
+              ? "Retirer le rôle administrateur"
+              : "Attribuer le rôle administrateur"
+            : action?.kind === "status" && action.client.status === "active"
+              ? "Suspendre l’accès client"
+              : "Réactiver l’accès client";
 
   const tableTitle =
     section === "clients"
@@ -465,10 +522,13 @@ function ManagementSection({
             </div>
             <div className="va-toolbar">
               <AdminField
-                label="Filtrer cette page"
+                label={section === "clients" ? "Rechercher un client" : "Filtrer cette page"}
                 type="search"
                 value={query}
-                onChange={setQuery}
+                onChange={(value) => {
+                  setQuery(value);
+                  if (section === "clients") setPage(0);
+                }}
                 placeholder={
                   section === "audit"
                     ? "Action ou motif"
@@ -490,7 +550,7 @@ function ManagementSection({
                 {section === "clients" && (
                   <AdminTable
                     label="Fiches clients"
-                    columns={["Client", "Compte", "Statut", "Dernière visite", "Actions"]}
+                    columns={["Client", "Rôle", "Statut", "Dernière visite", "Actions"]}
                     empty={clients.length ? undefined : empty}
                   >
                     {clients.map((client) => (
@@ -499,7 +559,20 @@ function ManagementSection({
                           <strong>{client.first_name}</strong>
                           <small>{client.email}</small>
                         </td>
-                        <td>{client.auth_user_id ? "Inscrit" : "À créer par le client"}</td>
+                        <td>
+                          {client.admin_role === "owner"
+                            ? "Propriétaire"
+                            : client.admin_role === "admin"
+                              ? "Administrateur"
+                              : client.reseller
+                                ? "Revendeur"
+                                : client.registered
+                                  ? "Client"
+                                  : "Compte à créer"}
+                          {client.admin_role && !!client.reseller && (
+                            <small className="block">Revendeur</small>
+                          )}
+                        </td>
                         <td>
                           <AdminStatus tone={client.status === "active" ? "positive" : "warning"}>
                             {client.status === "active" ? "Actif" : "Suspendu"}
@@ -508,7 +581,7 @@ function ManagementSection({
                         <td className="va-date">{date(client.last_seen_at)}</td>
                         <td>
                           <div className="va-table-actions">
-                            {client.status === "active" && client.auth_user_id && (
+                            {client.status === "active" && !!client.registered && (
                               <button
                                 className="va-row-action"
                                 type="button"
@@ -520,16 +593,36 @@ function ManagementSection({
                                 Attribuer une licence
                               </button>
                             )}
-                            <button
-                              className="va-row-action"
-                              type="button"
-                              disabled={loading}
-                              onClick={(event) =>
-                                openForm({ kind: "status", client }, event.currentTarget)
-                              }
-                            >
-                              {client.status === "active" ? "Suspendre" : "Réactiver"}
-                            </button>
+                            {canManageRoles &&
+                              !!client.registered &&
+                              client.admin_role !== "owner" &&
+                              (client.status === "active" || client.admin_role === "admin") && (
+                                <button
+                                  className="va-row-action"
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={(event) =>
+                                    openForm({ kind: "role", client }, event.currentTarget)
+                                  }
+                                >
+                                  {client.admin_role === "admin"
+                                    ? "Retirer le rôle admin"
+                                    : "Attribuer le rôle admin"}
+                                </button>
+                              )}
+                            {client.admin_role !== "owner" &&
+                              (canManageRoles || !client.admin_role) && (
+                                <button
+                                  className="va-row-action"
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={(event) =>
+                                    openForm({ kind: "status", client }, event.currentTarget)
+                                  }
+                                >
+                                  {client.status === "active" ? "Suspendre" : "Réactiver"}
+                                </button>
+                              )}
                           </div>
                         </td>
                       </tr>
@@ -548,8 +641,12 @@ function ManagementSection({
                       return (
                         <tr key={license.id}>
                           <td className="va-person">{license.email ?? "—"}</td>
-                          <td>{getPlan(license.plan_id)?.name ?? license.plan_id}</td>
-                          <td className="va-date">{date(license.expires_at)}</td>
+                          <td>{licenseLabel(license)}</td>
+                          <td className="va-date">
+                            {license.manual_expiry && lastIncludedParisDay(license.expires_at)
+                              ? formatLastLicenseDay(license.expires_at) + " inclus"
+                              : date(license.expires_at)}
+                          </td>
                           <td>{license.device_limit}</td>
                           <td>
                             <AdminStatus tone={active ? "positive" : "warning"}>
@@ -562,16 +659,38 @@ function ManagementSection({
                           </td>
                           <td>
                             {license.status !== "revoked" && (
-                              <button
-                                className="va-row-action"
-                                type="button"
-                                disabled={loading}
-                                onClick={(event) =>
-                                  openForm({ kind: "revoke", license }, event.currentTarget)
-                                }
-                              >
-                                Révoquer
-                              </button>
+                              <div className="va-table-actions">
+                                <button
+                                  className="va-row-action"
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={(event) =>
+                                    openForm(
+                                      {
+                                        kind: "grant",
+                                        client: {
+                                          id: license.client_id,
+                                          email: license.email ?? "—",
+                                        },
+                                        license,
+                                      },
+                                      event.currentTarget,
+                                    )
+                                  }
+                                >
+                                  Modifier la date
+                                </button>
+                                <button
+                                  className="va-row-action"
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={(event) =>
+                                    openForm({ kind: "revoke", license }, event.currentTarget)
+                                  }
+                                >
+                                  Révoquer
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -612,14 +731,18 @@ function ManagementSection({
                         <td className="va-date">{date(row.created_at)}</td>
                         <td>{auditLabels[row.action] ?? row.action}</td>
                         <td className="va-person">{row.note || "—"}</td>
-                        <td>{row.actor_id === "stripe" ? "Stripe" : "Administrateur"}</td>
+                        <td>{row.actor_label ?? "Administrateur"}</td>
                       </tr>
                     ))}
                   </AdminTable>
                 )}
                 <AdminPagination
                   page={page}
-                  hasMore={data.hasMore && data[section].length === 50}
+                  hasMore={
+                    section === "clients"
+                      ? data.hasMoreClients
+                      : data.hasMore && data[section].length === 50
+                  }
                   onChange={setPage}
                   busy={loading}
                 />
@@ -636,12 +759,18 @@ function ManagementSection({
           action?.kind === "client"
             ? "La fiche sera liée au compte lorsque le client confirmera son adresse. Aucun e-mail n’est envoyé ici."
             : action?.kind === "grant"
-              ? "Attribution manuelle sans paiement. Une licence active est prolongée à partir de son échéance."
-              : action?.kind === "status"
-                ? `La modification concerne les services VYRO de ${action.client.email}. Le compte de connexion est conservé.`
-                : action?.kind === "revoke"
-                  ? `L’accès TV lié à cette licence sera révoqué pour ${action.license.email ?? "ce client"}.`
-                  : ""
+              ? planId === "custom"
+                ? "La licence sera valable dès maintenant jusqu’au dernier jour indiqué, inclus. Cette date remplace l’échéance actuelle."
+                : "Attribution manuelle sans paiement. Une licence active est prolongée à partir de son échéance."
+              : action?.kind === "role"
+                ? action.client.admin_role
+                  ? `${action.client.email} perdra l’accès à la console dès sa prochaine requête. Ses accès client ou revendeur sont conservés.`
+                  : `${action.client.email} pourra gérer les clients, les licences, le support et les applications dans la console VYRO. La gestion des rôles reste réservée au propriétaire.`
+                : action?.kind === "status"
+                  ? `La modification concerne les services VYRO de ${action.client.email}. Le compte de connexion est conservé.`
+                  : action?.kind === "revoke"
+                    ? `L’accès TV lié à cette licence sera révoqué pour ${action.license.email ?? "ce client"}.`
+                    : ""
         }
         onClose={() => setAction(null)}
         returnFocus={() => {
@@ -653,7 +782,7 @@ function ManagementSection({
           {action?.kind === "client" && (
             <>
               <AdminField
-                label="Prénom"
+                label="Nom d’utilisateur"
                 value={firstName}
                 onChange={setFirstName}
                 maxLength={80}
@@ -675,16 +804,31 @@ function ManagementSection({
                 Client : <strong>{action.client.email}</strong>
               </p>
               <div className="va-form-grid">
-                <label className="va-field">
-                  Durée
-                  <select value={planId} onChange={(event) => setPlanId(event.target.value)}>
-                    {PLANS.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {!action.license && (
+                  <label className="va-field">
+                    Durée
+                    <select value={planId} onChange={(event) => setPlanId(event.target.value)}>
+                      {PLANS.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </option>
+                      ))}
+                      <option value="custom">Date de fin personnalisée</option>
+                    </select>
+                  </label>
+                )}
+                {planId === "custom" && (
+                  <AdminField
+                    label="Dernier jour d’accès"
+                    type="date"
+                    min={parisDateInput(Date.now())}
+                    max="9998-12-31"
+                    value={through}
+                    onChange={setThrough}
+                    hint="Date incluse, heure de Paris."
+                    required
+                  />
+                )}
                 <AdminField
                   label="Appareils autorisés"
                   type="number"

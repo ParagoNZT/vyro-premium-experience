@@ -1,12 +1,8 @@
-import { isAdminIdentity, type VerifiedIdentity } from "./admin-policy.ts";
+import { isAdminIdentity, type AdminIdentity, type VerifiedIdentity } from "./admin-policy.ts";
+import { ApiError } from "./api-error.ts";
+import { database } from "./database.server.ts";
 
-export class ApiError extends Error {
-  readonly status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
+export { ApiError } from "./api-error.ts";
 
 export const json = (data: unknown, status = 200) =>
   Response.json(data, {
@@ -48,7 +44,9 @@ function publicAuthConfig() {
   return { endpoint: base.href.replace(/\/+$/, "") + "/auth/v1/user", key };
 }
 
-export async function identity(request: Request, admin = false): Promise<VerifiedIdentity> {
+export function identity(request: Request, admin: true | "owner"): Promise<AdminIdentity>;
+export function identity(request: Request, admin?: boolean | "owner"): Promise<VerifiedIdentity>;
+export async function identity(request: Request, admin: boolean | "owner" = false) {
   const token = request.headers.get("authorization")?.match(/^Bearer ([^\s]+)$/i)?.[1];
   if (!token || token.length > 8192) throw new ApiError(401, "Connexion requise.");
   const { endpoint, key } = publicAuthConfig();
@@ -78,9 +76,20 @@ export async function identity(request: Request, admin = false): Promise<Verifie
   if (admin) {
     const adminId = process.env["VYRO_ADMIN_USER_ID"];
     if (!adminId?.trim()) throw new ApiError(503, "L’accès administrateur n’est pas configuré.");
-    if (!isAdminIdentity(user, adminId, process.env["VYRO_ADMIN_EMAIL"])) {
-      throw new ApiError(403, "Accès administrateur requis.");
-    }
+    if (isAdminIdentity(user, adminId, process.env["VYRO_ADMIN_EMAIL"]))
+      return { ...user, adminRole: "owner" } satisfies AdminIdentity;
+    if (admin === "owner" || user.id === adminId.trim())
+      throw new ApiError(403, "Accès propriétaire requis.");
+    const db = await database();
+    const membership = await db
+      .prepare(
+        `SELECT 1 FROM vyro_admin_memberships m JOIN clients c ON c.id=m.client_id
+        AND c.auth_user_id=m.auth_user_id WHERE m.auth_user_id=? AND c.status='active'`,
+      )
+      .bind(user.id)
+      .first();
+    if (!membership) throw new ApiError(403, "Accès administrateur requis.");
+    return { ...user, adminRole: "admin" } satisfies AdminIdentity;
   }
   return user;
 }

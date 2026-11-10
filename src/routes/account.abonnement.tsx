@@ -4,6 +4,7 @@ import { PLANS, formatPrice } from "@/config/site";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 import { PortalHeading } from "@/components/site/AuthShell";
+import { formatLastLicenseDay } from "@/lib/license-dates";
 
 export const Route = createFileRoute("/account/abonnement")({
   head: () => ({
@@ -34,7 +35,9 @@ function SubscriptionPage() {
                 "Statut",
                 isActive ? "Actif" : subscription.status === "revoked" ? "Révoqué" : "Expiré",
               ],
-              ["Échéance", formatDate(subscription.expiresAt)],
+              subscription.expiresOn
+                ? ["Dernier jour d’accès", formatLastLicenseDay(subscription.expiresAt)]
+                : ["Échéance", formatDate(subscription.expiresAt)],
               ["Temps restant", isActive && daysLeft != null ? `${daysLeft} j` : "—"],
             ].map(([label, value]) => (
               <div key={label}>

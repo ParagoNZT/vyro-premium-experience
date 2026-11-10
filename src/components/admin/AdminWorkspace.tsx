@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronRight, LogOut, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
+import type { AdminRole } from "@/lib/admin-policy";
 import { adminNavigation, adminSections, type AdminSection } from "./sections";
 
 export function AdminBrand() {
@@ -24,6 +25,7 @@ export function AdminBrand() {
 export function AdminWorkspace({
   section,
   email,
+  role,
   onSignOut,
   signingOut,
   logoutError,
@@ -31,6 +33,7 @@ export function AdminWorkspace({
 }: {
   section: AdminSection;
   email: string;
+  role: AdminRole;
   onSignOut: () => void;
   signingOut: boolean;
   logoutError: string;
@@ -73,7 +76,7 @@ export function AdminWorkspace({
             <span className="va-identity">
               <ShieldCheck size={17} aria-hidden />
               <span>
-                <strong>Administrateur</strong>
+                <strong>{role === "owner" ? "Propriétaire" : "Administrateur"}</strong>
                 <small>{email}</small>
               </span>
             </span>

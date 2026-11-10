@@ -18,6 +18,7 @@ export type Subscription = {
   status: "active" | "expired" | "revoked" | "none";
   startedAt: string;
   expiresAt: string;
+  expiresOn?: string;
   devicesUsed: number;
   devicesAllowed: number | null;
 };

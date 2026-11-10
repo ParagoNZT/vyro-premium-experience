@@ -1,3 +1,5 @@
+import type { AdminRole } from "./admin-policy";
+
 export type ClientRow = {
   id: string;
   auth_user_id: string | null;
@@ -7,6 +9,11 @@ export type ClientRow = {
   created_at: string;
   last_seen_at: string | null;
 };
+export type AdminClientRow = Omit<ClientRow, "auth_user_id"> & {
+  registered: number;
+  admin_role: AdminRole | null;
+  reseller: number;
+};
 export type LicenseRow = {
   id: string;
   client_id: string;
@@ -14,6 +21,7 @@ export type LicenseRow = {
   plan_id: string;
   started_at: string;
   expires_at: string;
+  manual_expiry: number;
   device_limit: number;
   status: "active" | "revoked";
   source_payment_id: string | null;
@@ -45,9 +53,10 @@ export type AuditRow = {
   target_id: string;
   note: string;
   created_at: string;
+  actor_label?: string;
 };
 export type AdminOverview = {
-  clients: ClientRow[];
+  clients: AdminClientRow[];
   licenses: LicenseRow[];
   payments: AdminPaymentRow[];
   audit: AuditRow[];
@@ -55,4 +64,5 @@ export type AdminOverview = {
   stats: { clients: number; activeLicenses: number; paidCents: number; testPaidCents: number };
   page: number;
   hasMore: boolean;
+  hasMoreClients: boolean;
 };
