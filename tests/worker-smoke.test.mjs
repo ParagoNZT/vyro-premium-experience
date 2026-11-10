@@ -246,6 +246,87 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       expected,
     );
   }
+  await t.test(
+    "access filters are exclusive across direct, SHOW+ and reseller origins",
+    async () => {
+      const secondReseller = randomUUID();
+      const secondAccess = randomUUID();
+      const app = randomUUID();
+      const assigned = randomUUID();
+      const ambiguous = randomUUID();
+      sqlite
+        .prepare(
+          "INSERT INTO resellers VALUES (?, 'Revendeur 2', 'second-hash', 'second-token', 1, ?)",
+        )
+        .run(secondReseller, fixtureDate);
+      insertAccess.run(
+        secondAccess,
+        "reseller-two-fixture",
+        "SHOW+ - Client attribué",
+        fixtureDate,
+        secondReseller,
+      );
+      insertAccess.run(assigned, "assigned-fixture", "Application client", fixtureDate, null);
+      insertAccess.run(ambiguous, "ambiguous-fixture", "SHOW+ - À examiner", fixtureDate, null);
+      sqlite
+        .prepare(
+          "INSERT INTO show_installations VALUES ('conflict-device','conflict-token','ambiguous-fixture','partner-fixture',?)",
+        )
+        .run(fixtureDate);
+      sqlite
+        .prepare(
+          "INSERT INTO partner_apps(id,name,package_name) VALUES(?,'App distincte','com.demo.partner')",
+        )
+        .run(app);
+      const assign = sqlite.prepare("INSERT INTO partner_app_devices VALUES(?,?)");
+      assign.run("reseller-two-fixture", app);
+      assign.run("assigned-fixture", app);
+      try {
+        const list = async (scope, q = "") => {
+          const response = await call("/api/beta?" + new URLSearchParams({ scope, q }), {
+            token: "admin",
+          });
+          assert.equal(response.status, 200, JSON.stringify(response));
+          assert.equal(response.json.stats.accesses, response.json.codes.length);
+          return response.json.codes;
+        };
+        assert.deepEqual(
+          (await list("direct")).map((c) => c.id),
+          [directFixture],
+        );
+        assert.deepEqual(
+          new Set((await list("show-plus")).map((c) => c.id)),
+          new Set([showFixture, reviewFixture, ambiguous]),
+        );
+        assert.deepEqual(
+          (await list("review")).map((c) => c.id),
+          [ambiguous],
+        );
+        assert.deepEqual(
+          (await list("reseller:" + secondReseller, "Revendeur 2")).map((c) => c.id),
+          [secondAccess],
+        );
+        assert.deepEqual(
+          new Set((await list("resellers")).map((c) => c.id)),
+          new Set([partnerFixture, secondAccess]),
+        );
+        assert.deepEqual(
+          (await list("partner:" + app)).map((c) => c.id),
+          [assigned],
+        );
+        assert.deepEqual(
+          (await list("show-plus", "Client attribué")).map((c) => c.id),
+          [],
+        );
+      } finally {
+        sqlite.exec(
+          "DELETE FROM codes WHERE code_hash IN ('reseller-two-fixture','assigned-fixture','ambiguous-fixture')",
+        );
+        sqlite.prepare("DELETE FROM partner_apps WHERE id=?").run(app);
+        sqlite.prepare("DELETE FROM resellers WHERE id=?").run(secondReseller);
+      }
+    },
+  );
   const partnerApi = "/api/partner-control";
   assert.equal(
     (

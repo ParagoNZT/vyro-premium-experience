@@ -24,7 +24,7 @@ type Access = {
   deviceCount: number;
   lastSeen: string | null;
   resellerName: string | null;
-  needsReview: number;
+  scopeKey: string;
   clientEmail: string | null;
   hasRecoverableKey: number;
   managedOnSite: number;
@@ -49,13 +49,13 @@ function inputDate(value: string | null) {
 }
 
 function origin(access: Access) {
-  return access.managedOnSite
-    ? "VYRO"
-    : access.resellerName
-      ? "Revendeur · " + access.resellerName
-      : access.needsReview
-        ? "SHOW+ · À vérifier"
-        : "Client direct";
+  if (access.scopeKey === "show-plus") return "SHOW+";
+  if (access.scopeKey === "review") return "SHOW+ · À vérifier";
+  if (access.scopeKey.startsWith("reseller:"))
+    return access.resellerName ? "Revendeur · " + access.resellerName : "Revendeur";
+  if (access.scopeKey.startsWith("partner:"))
+    return access.resellerName ? "Application · " + access.resellerName : "Application partenaire";
+  return access.managedOnSite ? "Client direct · VYRO" : "Client direct";
 }
 
 function accessStatus(access: Access) {
@@ -77,7 +77,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [scope, setScope] = useState("all");
+  const [scope, setScope] = useState("direct");
   const [sort, setSort] = useState("recent");
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -221,7 +221,9 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
   }
 
   const result = data?.key === params ? data.result : null;
-  const stats = data?.result.stats;
+  const stats = result?.stats;
+  const resellers = data?.result.resellers.filter((item) => item.kind === "reseller") ?? [];
+  const partners = data?.result.resellers.filter((item) => item.kind === "partner") ?? [];
   const selected = result?.codes.find((access) => access.id === selectedId) ?? result?.codes[0];
 
   function select(access: Access) {
@@ -245,7 +247,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
           <div className="va-card-head">
             <div>
               <h2 id="va-access-list-title">Liste des accès TV</h2>
-              <p>Filtrez vos clients directs et les accès des revendeurs.</p>
+              <p>Choisissez les clients directs, SHOW+ ou un revendeur précis.</p>
             </div>
             <button
               className="va-button va-button-secondary va-refresh"
@@ -267,20 +269,37 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
                   setScope(event.target.value);
                   setPage(0);
                   setSelectedId(null);
+                  setNotice("");
                 }}
               >
-                <option value="all">Tous les accès</option>
-                <option value="direct">Clients directs</option>
-                <option value="show-plus">Revendeur · SHOW+</option>
-                <option value="review">SHOW+ · À vérifier</option>
-                {data?.result.resellers.map((partner) => (
-                  <option
-                    key={`${partner.kind}:${partner.id}`}
-                    value={`${partner.kind}:${partner.id}`}
-                  >
-                    Revendeur · {partner.name}
-                  </option>
-                ))}
+                <optgroup label="Accès directs et SHOW+">
+                  <option value="direct">Clients directs VYRO</option>
+                  <option value="show-plus">Tous les accès SHOW+</option>
+                </optgroup>
+                {resellers.length > 0 && (
+                  <optgroup label="Revendeurs">
+                    <option value="resellers">Tous les revendeurs</option>
+                    {resellers.map((reseller) => (
+                      <option key={reseller.id} value={`reseller:${reseller.id}`}>
+                        {reseller.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {partners.length > 0 && (
+                  <optgroup label="Applications partenaires">
+                    <option value="partners">Toutes les applications partenaires</option>
+                    {partners.map((partner) => (
+                      <option key={partner.id} value={`partner:${partner.id}`}>
+                        {partner.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Vue d’ensemble">
+                  <option value="all">Tous les accès</option>
+                  <option value="review">SHOW+ · Accès à vérifier</option>
+                </optgroup>
               </select>
             </label>
             <label className="va-field">
@@ -316,7 +335,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
               value={query}
               onChange={setQuery}
               maxLength={80}
-              placeholder="Nom ou e-mail"
+              placeholder="Nom, e-mail ou revendeur"
             />
             <button className="va-button va-button-primary" type="submit" disabled={loading}>
               <Search size={16} aria-hidden /> Rechercher
@@ -348,7 +367,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
             <p className="va-state" role="status">
               {search
                 ? "Aucun accès TV ne correspond à cette recherche."
-                : "Aucun accès TV trouvé."}
+                : "Aucun accès TV dans ce périmètre."}
             </p>
           ) : (
             <>

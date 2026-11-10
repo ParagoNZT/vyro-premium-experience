@@ -3,6 +3,33 @@ import { api, identity, json, body, ApiError } from "./access.server";
 import { database, logIfChanged, changed } from "./management.server";
 import { showRegistration, showNeedsReview } from "./show-directory.server";
 
+// One origin per code. A verified licence or an explicit assignment takes
+// priority over a display-name prefix, which can be edited.
+const accessOrigins = `
+  WITH classified AS (
+    SELECT c.id,c.code_hash,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
+      c.created_at AS createdAt,u.email AS clientEmail,r.enabled AS resellerEnabled,
+      CASE WHEN l.id IS NOT NULL THEN 'direct'
+        WHEN c.reseller_id IS NOT NULL THEN 'reseller:'||c.reseller_id
+        WHEN a.id='show-plus' THEN 'show-plus'
+        WHEN a.id IS NOT NULL THEN 'partner:'||a.id
+        WHEN ${showRegistration} THEN 'show-plus'
+        WHEN ${showNeedsReview} THEN 'review'
+        ELSE 'direct' END AS scopeKey,
+      coalesce(r.name,a.name) AS assignedName,
+      CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
+      CASE WHEN l.license_key IS NOT NULL THEN 1 ELSE 0 END AS hasRecoverableKey
+    FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id
+    LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash LEFT JOIN clients u ON u.id=l.client_id
+    LEFT JOIN partner_app_devices p ON p.code_hash=c.code_hash LEFT JOIN partner_apps a ON a.id=p.app_id
+  ), origins AS (
+    SELECT *,CASE WHEN scopeKey='show-plus' THEN 'SHOW+'
+      WHEN scopeKey LIKE 'reseller:%' OR scopeKey LIKE 'partner:%' THEN assignedName END AS resellerName
+    FROM classified
+  )`;
+const searchSql =
+  "instr(lower(name||' '||coalesce(clientEmail,'')||' '||coalesce(resellerName,'')),lower(?))>0";
+
 const change = z.object({
   id: z.string().uuid(),
   enabled: z.boolean(),
@@ -71,49 +98,45 @@ export const betaRequest = api(async (request) => {
   const partnerId = partnerKind ? scope.slice(partnerKind.length + 1) : null;
   let scopeSql = "1=1";
   const scopeArgs: string[] = [];
-  if (scope === "show-plus") scopeSql = showRegistration;
-  else if (scope === "review") scopeSql = showNeedsReview;
-  else if (scope === "direct")
-    scopeSql = `c.reseller_id IS NULL AND a.id IS NULL AND NOT (${showRegistration}) AND NOT (${showNeedsReview})`;
-  else if (partnerId && z.string().uuid().safeParse(partnerId).success) {
-    scopeSql = partnerKind === "partner" ? "a.id=?" : "c.reseller_id=?";
-    scopeArgs.push(partnerId);
-  } else if (scope !== "all") throw new ApiError(400, "Filtre revendeur invalide.");
+  if (scope === "resellers") scopeSql = "scopeKey LIKE 'reseller:%'";
+  else if (scope === "partners") scopeSql = "scopeKey LIKE 'partner:%'";
+  else if (scope === "show-plus") scopeSql = "scopeKey IN ('show-plus','review')";
+  else if (
+    ["review", "direct"].includes(scope) ||
+    (partnerId && z.string().uuid().safeParse(partnerId).success)
+  ) {
+    scopeSql = "scopeKey=?";
+    scopeArgs.push(scope);
+  } else if (scope !== "all") throw new ApiError(400, "Périmètre d’accès invalide.");
   if (sort !== "recent" && sort !== "name" && sort !== "reseller")
     throw new ApiError(400, "Tri invalide.");
   const order =
     sort === "reseller"
-      ? "resellerName COLLATE NOCASE, c.name COLLATE NOCASE"
+      ? "resellerName COLLATE NOCASE, name COLLATE NOCASE"
       : sort === "name"
-        ? "c.name COLLATE NOCASE"
-        : "c.created_at DESC";
+        ? "name COLLATE NOCASE"
+        : "createdAt DESC";
   const [codes, stats, resellers] = await Promise.all([
     db
       .prepare(
-        `SELECT c.id,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
-      CASE WHEN ${showRegistration} THEN 'SHOW+' ELSE coalesce(a.name,r.name) END AS resellerName,
-      CASE WHEN ${showNeedsReview} THEN 1 ELSE 0 END AS needsReview,u.email AS clientEmail,
-      CASE WHEN l.license_key IS NOT NULL THEN 1 ELSE 0 END AS hasRecoverableKey,
-      CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
-      (SELECT count(*) FROM bindings WHERE code_hash=c.code_hash) AS deviceCount,
-      (SELECT max(last_seen) FROM device_profiles WHERE code_hash=c.code_hash) AS lastSeen
-      FROM codes c LEFT JOIN resellers r ON r.id=c.reseller_id LEFT JOIN licenses l ON l.beta_code_hash=c.code_hash
-      LEFT JOIN clients u ON u.id=l.client_id
-      LEFT JOIN partner_app_devices p ON p.code_hash=c.code_hash
-      LEFT JOIN partner_apps a ON a.id=p.app_id
-      WHERE ${scopeSql} AND instr(lower(c.name||' '||coalesce(u.email,'')),lower(?))>0
-      ORDER BY ${order},c.id LIMIT 51 OFFSET ?`,
+        `${accessOrigins}
+      SELECT id,name,enabled,maxDevices,expiresAt,scopeKey,resellerName,clientEmail,hasRecoverableKey,managedOnSite,
+      (SELECT count(*) FROM bindings b WHERE b.code_hash=o.code_hash) AS deviceCount,
+      (SELECT max(last_seen) FROM device_profiles d WHERE d.code_hash=o.code_hash) AS lastSeen
+      FROM origins o WHERE ${scopeSql} AND ${searchSql}
+      ORDER BY ${order},id LIMIT 51 OFFSET ?`,
       )
       .bind(...scopeArgs, search, page * 50)
       .all(),
     db
       .prepare(
-        `SELECT (SELECT count(*) FROM codes) AS accesses,
-      (SELECT count(*) FROM codes c WHERE enabled=1 AND (expires_at IS NULL OR expires_at>?)
-      AND (reseller_id IS NULL OR EXISTS(SELECT 1 FROM resellers WHERE id=c.reseller_id AND enabled=1))) AS activeAccesses,
-      (SELECT count(*) FROM bindings) AS devices`,
+        `${accessOrigins}
+      SELECT count(*) AS accesses,
+      coalesce(sum(enabled=1 AND (expiresAt IS NULL OR expiresAt>?) AND coalesce(resellerEnabled,1)=1),0) AS activeAccesses,
+      coalesce(sum((SELECT count(*) FROM bindings b WHERE b.code_hash=o.code_hash)),0) AS devices
+      FROM origins o WHERE ${scopeSql} AND ${searchSql}`,
       )
-      .bind(new Date().toISOString())
+      .bind(new Date().toISOString(), ...scopeArgs, search)
       .first(),
     db
       .prepare(
