@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { portalApi, PortalApiError } from "@/lib/portal-api";
+import { PrivateMessageComposer } from "./PrivateMessageComposer";
 import type { VyroConsole } from "@/lib/vyro-app-contract";
 import { AdminNotice } from "./AdminControls";
 
@@ -225,11 +226,12 @@ export function VyroAppPanel({ onAccessDenied }: { onAccessDenied: (status: 401 
         </>
       ) : (
         <>
+          <PrivateMessageComposer onAccessDenied={onAccessDenied} />
           <form
             onSubmit={announce}
             className="max-w-3xl space-y-4 rounded-xl border border-border bg-card p-5"
           >
-            <h2>Nouvelle annonce</h2>
+            <h2>Annonce à tous les appareils</h2>
             <p className="text-muted-foreground">
               Ce message est destiné à tous les appareils VYRO compatibles. Il apparaît dans
               l’application à sa prochaine connexion.

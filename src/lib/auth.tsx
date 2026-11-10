@@ -223,12 +223,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback(
     async (patch: { firstName?: string; email?: string }) => {
-      const { error } = await supabase.auth.updateUser({
-        ...(patch.firstName !== undefined
-          ? { data: { first_name: patch.firstName.trim().slice(0, 80) } }
-          : {}),
-        ...(patch.email !== undefined ? { email: patch.email.trim() } : {}),
-      });
+      const { error } = await supabase.auth.updateUser(
+        {
+          ...(patch.firstName !== undefined
+            ? { data: { first_name: patch.firstName.trim().slice(0, 80) } }
+            : {}),
+          ...(patch.email !== undefined ? { email: patch.email.trim() } : {}),
+        },
+        patch.email !== undefined
+          ? { emailRedirectTo: window.location.origin + "/login" }
+          : undefined,
+      );
       if (error) throw new Error("Impossible d’enregistrer le profil. Réessayez.");
       await refreshAccount();
     },

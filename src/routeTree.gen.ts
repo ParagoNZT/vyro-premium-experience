@@ -50,6 +50,7 @@ import { Route as ApiSupportTicketsRouteImport } from './routes/api.support-tick
 import { Route as ApiTvSettingsRouteImport } from './routes/api.tv-settings'
 import { Route as ApiVyroAnnouncementsRouteImport } from './routes/api.vyro-announcements'
 import { Route as ApiVyroConsoleRouteImport } from './routes/api.vyro-console'
+import { Route as ApiVyroInboxRouteImport } from './routes/api.vyro-inbox'
 import { Route as ApiVyroReleaseQueueRouteImport } from './routes/api.vyro-release-queue'
 import { Route as LegalConditionsRouteImport } from './routes/legal.conditions'
 import { Route as LegalConfidentialiteRouteImport } from './routes/legal.confidentialite'
@@ -261,6 +262,11 @@ const ApiVyroConsoleRoute = ApiVyroConsoleRouteImport.update({
   path: '/api/vyro-console',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVyroInboxRoute = ApiVyroInboxRouteImport.update({
+  id: '/api/vyro-inbox',
+  path: '/api/vyro-inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiVyroReleaseQueueRoute = ApiVyroReleaseQueueRouteImport.update({
   id: '/api/vyro-release-queue',
   path: '/api/vyro-release-queue',
@@ -328,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
   '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-inbox': typeof ApiVyroInboxRoute
   '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -375,6 +382,7 @@ export interface FileRoutesByTo {
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
   '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-inbox': typeof ApiVyroInboxRoute
   '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/api/tv-settings': typeof ApiTvSettingsRoute
   '/api/vyro-announcements': typeof ApiVyroAnnouncementsRoute
   '/api/vyro-console': typeof ApiVyroConsoleRoute
+  '/api/vyro-inbox': typeof ApiVyroInboxRoute
   '/api/vyro-release-queue': typeof ApiVyroReleaseQueueRoute
   '/legal/conditions': typeof LegalConditionsRoute
   '/legal/confidentialite': typeof LegalConfidentialiteRoute
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/api/tv-settings'
     | '/api/vyro-announcements'
     | '/api/vyro-console'
+    | '/api/vyro-inbox'
     | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -521,6 +531,7 @@ export interface FileRouteTypes {
     | '/api/tv-settings'
     | '/api/vyro-announcements'
     | '/api/vyro-console'
+    | '/api/vyro-inbox'
     | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -569,6 +580,7 @@ export interface FileRouteTypes {
     | '/api/tv-settings'
     | '/api/vyro-announcements'
     | '/api/vyro-console'
+    | '/api/vyro-inbox'
     | '/api/vyro-release-queue'
     | '/legal/conditions'
     | '/legal/confidentialite'
@@ -609,6 +621,7 @@ export interface RootRouteChildren {
   ApiTvSettingsRoute: typeof ApiTvSettingsRoute
   ApiVyroAnnouncementsRoute: typeof ApiVyroAnnouncementsRoute
   ApiVyroConsoleRoute: typeof ApiVyroConsoleRoute
+  ApiVyroInboxRoute: typeof ApiVyroInboxRoute
   ApiVyroReleaseQueueRoute: typeof ApiVyroReleaseQueueRoute
   LegalConditionsRoute: typeof LegalConditionsRoute
   LegalConfidentialiteRoute: typeof LegalConfidentialiteRoute
@@ -905,6 +918,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVyroConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/vyro-inbox': {
+      id: '/api/vyro-inbox'
+      path: '/api/vyro-inbox'
+      fullPath: '/api/vyro-inbox'
+      preLoaderRoute: typeof ApiVyroInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/vyro-release-queue': {
       id: '/api/vyro-release-queue'
       path: '/api/vyro-release-queue'
@@ -1004,6 +1024,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTvSettingsRoute: ApiTvSettingsRoute,
   ApiVyroAnnouncementsRoute: ApiVyroAnnouncementsRoute,
   ApiVyroConsoleRoute: ApiVyroConsoleRoute,
+  ApiVyroInboxRoute: ApiVyroInboxRoute,
   ApiVyroReleaseQueueRoute: ApiVyroReleaseQueueRoute,
   LegalConditionsRoute: LegalConditionsRoute,
   LegalConfidentialiteRoute: LegalConfidentialiteRoute,

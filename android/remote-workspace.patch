@@ -2,7 +2,7 @@ diff --git a/app/src/main/java/com/vyro/tv/RemoteWorkspace.kt b/app/src/main/jav
 new file mode 100644
 --- /dev/null
 +++ b/app/src/main/java/com/vyro/tv/RemoteWorkspace.kt
-@@ -0,0 +1,305 @@
+@@ -0,0 +1,334 @@
 +package com.vyro.tv
 +
 +import android.os.Build
@@ -168,6 +168,7 @@ new file mode 100644
 +    var linked by remember(profileId) { mutableStateOf(false) }
 +    var busy by remember(profileId) { mutableStateOf(false) }
 +    var message by remember(profileId) { mutableStateOf<String?>(null) }
++    var privateMessages by remember(profileId) { mutableStateOf(emptyList<BetaInboxMessage>()) }
 +    var lastReceipt by remember(profileId) { mutableStateOf<Pair<String, JSONObject>?>(null) }
 +
 +    LaunchedEffect(profileId) {
@@ -185,9 +186,24 @@ new file mode 100644
 +            while (true) {
 +                val active = current?.takeIf { unlocked && it.profile.id == profileId }
 +                val manifest = active?.let { withContext(Dispatchers.Default) { it.encode(vault) } }
-+                val reply = request(registered,"poll") { put("catalog",manifest ?: JSONObject.NULL) }
++                val reply = request(registered,"poll") {
++                    put("catalog",manifest ?: JSONObject.NULL)
++                    if (!BuildConfig.BETA_ACCESS_ENABLED && manifest != null) put("inbox",true)
++                }
 +                if (reply?.status == 200) {
 +                    linked = reply.body.optBoolean("linked")
++                    if (!BuildConfig.BETA_ACCESS_ENABLED && unlocked && current?.profile?.id == profileId) {
++                        val items = reply.body.optJSONArray("messages")
++                        if (!linked) privateMessages = emptyList()
++                        else if (items != null) privateMessages = (0 until minOf(items.length(),25)).mapNotNull { index ->
++                                val row = items.optJSONObject(index) ?: return@mapNotNull null
++                                val id = row.optString("id")
++                                if (runCatching { UUID.fromString(id).toString() == id }.getOrDefault(false)) {
++                                    BetaInboxMessage(id,row.optString("title").take(100),row.optString("body").take(1000),
++                                        row.optString("createdAt"),row.optBoolean("read"),row.optString("sender").take(80).ifBlank { "Équipe VYRO" })
++                                } else null
++                            }
++                    }
 +                    if (linked && code != null) { code = null; message = null }
 +                    val job = reply.body.optJSONObject("job")
 +                    if (job != null && active != null && unlocked && current?.profile?.id == profileId) {
@@ -212,7 +228,20 @@ new file mode 100644
 +        }
 +    }
 +
-+    return TvSettingsUi(linked,code,busy,message,qr = true, requestCode = {
++    return TvSettingsUi(linked,code,busy,message,qr = true,
++        privateMessages = if (profileUnlocked && linked) privateMessages else emptyList(),
++        messageReceipt = { id, dismiss ->
++            val local = identity
++            if (local != null && unlocked && linked && privateMessages.any { it.id == id }) scope.launch {
++                if (request(local,"message-receipt") {
++                    put("messageId",id)
++                    put("receipt",if (dismiss) "dismiss" else "read")
++                }?.body?.optBoolean("ok") == true && unlocked && current?.profile?.id == profileId) {
++                    privateMessages = if (dismiss) privateMessages.filterNot { it.id == id }
++                        else privateMessages.map { if (it.id == id) it.copy(isRead=true) else it }
++                }
++            }
++        }, requestCode = {
 +        if (!busy && profileId != null && unlocked) scope.launch {
 +            busy = true; message = null
 +            try {
@@ -311,12 +340,14 @@ new file mode 100644
 diff --git a/app/src/main/java/com/vyro/tv/TvSettingsSync.kt b/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
 --- a/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
 +++ b/app/src/main/java/com/vyro/tv/TvSettingsSync.kt
-@@ -25,6 +25,8 @@
+@@ -25,6 +25,10 @@
      val code: String?,
      val busy: Boolean,
      val message: String?,
 +    val qr: Boolean = false,
 +    val legacy: TvSettingsUi? = null,
++    val privateMessages: List<BetaInboxMessage> = emptyList(),
++    val messageReceipt: (String, Boolean) -> Unit = { _, _ -> },
      val requestCode: () -> Unit,
  )
  
@@ -442,11 +473,10 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/IptvApp.kt b/app/src/main/java/com
      var selectedItem by remember { mutableStateOf<CatalogItem?>(null) }
      var details by remember { mutableStateOf<ContentDetails?>(null) }
      var episodes by remember { mutableStateOf<List<CatalogItem>>(emptyList()) }
-@@ -958,6 +960,26 @@
-         playlistInfoById = playlistInfoById + (playlistKey to merged)
+@@ -959,6 +961,28 @@
          warnIfConnectionQuotaReached(merged)
      }
-+
+ 
 +    val remoteCatalog = remember(activeProfile,profiles,settingsBinding,catalog,customization) {
 +        activeProfile?.let { com.vyro.tv.RemoteCatalogInput(it,profiles,settingsBinding,catalog,customization) }
 +    }
@@ -466,9 +496,33 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/IptvApp.kt b/app/src/main/java/com
 +            }
 +        }
 +    }.copy(legacy=legacyTvSettings) else legacyTvSettings
- 
++    val privateAccountMessages = tvSettings?.privateMessages.orEmpty()
++    val accountMessages = (privateAccountMessages + betaMessages).distinctBy { it.id }
++
      LaunchedEffect(betaRemoteRevision) {
          if (betaRemoteRevision <= 0) return@LaunchedEffect
+         profileRestoreJob?.cancel()
+@@ -2232,10 +2256,16 @@
+                         epgSchedule = epgSchedule,
+                         epgLoading = epgLoading,
+                         onRefreshSports = ::refreshSportsData,
+-                        betaMessages = betaMessages,
+-                        hasUnreadNotification = betaMessages.any { !it.isRead } || playlistRefreshState != null,
+-                        onMarkBetaMessageRead = onMarkBetaMessageRead,
+-                        onDeleteBetaMessage = onDeleteBetaMessage,
++                        betaMessages = accountMessages,
++                        hasUnreadNotification = accountMessages.any { !it.isRead } || playlistRefreshState != null,
++                        onMarkBetaMessageRead = { id ->
++                            if (privateAccountMessages.any { it.id == id }) tvSettings?.messageReceipt?.invoke(id,false)
++                            else onMarkBetaMessageRead(id)
++                        },
++                        onDeleteBetaMessage = { id ->
++                            if (privateAccountMessages.any { it.id == id }) tvSettings?.messageReceipt?.invoke(id,true)
++                            else onDeleteBetaMessage(id)
++                        },
+                         onRefreshBetaMessages = onRefreshBetaMessages,
+                         favoriteIds = favorites,
+                         watchlistIds = watchlist,
 diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
 --- a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
 +++ b/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt
@@ -480,7 +534,48 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/sr
  import androidx.compose.foundation.background
  import androidx.compose.foundation.border
  import androidx.compose.foundation.focusGroup
-@@ -1684,12 +1685,29 @@
+@@ -1670,10 +1671,40 @@
+             color = if (LocalSettingsTv.current) MaterialTheme.vyroColors.textSecondary else TextMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 9.dp))
+     }
+     if (isTv && tvSettings != null) DeviceBackupCard(tvSettings)
++    if (!BuildConfig.BETA_ACCESS_ENABLED) VyroProfileCard()
+     SettingsCard {
+         SettingAction("COMPTE ET APPAREILS", Icons.Default.Devices, primary = false, onClick = onManageAccount)
+         SettingsDangerAction("EFFACER LES FAVORIS DU PROFIL", Icons.Default.Delete, onClearFavorites)
+         SettingsDangerAction("RÉTABLIR LES RÉGLAGES", Icons.Default.Settings, onReset)
++    }
++}
++
++@Composable
++private fun VyroProfileCard() {
++    val tv = LocalSettingsTv.current
++    val browser = LocalUriHandler.current
++    val url = "https://vyro-player.app/account/profil"
++    var showQr by remember { mutableStateOf(false) }
++    SettingsCard {
++        SettingsInfoRow("Profil VYRO", "Nom d’utilisateur, adresse e-mail et mot de passe")
++        SettingAction(if (tv && showQr) "MASQUER LE QR CODE DU PROFIL" else "GÉRER MON PROFIL VYRO",
++            Icons.Default.Language, primary = false) {
++            if (tv) showQr = !showQr
++            else try { browser.openUri(url) } catch (_: IllegalArgumentException) { showQr = true }
++        }
++        if (showQr) {
++            val qr = remember(url) {
++                val size = 320
++                val bits = com.google.zxing.qrcode.QRCodeWriter().encode(url,com.google.zxing.BarcodeFormat.QR_CODE,size,size)
++                val pixels = IntArray(size*size) { idx ->
++                    if (bits[idx%size,idx/size]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
++                }
++                android.graphics.Bitmap.createBitmap(pixels,size,size,android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
++            }
++            Image(qr,"QR code pour ouvrir Mon profil VYRO",modifier=Modifier.size(148.dp))
++            Text("Ouvrez vyro-player.app/account/profil et connectez-vous pour modifier votre compte.",
++                style=MaterialTheme.typography.bodySmall)
++        }
+     }
+ }
+ 
+@@ -1684,12 +1715,29 @@
      val uriHandler = LocalUriHandler.current
      var feedback by remember(sync.code,sync.linked) { mutableStateOf<String?>(null) }
      SettingsCard {
@@ -514,7 +609,7 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/sr
                      SettingAction("COPIER LE CODE", Icons.Default.ContentCopy, primary = false) {
                          val clip = ClipData.newPlainText("Code de liaison SHOW+", code)
                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-@@ -1706,6 +1724,7 @@
+@@ -1706,6 +1754,7 @@
              SettingAction(when {
                  sync.busy -> "CRÉATION DU CODE…"
                  sync.code != null -> "RENOUVELER LE CODE"
@@ -522,7 +617,7 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/sr
                  else -> "AFFICHER UN CODE DE LIAISON"
              },
                  Icons.Default.Devices, primary = false, onClick = sync.requestCode)
-@@ -1713,7 +1732,7 @@
+@@ -1713,7 +1762,7 @@
          if (mobile) {
              SettingAction("OUVRIR L’ESPACE CLIENT", Icons.Default.Language, primary = false) {
                  try {
@@ -531,7 +626,7 @@ diff --git a/app/src/main/java/com/vyro/tv/ui/screens/SettingsScreen.kt b/app/sr
                  } catch (_: IllegalArgumentException) {
                      feedback = "Ouvrez vyro-player.app dans votre navigateur."
                  }
-@@ -1721,6 +1740,7 @@
+@@ -1721,6 +1770,7 @@
              feedback?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
          }
      }

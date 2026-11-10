@@ -9,6 +9,7 @@ import {
   type RemoteDevice,
 } from "./remote-contract";
 import { tvBackupFile } from "./tv-settings-contract";
+import { privateInboxReceipt, readPrivateInbox } from "./vyro-inbox.server";
 
 const hex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -343,6 +344,14 @@ export const nativeRemoteWorkspace = api(async (request) => {
     .first<Device>();
   if (!device?.owner_id) return json({ linked: false });
   const owner = device.owner_id;
+  if (action.action === "message-receipt") {
+    if (device.edition !== "vyro") throw new ApiError(403, "Messagerie indisponible.");
+    await privateInboxReceipt(db, owner, action.messageId, action.receipt, {
+      id: device.id,
+      tokenHash: token,
+    });
+    return json({ ok: true });
+  }
   if (action.action === "poll") {
     const raw = action.catalog ? JSON.stringify(action.catalog) : null;
     await db.batch([
@@ -369,7 +378,13 @@ export const nativeRemoteWorkspace = api(async (request) => {
       )
       .bind(now, device.id, owner, token)
       .first<Job>();
-    if (!job) return json({ linked: true, job: null });
+    if (!job) {
+      const inbox =
+        action.inbox && device.edition === "vyro"
+          ? { messages: await readPrivateInbox(db, owner, { id: device.id, tokenHash: token }) }
+          : {};
+      return json({ linked: true, job: null, ...inbox });
+    }
     let payload: unknown = job.payload ? JSON.parse(job.payload) : null;
     if (job.kind === "restore") {
       const reference = z.object({ backup: validId }).parse(payload);

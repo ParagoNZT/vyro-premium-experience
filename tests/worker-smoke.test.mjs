@@ -66,6 +66,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0010_support_processing.sql",
     "../migrations/d1/0011_vyro_app_console.sql",
     "../migrations/d1/0012_remote_workspace.sql",
+    "../migrations/d1/0013_vyro_private_messages.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -124,7 +125,11 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       assert.equal(headers.get("apikey"), "sb_publishable_fixture");
       const account = accounts[headers.get("authorization")?.replace(/^Bearer /, "")];
       return account
-        ? Response.json({ ...account, email_confirmed_at: "2026-01-01", user_metadata: {} })
+        ? Response.json({
+            ...account,
+            email_confirmed_at: "2026-01-01",
+            user_metadata: account.id === accounts.admin.id ? { first_name: "VYRO QA" } : {},
+          })
         : Response.json({}, { status: 401 });
     }
     if (url.href === stripeOrigin + "/v1/checkout/sessions" && init?.method === "POST") {
@@ -1245,6 +1250,88 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     assert.equal((await tvDevice.send({ action: "poll", catalog: manifest })).status, 200);
     assert.equal((await phone.send({ action: "poll", catalog: manifest })).status, 200);
     assert.equal((await other.send({ action: "poll", catalog: manifest })).status, 200);
+    const inbox = "/api/vyro-inbox";
+    const inboxAdmin = inbox + "?view=admin";
+    sqlite.prepare("UPDATE clients SET first_name='Test Salon' WHERE id=?").run(clientId);
+    const recipients = await call(inboxAdmin + "&q=Test%20Salon", { token: "admin" });
+    assert.equal(recipients.status, 200);
+    assert.equal(recipients.json.recipients[0].id, clientId);
+    assert.equal(recipients.json.recipients[0].devices, 2);
+    assert.equal((await call(inboxAdmin + "&q=Test%20Salon", { token: "second" })).status, 403);
+    assert.equal(
+      (
+        await post(inboxAdmin, "second", {
+          action: "send",
+          client: clientId,
+          title: "Pas autorisé",
+          body: "Test privé",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await post(inboxAdmin, "admin", {
+          action: "send",
+          client: clientId,
+          title: "Test privé",
+          body: "Uniquement sur le compte Salon",
+        })
+      ).status,
+      201,
+    );
+    const privateFeed = (await call(inbox, { token: "first" })).json.messages;
+    assert.equal(privateFeed.length, 1);
+    const privateMessage = privateFeed[0];
+    assert.equal(privateMessage.sender, "VYRO QA");
+    assert.deepEqual((await call(inbox, { token: "second" })).json.messages, []);
+    assert.ok(
+      !(await call("/api/vyro-announcements")).json.announcements.some(
+        (m) => m.id === privateMessage.id,
+      ),
+    );
+    assert.deepEqual(
+      (await tvDevice.send({ action: "poll", catalog: manifest, inbox: true })).json.messages,
+      privateFeed,
+    );
+    assert.equal(
+      (await other.send({ action: "poll", catalog: manifest, inbox: true })).json.messages,
+      undefined,
+    );
+    assert.equal(
+      (
+        await other.send({
+          action: "message-receipt",
+          messageId: privateMessage.id,
+          receipt: "read",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (await post(inbox, "second", { action: "read", id: privateMessage.id })).status,
+      200,
+    );
+    assert.equal((await call(inbox, { token: "first" })).json.messages[0].read, false);
+    assert.equal(
+      (
+        await phone.send({
+          action: "message-receipt",
+          messageId: privateMessage.id,
+          receipt: "read",
+        })
+      ).status,
+      200,
+    );
+    assert.equal((await call(inbox, { token: "first" })).json.messages[0].read, true);
+    assert.equal(
+      (await post(inbox, "first", { action: "dismiss", id: privateMessage.id })).status,
+      200,
+    );
+    assert.deepEqual(
+      (await tvDevice.send({ action: "poll", catalog: manifest, inbox: true })).json.messages,
+      [],
+    );
     assert.equal((await call(endpoint, { token: "first" })).json.devices.length, 2);
     assert.equal((await call(endpoint, { token: "admin" })).json.devices.length, 0);
     assert.equal(

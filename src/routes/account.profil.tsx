@@ -3,6 +3,8 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 import { Field, PortalHeading, PortalNotice } from "@/components/site/AuthShell";
+import { PrivateInbox } from "@/components/account/PrivateInbox";
+import { ProfilePassword } from "@/components/account/ProfilePassword";
 
 export const Route = createFileRoute("/account/profil")({
   head: () => ({
@@ -12,6 +14,11 @@ export const Route = createFileRoute("/account/profil")({
 });
 
 function ProfilePage() {
+  const { user } = useAuth();
+  return user ? <ProfileContent key={user.id} userId={user.id} /> : null;
+}
+
+function ProfileContent({ userId }: { userId: string }) {
   const { user, updateProfile } = useAuth();
   const [username, setUsername] = useState(user?.firstName ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -53,15 +60,16 @@ function ProfilePage() {
   }
 
   return (
-    <div className="portal-enter">
-      <PortalHeading label="VYRO / Profil" title="Mes informations">
-        Gérez les informations utilisées pour votre compte.
+    <div className="portal-enter space-y-5">
+      <PortalHeading label="VYRO / Profil" title="Mon profil">
+        Gérez votre nom d’utilisateur, votre adresse e-mail, votre mot de passe et vos messages.
       </PortalHeading>
       <form
         onSubmit={onSubmit}
-        className="portal-panel mt-7 max-w-2xl space-y-5 p-5 sm:p-7"
+        className="portal-panel max-w-2xl space-y-5 p-5 sm:p-7"
         aria-busy={busy}
       >
+        <h2 className="font-display text-xl font-semibold">Informations du compte</h2>
         <Field
           label="Nom d’utilisateur"
           value={username}
@@ -86,7 +94,9 @@ function ProfilePage() {
           {busy ? "Enregistrement…" : "Enregistrer"}
         </Button>
       </form>
-      <div className="portal-panel mt-4 max-w-2xl space-y-3 p-5 sm:p-7">
+      <ProfilePassword userId={userId} />
+      <PrivateInbox />
+      <div className="portal-panel max-w-2xl space-y-3 p-5 sm:p-7">
         <h2 className="font-display text-lg font-semibold">Besoin d’aide avec votre compte ?</h2>
         <p className="text-sm text-muted-foreground">
           Le lien « Mot de passe oublié ? » se trouve sur la page de connexion.

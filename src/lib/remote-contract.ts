@@ -64,7 +64,20 @@ export const remoteNative = z.discriminatedUnion("action", [
     })
     .strict(),
   z
-    .object({ action: z.literal("poll"), ...credentials, catalog: remoteCatalog.nullable() })
+    .object({
+      action: z.literal("poll"),
+      ...credentials,
+      catalog: remoteCatalog.nullable(),
+      inbox: z.boolean().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("message-receipt"),
+      ...credentials,
+      messageId: id,
+      receipt: z.enum(["read", "dismiss"]),
+    })
     .strict(),
   z
     .object({
