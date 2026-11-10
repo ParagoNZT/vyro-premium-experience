@@ -87,8 +87,8 @@ function Pair() {
           </>
         ) : !proof ? (
           <p>
-            Ouvrez <strong>Réglages → Sauvegardes</strong> dans l’application et scannez le QR code
-            de votre appareil.
+            Ouvrez <strong>Réglages → À propos → Gestion à distance</strong> dans l’application et
+            scannez le QR code de votre appareil.
           </p>
         ) : !user ? (
           <>

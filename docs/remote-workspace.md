@@ -1,6 +1,6 @@
 # Gestion à distance VYRO
 
-Le panneau est accessible depuis **Espace client → Gestion à distance**. Dans une version Android compatible, ouvrir **Réglages → Sauvegardes → Afficher le QR code**. Le code expire après cinq minutes et n'associe l'appareil qu'après connexion et confirmation du compte VYRO. Sur mobile, le bouton **Associer dans le navigateur** remplace le scan.
+Le panneau est accessible depuis **Espace client → Gestion à distance**. Dans une version Android compatible, ouvrir **Réglages → À propos → Gestion à distance → Afficher le QR code**. Le code expire après cinq minutes et n'associe l'appareil qu'après connexion et confirmation du compte VYRO. Sur mobile, le bouton **Associer dans le navigateur** remplace le scan.
 
 L'association porte sur le profil Android sélectionné. La liste des appareils, les catalogues et les sauvegardes appartiennent au compte qui a confirmé l'association. Les permissions d'administration et de revendeur ne donnent pas accès à ces historiques. La dissociation supprime l'appareil et ses commandes; le compte garde ses sauvegardes.
 

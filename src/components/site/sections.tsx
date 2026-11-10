@@ -182,10 +182,10 @@ export function IntegrationsSection() {
     <Section id="integrations">
       <Reveal className="max-w-2xl">
         <Eyebrow>Intégrations</Eyebrow>
-        <Heading className="mt-4">Connecté aux services que vous utilisez déjà.</Heading>
+        <Heading className="mt-4">Les intégrations de VYRO.</Heading>
         <Lead className="mt-5">
-          VYRO Premium enrichit votre bibliothèque avec les services que vous avez déjà. Rien de
-          plus, rien d'inventé.
+          Consultez les services disponibles pour enrichir votre bibliothèque et suivre votre
+          lecture.
         </Lead>
       </Reveal>
       <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -201,7 +201,11 @@ export function IntegrationsSection() {
                     : "bg-surface-2 text-muted-foreground",
                 )}
               >
-                {item.status === "available" ? "Disponible" : "Prochainement"}
+                {item.status === "available"
+                  ? "Disponible"
+                  : item.status === "soon"
+                    ? "Prochainement"
+                    : "Non intégré"}
               </span>
             </div>
             <p className="mt-2.5 text-sm text-muted-foreground">{item.description}</p>

@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { FeatureRow, FinalCta, IntegrationsSection } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
+import { WorkspaceSpotlight } from "@/components/site/WorkspaceSpotlight";
+import { PlaybackSpotlight } from "@/components/site/PlaybackSpotlight";
+import { SportsSpotlight } from "@/components/site/SportsSpotlight";
 import { captureCaption, homeCapture, scenes } from "@/components/site/captures";
 
 export const Route = createFileRoute("/fonctionnalites")({
@@ -11,7 +14,7 @@ export const Route = createFileRoute("/fonctionnalites")({
       {
         name: "description",
         content:
-          "Découvrez les véritables écrans de VYRO Premium : catalogue, direct et guide TV, fiches détaillées et lecteur.",
+          "Explorez Sports, les réglages d’image et de son, la synchronisation entre appareils et la gestion des playlists et sauvegardes avec VYRO.",
       },
       { property: "og:url", content: "https://vyro-player.app/fonctionnalites" },
     ],
@@ -68,9 +71,19 @@ function FeaturesPage() {
             </p>
             <h1 className="vyro-display-title">Dans l’écran de VYRO.</h1>
             <p className="vyro-subhero-lead">
-              Du premier choix au plein écran, explorez les vraies interfaces du lecteur.
+              Explorez les vrais écrans du lecteur et découvrez comment retrouver vos réglages d’un
+              appareil à l’autre.
             </p>
             <nav aria-label="Écrans à découvrir" className="vyro-section-links">
+              <a href="#espace-client">
+                Gestion à distance <ArrowUpRight size={15} aria-hidden />
+              </a>
+              <a href="#sports">
+                Sports <ArrowUpRight size={15} aria-hidden />
+              </a>
+              <a href="#reglages-lecture">
+                Image et son <ArrowUpRight size={15} aria-hidden />
+              </a>
               {scenes.map(({ id, label }) => (
                 <a key={id} href={"#" + id}>
                   {label} <ArrowUpRight size={15} aria-hidden />
@@ -91,6 +104,8 @@ function FeaturesPage() {
           </figure>
         </div>
       </section>
+      <WorkspaceSpotlight detailed />
+      <SportsSpotlight detailed />
       <div className="vyro-wrap vyro-block vyro-detail-scenes">
         {scenes.map(({ id, label, image, alt }, index) => {
           const details = content[index];
@@ -136,6 +151,7 @@ function FeaturesPage() {
           </figure>
         </div>
       </section>
+      <PlaybackSpotlight />
       <IntegrationsSection />
       <FinalCta />
     </>

@@ -27,6 +27,14 @@ const GUIDES = [
     body: "Réglages › Profils. Créez un profil par utilisateur, puis activez un code PIN si vous souhaitez le protéger.",
   },
   {
+    title: "Associer un appareil pour le gérer à distance",
+    body: "Dans VYRO, ouvrez Réglages → À propos → Gestion à distance. Affichez le QR code, scannez-le et confirmez l’association dans votre compte. Ouvrez ensuite Gestion à distance dans l’espace client.",
+  },
+  {
+    title: "Transférer ou exporter une configuration",
+    body: "Dans Gestion à distance → Sauvegardes, choisissez un appareil et créez une sauvegarde. Vous pouvez la restaurer sur un second appareil ou l’exporter en JSON. Pour retrouver vos favoris, vos groupes et votre historique, ouvrez la même playlist sur la destination.",
+  },
+  {
     title: "Activer la synchronisation Trakt",
     body: "Réglages › Intégrations › Trakt. Autorisez l'appareil pour synchroniser votre progression de lecture.",
   },

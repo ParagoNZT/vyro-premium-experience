@@ -116,7 +116,7 @@ function RemotePanel() {
         </h2>
         <p className="text-sm text-muted-foreground">
           Avec une version de l’application qui prend en charge la gestion à distance, ouvrez
-          Réglages → Sauvegardes et scannez le QR code avec votre téléphone.
+          Réglages → À propos → Gestion à distance et scannez le QR code avec votre téléphone.
         </p>
         {!data && !error && <p>Chargement…</p>}
         {device && (

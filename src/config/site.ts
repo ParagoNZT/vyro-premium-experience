@@ -75,13 +75,17 @@ export const getPlan = (id: string) => PLANS.find((p) => p.id === id);
 export type Integration = {
   name: string;
   description: string;
-  status: "available" | "soon";
+  status: "available" | "soon" | "not-integrated";
 };
 
 export const INTEGRATIONS: Integration[] = [
   { name: "TMDB", description: "Affiches, synopsis, casting et métadonnées.", status: "available" },
   { name: "Trakt", description: "Progression de lecture synchronisée.", status: "available" },
-  { name: "MDBList", description: "Listes et notes agrégées.", status: "available" },
+  {
+    name: "MDBList",
+    description: "Les listes et notes MDBList ne sont pas encore prises en charge.",
+    status: "not-integrated",
+  },
   { name: "IntroDB", description: "Détection des génériques.", status: "soon" },
   { name: "SubDL", description: "Recherche de sous-titres.", status: "soon" },
 ];
@@ -150,12 +154,20 @@ export const FAQ = [
     a: "Le nombre d'appareils autorisés dépend des règles de licence appliquées à votre compte. Le détail exact est affiché dans votre espace client, section « Mes appareils ».",
   },
   {
+    q: "Comment retrouver mes réglages sur un autre appareil ?",
+    a: "Avec une version compatible de VYRO, associez les deux appareils à votre compte. Dans Gestion à distance, créez une sauvegarde, puis restaurez-la sur le second appareil. Pour les favoris, les groupes et l’historique, ouvrez la même playlist sur les deux appareils. Vous pouvez aussi exporter puis importer la configuration en JSON.",
+  },
+  {
     q: "Comment installer VYRO Premium ?",
     a: "Après l'achat, le fichier d'installation et les instructions correspondant à votre appareil sont disponibles dans votre espace client, section « Télécharger VYRO ».",
   },
   {
     q: "Comment connecter mon service ?",
     a: "VYRO Premium prend en charge la connexion par Xtream Codes (URL du serveur, identifiant, mot de passe) et par liste M3U avec EPG optionnel. Les guides détaillés se trouvent dans le centre d'aide.",
+  },
+  {
+    q: "Puis-je gérer mes playlists depuis le site ?",
+    a: "Oui. Avec un appareil VYRO compatible et associé, la section Gestion à distance permet de renommer vos playlists, d’ajouter ou modifier une URL M3U HTTPS et de gérer les catégories et groupes de la playlist ouverte.",
   },
   {
     q: "Puis-je récupérer ma progression ?",

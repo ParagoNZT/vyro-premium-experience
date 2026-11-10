@@ -591,6 +591,172 @@
 .screening-section {
   padding-block: clamp(3.3rem, 8vw, 7.4rem);
 }
+.workspace-spotlight {
+  scroll-margin-top: 6rem;
+  border-block: 1px solid var(--border);
+  background: radial-gradient(ellipse at 87% 10%, #35224d90 0%, transparent 58%), #110d1b;
+}
+.workspace-spotlight__intro {
+  max-width: 52rem;
+}
+.workspace-spotlight__kicker {
+  color: #d2b7ff;
+  font-size: 0.77rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.workspace-spotlight__intro h2 {
+  margin-top: 0.55rem;
+  font: 700 clamp(2.3rem, 5.6vw, 4.7rem) / 1.04 var(--font-display);
+  letter-spacing: -0.07em;
+  text-wrap: balance;
+}
+.workspace-spotlight__intro h2 em {
+  color: var(--primary);
+  font-style: normal;
+}
+.workspace-spotlight__intro > p:last-child {
+  max-width: 58ch;
+  margin-top: 1rem;
+  color: var(--muted-foreground);
+  line-height: 1.65;
+}
+.workspace-spotlight__features,
+.workspace-spotlight__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: clamp(1.6rem, 4vw, 2.9rem);
+}
+.workspace-spotlight__feature {
+  min-width: 0;
+  padding: clamp(1.15rem, 2vw, 1.65rem);
+  border: 1px solid #a98cd94a;
+  border-radius: 1.12rem;
+  background: #1a1326;
+}
+.workspace-spotlight__icon {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  margin-bottom: 1rem;
+  color: #dfc6ff;
+  border-radius: 0.8rem;
+  background: #322148;
+}
+.workspace-spotlight__feature h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.1vw, 1.48rem);
+  font-weight: 650;
+  line-height: 1.18;
+}
+.workspace-spotlight__feature p,
+.workspace-spotlight__steps span,
+.workspace-spotlight__foot p {
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.workspace-spotlight__feature p {
+  margin-top: 0.55rem;
+}
+.workspace-spotlight__steps {
+  counter-reset: workspace-step;
+}
+.workspace-spotlight__steps li {
+  position: relative;
+  min-width: 0;
+  padding: 0.8rem 0.65rem 0 2.35rem;
+  border-top: 1px solid #a98cd94a;
+  counter-increment: workspace-step;
+}
+.workspace-spotlight__steps li::before {
+  content: counter(workspace-step, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0.8rem;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+.workspace-spotlight__steps strong,
+.workspace-spotlight__steps span {
+  display: block;
+}
+.workspace-spotlight__steps span {
+  margin-top: 0.38rem;
+}
+.workspace-spotlight__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-top: clamp(1.35rem, 3vw, 2rem);
+}
+.workspace-spotlight__foot p {
+  max-width: 54ch;
+}
+.workspace-spotlight__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.95rem;
+}
+.workspace-playback {
+  scroll-margin-top: 6rem;
+}
+.workspace-playback__features {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.sports-spotlight {
+  scroll-margin-top: 6rem;
+}
+.sports-spotlight__teaser,
+.sports-spotlight__captures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+}
+.sports-spotlight__teaser {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+}
+.sports-spotlight__captures {
+  margin-top: clamp(1.35rem, 3vw, 2.25rem);
+}
+.sports-spotlight__teaser .sports-spotlight__captures {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+.sports-spotlight__capture {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #a98cd94a;
+  border-radius: 1.12rem;
+  background: #1a1326;
+}
+.sports-spotlight__capture img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.sports-spotlight__capture figcaption {
+  padding: 0.7rem 0.95rem;
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+@media (max-width: 48rem) {
+  .workspace-spotlight__features,
+  .workspace-spotlight__steps,
+  .sports-spotlight__teaser,
+  .sports-spotlight__captures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .screening-section-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.47fr);

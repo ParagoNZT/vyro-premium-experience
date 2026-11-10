@@ -13,6 +13,8 @@ import {
 import { FaqSection, PricingSection } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import { ScreeningRoom } from "@/components/site/ScreeningRoom";
+import { WorkspaceSpotlight } from "@/components/site/WorkspaceSpotlight";
+import { SportsSpotlight } from "@/components/site/SportsSpotlight";
 import { scenes } from "@/components/site/captures";
 
 const title = "VYRO Premium — La soirée est à vous";
@@ -24,12 +26,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "VYRO Premium réunit votre direct, vos films et vos séries sur Android TV, Google TV, Fire TV, téléphone et tablette Android.",
+          "Regardez vos contenus sur TV et mobile avec VYRO. Gérez vos playlists, sauvegardez vos configurations et transférez vos réglages entre appareils.",
       },
       { property: "og:title", content: title },
       {
         property: "og:description",
-        content: "Explorez les vrais écrans de VYRO Premium et choisissez votre accès.",
+        content:
+          "Découvrez le lecteur VYRO et la gestion à distance des playlists et des sauvegardes.",
       },
       { property: "og:url", content: "https://vyro-player.app/" },
     ],
@@ -111,6 +114,9 @@ function Home() {
                 Choisir mon accès <ArrowUpRight size={17} aria-hidden />
               </Link>
             </div>
+            <a href="#espace-client" className="screening-text-link">
+              Synchronisation et gestion à distance <ArrowDown size={16} aria-hidden />
+            </a>
           </div>
           <ScreeningRoom />
         </div>
@@ -130,6 +136,8 @@ function Home() {
           </Link>
         </div>
       </section>
+      <WorkspaceSpotlight />
+      <SportsSpotlight />
       <section
         id="experience"
         className="screening-wrap screening-section"
