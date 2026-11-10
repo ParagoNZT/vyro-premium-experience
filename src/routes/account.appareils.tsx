@@ -27,7 +27,7 @@ function DevicesPage() {
         title="Mes appareils"
         action={
           <a href="#activation-tv" className="account-button account-button-on-dark">
-            Activer avec une clé <ArrowDown size={16} aria-hidden />
+            Comment activer un appareil <ArrowDown size={16} aria-hidden />
           </a>
         }
         summary={
@@ -43,7 +43,7 @@ function DevicesPage() {
           </>
         }
       >
-        Retrouvez vos appareils associés par QR code et ceux activés avec votre clé de licence.
+        Retrouvez vos appareils associés par QR code et ceux activés sur votre licence.
       </AccountHero>
       <AccountDevices />
       <AccountActivation />

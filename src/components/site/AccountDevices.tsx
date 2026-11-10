@@ -87,8 +87,8 @@ function RemoteDeviceList({ devices }: { devices: RemoteDeviceSummary[] }) {
           <span className="account-count">{devices.length}</span>
         </div>
         <p className="account-remote-note">
-          Pour gérer vos playlists et vos sauvegardes à distance. L’activation de la licence se fait
-          séparément avec votre clé.
+          Pour gérer vos playlists et vos sauvegardes à distance. Le QR code ne compte pas dans le
+          quota de la licence.
         </p>
       </div>
       {devices.length ? (
@@ -284,7 +284,7 @@ export function AccountDevices() {
               <small>
                 {devices.length
                   ? "Essayez un autre nom ou une autre plateforme."
-                  : "Votre téléviseur apparaîtra ici après l’activation avec votre clé VYRO."}
+                  : "Sur une version compatible, connectez votre compte VYRO dans l’application pour activer cet appareil."}
               </small>
               {query && (
                 <button
@@ -393,7 +393,8 @@ export function AccountDevices() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Retirer {pendingDevice?.name} ?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  L’appareil devra être réactivé avec votre clé pour utiliser VYRO Premium.
+                  Pour activer cet appareil à nouveau, reconnectez votre compte VYRO dans
+                  l’application ou utilisez votre clé sur une version plus ancienne.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               {removeError && <PortalNotice error>{removeError}</PortalNotice>}
@@ -491,7 +492,7 @@ export function AccountActivation() {
           </span>
           <div>
             <p className="account-eyebrow">Activation sur la TV</p>
-            <h2 id="account-activation-heading">Activer un téléviseur avec ma clé</h2>
+            <h2 id="account-activation-heading">Activer un appareil</h2>
           </div>
         </div>
         <Link to="/account/guides" className="account-button">
@@ -504,6 +505,11 @@ export function AccountActivation() {
           Voir mes appareils pour la gestion à distance
         </a>
         .
+      </p>
+      <p className="account-remote-note">
+        Sur une version compatible, connectez-vous dans le menu <strong>Compte VYRO</strong>. Avec
+        une licence active et une place libre, l’appareil s’active sans saisir de clé. Les étapes
+        ci-dessous servent aux versions qui demandent encore une clé.
       </p>
       <ol className="account-activation-steps">
         <li>

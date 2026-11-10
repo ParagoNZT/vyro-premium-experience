@@ -33,6 +33,7 @@ import { Route as AccountSauvegardesRouteImport } from './routes/account.sauvega
 import { Route as AccountSupportRouteImport } from './routes/account.support'
 import { Route as AccountTelechargementRouteImport } from './routes/account.telechargement'
 import { Route as ApiAccountRouteImport } from './routes/api.account'
+import { Route as ApiAccountDeviceRouteImport } from './routes/api.account-device'
 import { Route as ApiAdminRouteImport } from './routes/api.admin'
 import { Route as ApiAdminDeadlinesRouteImport } from './routes/api.admin-deadlines'
 import { Route as ApiBetaRouteImport } from './routes/api.beta'
@@ -177,6 +178,11 @@ const ApiAccountRoute = ApiAccountRouteImport.update({
   path: '/api/account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAccountDeviceRoute = ApiAccountDeviceRouteImport.update({
+  id: '/api/account-device',
+  path: '/api/account-device',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminRoute = ApiAdminRouteImport.update({
   id: '/api/admin',
   path: '/api/admin',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
+  '/api/account-device': typeof ApiAccountDeviceRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
+  '/api/account-device': typeof ApiAccountDeviceRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/account/support': typeof AccountSupportRoute
   '/account/telechargement': typeof AccountTelechargementRoute
   '/api/account': typeof ApiAccountRoute
+  '/api/account-device': typeof ApiAccountDeviceRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/admin-deadlines': typeof ApiAdminDeadlinesRoute
   '/api/beta': typeof ApiBetaRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
+    | '/api/account-device'
     | '/api/admin'
     | '/api/admin-deadlines'
     | '/api/beta'
@@ -514,6 +524,7 @@ export interface FileRouteTypes {
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
+    | '/api/account-device'
     | '/api/admin'
     | '/api/admin-deadlines'
     | '/api/beta'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/account/support'
     | '/account/telechargement'
     | '/api/account'
+    | '/api/account-device'
     | '/api/admin'
     | '/api/admin-deadlines'
     | '/api/beta'
@@ -604,6 +616,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TarifsRoute: typeof TarifsRoute
   ApiAccountRoute: typeof ApiAccountRoute
+  ApiAccountDeviceRoute: typeof ApiAccountDeviceRoute
   ApiAdminRoute: typeof ApiAdminRoute
   ApiAdminDeadlinesRoute: typeof ApiAdminDeadlinesRoute
   ApiBetaRoute: typeof ApiBetaRoute
@@ -797,6 +810,13 @@ declare module '@tanstack/react-router' {
       path: '/api/account'
       fullPath: '/api/account'
       preLoaderRoute: typeof ApiAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account-device': {
+      id: '/api/account-device'
+      path: '/api/account-device'
+      fullPath: '/api/account-device'
+      preLoaderRoute: typeof ApiAccountDeviceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin': {
@@ -1007,6 +1027,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TarifsRoute: TarifsRoute,
   ApiAccountRoute: ApiAccountRoute,
+  ApiAccountDeviceRoute: ApiAccountDeviceRoute,
   ApiAdminRoute: ApiAdminRoute,
   ApiAdminDeadlinesRoute: ApiAdminDeadlinesRoute,
   ApiBetaRoute: ApiBetaRoute,

@@ -451,6 +451,75 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     sqlite.prepare("DELETE FROM licenses WHERE id=?").run(row.id);
   });
 
+  await t.test(
+    "native account sign-in activates one licence seat without exposing a key",
+    async () => {
+      const endpoint = "/api/account-device";
+      const activate = (deviceId, token = "second", action = "activate") =>
+        call(endpoint, {
+          token,
+          native: true,
+          body: JSON.stringify({
+            action,
+            deviceId,
+            name: "Amazon AFTKRT",
+            android: "11",
+            version: "0.24.57",
+          }),
+        });
+      const a = randomBytes(32).toString("hex");
+      const b = randomBytes(32).toString("hex");
+      assert.equal((await activate(a, "not-a-session")).status, 401);
+      assert.deepEqual((await activate(a)).json, { status: "inactive" });
+      assert.equal(
+        (
+          await post(manage, "admin", {
+            action: "grant-pack",
+            clientId: secondClient.id,
+            packId: "solo",
+            version: null,
+            note: "Native activation test",
+          })
+        ).status,
+        200,
+      );
+      assert.deepEqual((await activate(a, "second", "check")).json, { status: "unregistered" });
+      const statuses = (await Promise.all([activate(a), activate(b)])).map((r) => r.json.status);
+      assert.deepEqual([...statuses].sort(), ["active", "quota-full"]);
+      const winningId = statuses[0] === "active" ? a : b;
+      const hash = createHash("sha256").update(winningId).digest("hex");
+      assert.deepEqual((await activate(winningId)).json, { status: "active" });
+      assert.deepEqual((await activate(winningId, "first")).json, { status: "inactive" });
+      const signedIn = (await call(portal, { token: "second" })).json;
+      assert.equal(signedIn.subscription.devicesUsed, 1);
+      assert.deepEqual(
+        signedIn.devices.map((device) => [device.id, device.name]),
+        [[hash, "Amazon AFTKRT"]],
+      );
+      assert.equal((await post(portal, "second", { action: "remove", id: hash })).status, 200);
+      assert.deepEqual((await activate(winningId, "second", "check")).json, {
+        status: "unregistered",
+      });
+      assert.equal((await call(portal, { token: "second" })).json.subscription.devicesUsed, 0);
+      const licence = sqlite
+        .prepare("SELECT id FROM licenses WHERE client_id=?")
+        .get(secondClient.id);
+      assert.equal(
+        (
+          await post(manage, "admin", {
+            action: "revoke-license",
+            licenseId: licence.id,
+            note: "Native activation test",
+          })
+        ).status,
+        200,
+      );
+      assert.deepEqual((await activate(a)).json, { status: "inactive" });
+      sqlite.prepare("DELETE FROM codes WHERE id=?").run(licence.id);
+      sqlite.prepare("DELETE FROM licenses WHERE id=?").run(licence.id);
+    },
+  );
+
   const resellerCode = randomUUID();
   const showFixture = randomUUID();
   const directFixture = randomUUID();
