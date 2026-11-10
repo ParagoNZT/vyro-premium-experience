@@ -57,7 +57,7 @@ const packById: Record<PackId, Omit<Pack, "id">> = {
 };
 export const getPack = (id: PackId): Pack => ({ id, ...packById[id] });
 export const PACKS = PACK_IDS.map(getPack);
-export const packDevices = (pack: Pack) =>
+export const packDevices = (pack: { devices: number }) =>
   `${pack.devices} appareil${pack.devices === 1 ? "" : "s"}`;
 export const packBilling = (pack: Pack) => (pack.term === "annual" ? "par an" : "paiement unique");
 export const PACK_ORDER_NOTICE = "Les achats en ligne sont indisponibles pour le moment.";

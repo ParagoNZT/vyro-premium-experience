@@ -69,6 +69,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0012_remote_workspace.sql",
     "../migrations/d1/0013_vyro_private_messages.sql",
     "../migrations/d1/0014_admin_delegation_and_license_expiry.sql",
+    "../migrations/d1/0015_admin_license_packs.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -286,6 +287,169 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.equal((await call(portal, { token: "collaborator" })).status, 200);
   sqlite.prepare("DELETE FROM codes WHERE id=?").run(initial.id);
   sqlite.prepare("DELETE FROM licenses WHERE id=?").run(initial.id);
+
+  await t.test("assign annual, lifetime and custom packs without any payment", async () => {
+    const catalogue = () =>
+      call(manage + "?packs=1", { token: "admin" }).then(({ json }) => json.packs);
+    const save = {
+      action: "save-pack",
+      name: "Essai intégration",
+      months: 6,
+      devices: 4,
+      priceCents: 1234,
+    };
+    assert.equal((await post(manage, "second", save)).status, 403);
+    assert.equal((await post(manage, "admin", { ...save, name: "SOLO" })).status, 409);
+    assert.equal((await post(manage, "admin", save)).status, 200);
+    const customPack = (await catalogue()).find((pack) => pack.name === save.name);
+    assert.ok(customPack?.id);
+    const payload = (packId, version = null) => ({
+      action: "grant-pack",
+      clientId: secondClient.id,
+      packId,
+      version,
+      note: "Intégration catalogue",
+    });
+    const actual = () =>
+      sqlite
+        .prepare(
+          `SELECT l.id,l.license_key,l.beta_code_hash,l.expires_at,b.expires_at AS tvExpiry,b.max_devices AS quota
+      FROM licenses l JOIN codes b ON l.beta_code_hash=b.code_hash WHERE l.client_id=?`,
+        )
+        .get(secondClient.id);
+    assert.equal(
+      (await post(manage, "admin", { ...payload("solo"), deviceLimit: 10 })).status,
+      400,
+    );
+    const expected = [
+      ["solo", "Solo", 1, 999],
+      ["maison", "Maison", 3, 1999],
+      ["famille", "Famille", 5, 2999],
+    ];
+    const all = await catalogue();
+    let key;
+    let priorEnd;
+    for (const [id, name, quota, cents] of expected) {
+      const pack = all.find((row) => row.id === id);
+      assert.deepEqual(
+        [pack.name, pack.devices, pack.months, pack.priceCents],
+        [name, quota, 12, cents],
+      );
+      assert.equal((await post(manage, "admin", payload(id))).status, 200);
+      const subscription = (await call(portal, { token: "second" })).json.subscription;
+      const row = actual();
+      assert.equal(subscription.planName, name);
+      assert.equal(subscription.devicesAllowed, quota);
+      assert.equal(row.quota, quota);
+      assert.equal(row.tvExpiry, subscription.expiresAt);
+      if (priorEnd) assert.ok(row.expires_at > priorEnd);
+      else assert.ok(Date.parse(row.expires_at) > Date.now() + 364 * 86400000);
+      priorEnd = row.expires_at;
+      key ??= row.license_key;
+      assert.equal(row.license_key, key);
+    }
+    assert.equal(
+      (await post(manage, "admin", payload(customPack.id, customPack.updatedAt))).status,
+      200,
+    );
+    assert.equal(actual().quota, 4);
+    assert.equal((await call(portal, { token: "second" })).json.subscription.planName, save.name);
+    const editedName = "Offre interne modifiée";
+    assert.equal(
+      (
+        await post(manage, "admin", {
+          ...save,
+          id: customPack.id,
+          name: editedName,
+          devices: 2,
+          months: null,
+        })
+      ).status,
+      200,
+    );
+    assert.equal((await call(portal, { token: "second" })).json.subscription.planName, save.name);
+    assert.equal(actual().quota, 4);
+    assert.equal(
+      (await post(manage, "admin", payload(customPack.id, customPack.updatedAt))).status,
+      409,
+    );
+    const edited = (await catalogue()).find((pack) => pack.id === customPack.id);
+    assert.equal(edited.months, null);
+    assert.equal((await post(manage, "admin", payload(edited.id, edited.updatedAt))).status, 200);
+    assert.equal(actual().quota, 2);
+    assert.equal(actual().tvExpiry, null);
+    assert.equal(
+      (
+        await post(manage, "admin", {
+          action: "pack-availability",
+          id: customPack.id,
+          enabled: false,
+        })
+      ).status,
+      200,
+    );
+    const archived = (await catalogue()).find((pack) => pack.id === customPack.id);
+    assert.equal(archived.enabled, 0);
+    assert.equal(
+      (await post(manage, "admin", payload(archived.id, archived.updatedAt))).status,
+      409,
+    );
+    assert.equal((await call(portal, { token: "second" })).json.subscription.planName, editedName);
+
+    const lifetime = all.find((pack) => pack.id === "a-vie");
+    assert.deepEqual([lifetime.devices, lifetime.months, lifetime.priceCents], [5, null, 4999]);
+    assert.equal((await post(manage, "admin", payload("a-vie"))).status, 200);
+    const unlimited = (await call(portal, { token: "second" })).json;
+    assert.equal(unlimited.licenseKey, key);
+    assert.equal(unlimited.subscription.planName, "À vie");
+    assert.equal(unlimited.subscription.status, "active");
+    assert.equal(unlimited.subscription.expiresAt, null);
+    assert.equal(unlimited.subscription.devicesAllowed, 5);
+    assert.equal(actual().tvExpiry, null);
+    assert.equal(actual().quota, 5);
+    assert.equal((await post(manage, "admin", payload("solo"))).status, 409);
+    assert.equal(
+      (
+        await post("/api/beta", "admin", {
+          id: actual().id,
+          enabled: true,
+          maxDevices: 1,
+          expiresAt: null,
+          note: "Test verrou quota",
+        })
+      ).status,
+      409,
+    );
+    assert.equal((await post(manage, "admin", { ...exactGrant, deviceLimit: 5 })).status, 409);
+    assert.equal(
+      sqlite.prepare("SELECT count(*) AS n FROM payments WHERE client_id=?").get(secondClient.id).n,
+      0,
+    );
+
+    const row = actual();
+    sqlite
+      .prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,?)")
+      .run(row.beta_code_hash, "test-device-a", "2026-01-01");
+    sqlite
+      .prepare("INSERT INTO bindings(code_hash,device_hash,created_at) VALUES(?,?,?)")
+      .run(row.beta_code_hash, "test-device-b", "2026-01-01");
+    assert.equal(
+      (
+        await post(manage, "admin", {
+          action: "revoke-license",
+          licenseId: row.id,
+          note: "Test quota",
+        })
+      ).status,
+      200,
+    );
+    assert.match((await post(manage, "admin", payload("solo"))).json.error, /2 appareils liés/);
+    assert.equal((await post(manage, "admin", payload("maison"))).status, 200);
+    assert.equal(actual().quota, 3);
+    assert.notEqual(actual().tvExpiry, null);
+    sqlite.prepare("DELETE FROM codes WHERE id=?").run(row.id);
+    sqlite.prepare("DELETE FROM licenses WHERE id=?").run(row.id);
+  });
 
   const resellerCode = randomUUID();
   const showFixture = randomUUID();

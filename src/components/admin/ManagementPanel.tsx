@@ -12,7 +12,13 @@ import {
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLANS, formatPrice, getPlan } from "@/config/site";
 import type { AdminClientRow, AdminOverview, LicenseRow } from "@/lib/management-types";
-import { formatLastLicenseDay, lastIncludedParisDay, parisDateInput } from "@/lib/license-dates";
+import {
+  formatLastLicenseDay,
+  lastIncludedParisDay,
+  NO_LICENSE_EXPIRY,
+  parisDateInput,
+} from "@/lib/license-dates";
+import { licensePackTerms } from "@/lib/license-packs";
 import { portalApi, PortalApiError } from "@/lib/portal-api";
 import { AdminDialog, AdminField, AdminNotice } from "./AdminControls";
 import { AdminPagination, AdminStats, AdminStatus, AdminTable } from "./AdminTable";
@@ -23,6 +29,7 @@ import { SupportDesk } from "@/components/account/SupportDesk";
 import { PartnerWorkspace } from "@/components/account/PartnerWorkspace";
 import { DeadlinesPanel } from "./DeadlinesPanel";
 import { VyroAppPanel } from "./VyroAppPanel";
+import { PacksPanel } from "./PacksPanel";
 
 type OnDenied = (status: 401 | 403) => void;
 type Action =
@@ -40,6 +47,11 @@ const auditLabels: Record<string, string> = {
   "client-created": "Fiche client créée",
   "license-granted": "Licence attribuée ou prolongée",
   "license-expiry-set": "Date de fin de licence définie",
+  "pack-created": "Pack personnalisé créé",
+  "pack-updated": "Pack personnalisé modifié",
+  "pack-archived": "Pack archivé",
+  "pack-restored": "Pack réactivé",
+  "pack-granted": "Pack attribué",
   "admin-role-granted": "Rôle administrateur attribué",
   "admin-role-revoked": "Rôle administrateur retiré",
   "license-revoked": "Licence révoquée",
@@ -57,9 +69,10 @@ const paymentLabels: Record<string, string> = {
 };
 
 const licenseLabel = (license: LicenseRow) =>
-  license.manual_expiry
+  license.pack_name ??
+  (license.manual_expiry
     ? "Durée personnalisée"
-    : (getPlan(license.plan_id)?.name ?? license.plan_id);
+    : (getPlan(license.plan_id)?.name ?? license.plan_id));
 
 function date(value: string | null) {
   return value && Number.isFinite(Date.parse(value))
@@ -217,6 +230,8 @@ export function ManagementPanel({
     <DeadlinesPanel onAccessDenied={onAccessDenied} />
   ) : section === "vyro" ? (
     <VyroAppPanel onAccessDenied={onAccessDenied} />
+  ) : section === "packs" ? (
+    <PacksPanel onAccessDenied={onAccessDenied} />
   ) : (
     <ManagementSection
       section={section}
@@ -231,7 +246,7 @@ function ManagementSection({
   canManageRoles,
   onAccessDenied,
 }: {
-  section: Exclude<AdminSection, "beta" | "support" | "partners" | "vyro" | "deadlines">;
+  section: Exclude<AdminSection, "beta" | "support" | "partners" | "vyro" | "deadlines" | "packs">;
   canManageRoles: boolean;
   onAccessDenied: OnDenied;
 }) {
@@ -247,13 +262,16 @@ function ManagementSection({
   const [busy, setBusy] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
-  const [planId, setPlanId] = useState("12m");
+  const [planId, setPlanId] = useState("solo");
   const [through, setThrough] = useState("");
   const [limit, setLimit] = useState("3");
   const [note, setNote] = useState("");
   const dialogTrigger = useRef<HTMLButtonElement | null>(null);
   const sectionHeading = useRef<HTMLHeadingElement>(null);
   const clientQuery = section === "clients" ? query.trim().slice(0, 254) : "";
+  const packs = data?.packs.filter((pack) => pack.enabled) ?? [];
+  const customPacks = packs.filter((pack) => pack.updatedAt !== null);
+  const selectedPack = packs.find((pack) => pack.id === planId);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -296,7 +314,7 @@ function ManagementSection({
     setEmail("");
     setNote("");
     const license = next.kind === "grant" ? next.license : undefined;
-    setPlanId(license ? "custom" : "12m");
+    setPlanId(license ? "custom" : "solo");
     setThrough(license?.manual_expiry ? (lastIncludedParisDay(license.expires_at) ?? "") : "");
     setLimit(String(license?.device_limit ?? 3));
     setFormError("");
@@ -314,22 +332,30 @@ function ManagementSection({
         action.kind === "client"
           ? { action: "create-client", firstName, email }
           : action.kind === "grant"
-            ? planId === "custom"
+            ? selectedPack
               ? {
-                  action: "grant-license-until",
+                  action: "grant-pack",
                   clientId: action.client.id,
-                  expectedLicenseId: action.license?.id,
-                  through,
-                  deviceLimit: Number(limit),
+                  packId: selectedPack.id,
+                  version: selectedPack.updatedAt,
                   note,
                 }
-              : {
-                  action: "grant-license",
-                  clientId: action.client.id,
-                  planId,
-                  deviceLimit: Number(limit),
-                  note,
-                }
+              : planId === "custom"
+                ? {
+                    action: "grant-license-until",
+                    clientId: action.client.id,
+                    expectedLicenseId: action.license?.id,
+                    through,
+                    deviceLimit: Number(limit),
+                    note,
+                  }
+                : {
+                    action: "grant-license",
+                    clientId: action.client.id,
+                    planId,
+                    deviceLimit: Number(limit),
+                    note,
+                  }
             : action.kind === "role"
               ? {
                   action: "client-admin-role",
@@ -501,6 +527,15 @@ function ManagementSection({
                 )}
               </div>
               <div className="va-actions">
+                {section === "licenses" && (
+                  <Link
+                    className="va-button va-button-secondary"
+                    to="/admin"
+                    search={{ section: "packs" }}
+                  >
+                    Gérer les packs
+                  </Link>
+                )}
                 <button
                   className="va-button va-button-secondary"
                   type="button"
@@ -643,9 +678,11 @@ function ManagementSection({
                           <td className="va-person">{license.email ?? "—"}</td>
                           <td>{licenseLabel(license)}</td>
                           <td className="va-date">
-                            {license.manual_expiry && lastIncludedParisDay(license.expires_at)
-                              ? formatLastLicenseDay(license.expires_at) + " inclus"
-                              : date(license.expires_at)}
+                            {license.expires_at === NO_LICENSE_EXPIRY
+                              ? "Sans échéance"
+                              : license.manual_expiry && lastIncludedParisDay(license.expires_at)
+                                ? formatLastLicenseDay(license.expires_at) + " inclus"
+                                : date(license.expires_at)}
                           </td>
                           <td>{license.device_limit}</td>
                           <td>
@@ -660,26 +697,28 @@ function ManagementSection({
                           <td>
                             {license.status !== "revoked" && (
                               <div className="va-table-actions">
-                                <button
-                                  className="va-row-action"
-                                  type="button"
-                                  disabled={loading}
-                                  onClick={(event) =>
-                                    openForm(
-                                      {
-                                        kind: "grant",
-                                        client: {
-                                          id: license.client_id,
-                                          email: license.email ?? "—",
+                                {license.expires_at !== NO_LICENSE_EXPIRY && (
+                                  <button
+                                    className="va-row-action"
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={(event) =>
+                                      openForm(
+                                        {
+                                          kind: "grant",
+                                          client: {
+                                            id: license.client_id,
+                                            email: license.email ?? "—",
+                                          },
+                                          license,
                                         },
-                                        license,
-                                      },
-                                      event.currentTarget,
-                                    )
-                                  }
-                                >
-                                  Modifier la date
-                                </button>
+                                        event.currentTarget,
+                                      )
+                                    }
+                                  >
+                                    Modifier la date
+                                  </button>
+                                )}
                                 <button
                                   className="va-row-action"
                                   type="button"
@@ -759,9 +798,13 @@ function ManagementSection({
           action?.kind === "client"
             ? "La fiche sera liée au compte lorsque le client confirmera son adresse. Aucun e-mail n’est envoyé ici."
             : action?.kind === "grant"
-              ? planId === "custom"
-                ? "La licence sera valable dès maintenant jusqu’au dernier jour indiqué, inclus. Cette date remplace l’échéance actuelle."
-                : "Attribution manuelle sans paiement. Une licence active est prolongée à partir de son échéance."
+              ? selectedPack
+                ? selectedPack.months === null
+                  ? "Le quota du pack s’applique dès maintenant. La licence n’aura plus de date de fin. Aucun paiement n’est enregistré."
+                  : "Le quota du pack s’applique dès maintenant. Si le client a déjà une licence active avec une échéance, sa durée restante est conservée et prolongée. Aucun paiement n’est enregistré."
+                : planId === "custom"
+                  ? "La date choisie remplace l’échéance actuelle, dernier jour inclus. Un pack existant devient une licence personnalisée."
+                  : "Attribution manuelle sans paiement. Une licence active est prolongée à partir de son échéance."
               : action?.kind === "role"
                 ? action.client.admin_role
                   ? `${action.client.email} perdra l’accès à la console dès sa prochaine requête. Ses accès client ou revendeur sont conservés.`
@@ -805,17 +848,41 @@ function ManagementSection({
               </p>
               <div className="va-form-grid">
                 {!action.license && (
-                  <label className="va-field">
-                    Durée
-                    <select value={planId} onChange={(event) => setPlanId(event.target.value)}>
-                      {PLANS.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </option>
-                      ))}
-                      <option value="custom">Date de fin personnalisée</option>
+                  <div className="va-field">
+                    <label htmlFor="va-license-offer">Offre ou durée</label>
+                    <select
+                      id="va-license-offer"
+                      value={planId}
+                      onChange={(event) => setPlanId(event.target.value)}
+                    >
+                      <optgroup label="Packs VYRO">
+                        {packs
+                          .filter((pack) => !pack.updatedAt)
+                          .map((pack) => (
+                            <option key={pack.id} value={pack.id}>
+                              {pack.name} — {licensePackTerms(pack)}
+                            </option>
+                          ))}
+                      </optgroup>
+                      {customPacks.length > 0 && (
+                        <optgroup label="Packs personnalisés">
+                          {customPacks.map((pack) => (
+                            <option key={pack.id} value={pack.id}>
+                              {pack.name} — {licensePackTerms(pack)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="Licence manuelle">
+                        {PLANS.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name}
+                          </option>
+                        ))}
+                        <option value="custom">Date de fin personnalisée</option>
+                      </optgroup>
                     </select>
-                  </label>
+                  </div>
                 )}
                 {planId === "custom" && (
                   <AdminField
@@ -829,15 +896,25 @@ function ManagementSection({
                     required
                   />
                 )}
-                <AdminField
-                  label="Appareils autorisés"
-                  type="number"
-                  value={limit}
-                  onChange={setLimit}
-                  min={1}
-                  max={10}
-                  required
-                />
+                {selectedPack ? (
+                  <div className="va-field">
+                    <span>Conditions du pack</span>
+                    <strong>{licensePackTerms(selectedPack)}</strong>
+                    {selectedPack.priceCents !== null && (
+                      <small>Prix indicatif : {formatPrice(selectedPack.priceCents / 100)}</small>
+                    )}
+                  </div>
+                ) : (
+                  <AdminField
+                    label="Appareils autorisés"
+                    type="number"
+                    value={limit}
+                    onChange={setLimit}
+                    min={1}
+                    max={10}
+                    required
+                  />
+                )}
               </div>
             </>
           )}

@@ -38,3 +38,5 @@ export function lastIncludedParisDay(expiresAt: string) {
   const day = parisDateInput(timestamp - 1);
   return expiryAfterParisDay(day) === expiresAt ? day : undefined;
 }
+// The legacy web schema stores this marker; the linked TV code stores a null expiry.
+export const NO_LICENSE_EXPIRY = "9999-12-31T23:59:59.999Z";

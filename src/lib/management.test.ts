@@ -43,6 +43,12 @@ function setup() {
       "utf8",
     ),
   );
+  db.exec(
+    readFileSync(
+      new URL("../../migrations/d1/0015_admin_license_packs.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   return db;
 }
 

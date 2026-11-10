@@ -35,9 +35,11 @@ function SubscriptionPage() {
                 "Statut",
                 isActive ? "Actif" : subscription.status === "revoked" ? "Révoqué" : "Expiré",
               ],
-              subscription.expiresOn
-                ? ["Dernier jour d’accès", formatLastLicenseDay(subscription.expiresAt)]
-                : ["Échéance", formatDate(subscription.expiresAt)],
+              subscription.expiresAt === null
+                ? ["Échéance", "Sans échéance"]
+                : subscription.expiresOn
+                  ? ["Dernier jour d’accès", formatLastLicenseDay(subscription.expiresAt)]
+                  : ["Échéance", formatDate(subscription.expiresAt)],
               ["Temps restant", isActive && daysLeft != null ? `${daysLeft} j` : "—"],
             ].map(([label, value]) => (
               <div key={label}>

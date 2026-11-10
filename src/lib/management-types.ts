@@ -1,4 +1,5 @@
 import type { AdminRole } from "./admin-policy";
+import type { LicensePack } from "./license-packs";
 
 export type ClientRow = {
   id: string;
@@ -22,6 +23,8 @@ export type LicenseRow = {
   started_at: string;
   expires_at: string;
   manual_expiry: number;
+  pack_id: string | null;
+  pack_name: string | null;
   device_limit: number;
   status: "active" | "revoked";
   source_payment_id: string | null;
@@ -65,4 +68,5 @@ export type AdminOverview = {
   page: number;
   hasMore: boolean;
   hasMoreClients: boolean;
+  packs: LicensePack[];
 };

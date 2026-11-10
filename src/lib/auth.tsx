@@ -17,7 +17,7 @@ export type Subscription = {
   planName: string;
   status: "active" | "expired" | "revoked" | "none";
   startedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   expiresOn?: string;
   devicesUsed: number;
   devicesAllowed: number | null;
@@ -263,10 +263,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
   }, []);
 
-  const daysLeft = user?.subscription
+  const daysLeft = user?.subscription?.expiresAt
     ? Math.max(0, Math.ceil((Date.parse(user.subscription.expiresAt) - Date.now()) / 86_400_000))
     : null;
-  const isActive = user?.subscription?.status === "active" && daysLeft !== null && daysLeft > 0;
+  const isActive = user?.subscription?.status === "active" && (daysLeft === null || daysLeft > 0);
   const value = useMemo<AuthState>(
     () => ({
       user,

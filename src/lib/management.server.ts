@@ -10,8 +10,19 @@ import type {
 import { ApiError, api, body, identity, json } from "./access.server";
 import type { VerifiedIdentity } from "./admin-policy";
 import { actionSchema, deviceSchema } from "./management-validation";
-import { licenseThroughSql, licenseUpsertSql } from "./license-sql";
-import { expiryAfterParisDay, lastIncludedParisDay, parisDateInput } from "./license-dates";
+import { licensePackUpsertSql, licenseThroughSql, licenseUpsertSql } from "./license-sql";
+import {
+  expiryAfterParisDay,
+  lastIncludedParisDay,
+  NO_LICENSE_EXPIRY,
+  parisDateInput,
+} from "./license-dates";
+import {
+  licensePackNameKey,
+  licensePackTerms,
+  standardLicensePacks,
+  type LicensePack,
+} from "./license-packs";
 import { stripeMode } from "./stripe-config.server";
 import { getPlan, formatPrice } from "@/config/site";
 import { database } from "./database.server";
@@ -144,16 +155,28 @@ export async function grantStatement(
     );
 }
 
+const customPackColumns =
+  "id,name,months,devices,price_cents AS priceCents,enabled,updated_at AS updatedAt";
+async function listPacks(db: ManagementDB) {
+  const custom = await db
+    .prepare(
+      `SELECT ${customPackColumns} FROM vyro_custom_packs ORDER BY enabled DESC,name COLLATE NOCASE,id`,
+    )
+    .all<LicensePack>();
+  return [...standardLicensePacks, ...custom.results];
+}
+
 export const manageRequest = api(async (request) => {
   const user = await identity(request, true);
   const db = await database();
   const ownerId = process.env["VYRO_ADMIN_USER_ID"]!.trim();
   if (request.method === "GET") {
     const params = new URL(request.url).searchParams;
+    if (params.get("packs") === "1") return json({ packs: await listPacks(db) });
     const page = Math.floor(Math.max(0, Math.min(100000, Number(params.get("page")) || 0)));
     const offset = page * 50;
     const clientQuery = (params.get("client") ?? "").trim().slice(0, 254);
-    const [clients, licenses, payments, audit, totals] = await Promise.all([
+    const [clients, licenses, payments, audit, totals, packs] = await Promise.all([
       db
         .prepare(
           `SELECT c.id,c.email,c.first_name,c.status,c.created_at,c.last_seen_at,
@@ -170,7 +193,7 @@ export const manageRequest = api(async (request) => {
         .all<AdminClientRow>(),
       db
         .prepare(
-          `SELECT l.id,l.client_id,c.email,l.plan_id,l.started_at,l.expires_at,l.manual_expiry,l.device_limit,l.status,l.source_payment_id,l.updated_at
+          `SELECT l.id,l.client_id,c.email,l.plan_id,l.started_at,l.expires_at,l.manual_expiry,l.pack_id,l.pack_name,l.device_limit,l.status,l.source_payment_id,l.updated_at
         FROM licenses l JOIN clients c ON c.id=l.client_id ORDER BY l.updated_at DESC,l.id LIMIT 51 OFFSET ?`,
         )
         .bind(offset)
@@ -201,6 +224,7 @@ export const manageRequest = api(async (request) => {
         )
         .bind(new Date().toISOString())
         .first<AdminOverview["stats"]>(),
+      listPacks(db),
     ]);
     const stripe = stripeMode();
     return json({
@@ -213,6 +237,7 @@ export const manageRequest = api(async (request) => {
       page,
       hasMore: [clients, licenses, payments, audit].some((v) => v.results.length > 50),
       hasMoreClients: clients.results.length > 50,
+      packs,
     });
   }
   const parsed = actionSchema.safeParse(await body(request));
@@ -230,6 +255,110 @@ export const manageRequest = api(async (request) => {
       logIfChanged(db, user.id, "client-created", id, "Fiche client créée"),
     ]);
     if (!changed(result[0])) throw new ApiError(409, "Cette fiche client existe déjà.");
+  } else if (data.action === "save-pack") {
+    const id = data.id ?? crypto.randomUUID();
+    const name = data.name.replace(/\s+/g, " ");
+    const nameKey = licensePackNameKey(name);
+    if (standardLicensePacks.some((pack) => licensePackNameKey(pack.name) === nameKey))
+      throw new ApiError(409, "Ce nom est réservé à un pack VYRO.");
+    const now = new Date().toISOString();
+    const statement = data.id
+      ? db
+          .prepare(
+            `UPDATE vyro_custom_packs SET name=?,name_key=?,months=?,devices=?,price_cents=?,updated_at=?
+        WHERE id=? AND NOT EXISTS(SELECT 1 FROM vyro_custom_packs WHERE name_key=? AND id<>?)`,
+          )
+          .bind(name, nameKey, data.months, data.devices, data.priceCents, now, id, nameKey, id)
+      : db
+          .prepare(
+            `INSERT INTO vyro_custom_packs(id,name,name_key,months,devices,price_cents,updated_at)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(name_key) DO NOTHING`,
+          )
+          .bind(id, name, nameKey, data.months, data.devices, data.priceCents, now);
+    const result = await db.batch([
+      statement,
+      logIfChanged(db, user.id, data.id ? "pack-updated" : "pack-created", id, name),
+    ]);
+    if (!changed(result[0]))
+      throw new ApiError(409, "Ce nom est déjà utilisé ou le pack est introuvable.");
+  } else if (data.action === "pack-availability") {
+    const enabled = Number(data.enabled);
+    const result = await db.batch([
+      db
+        .prepare("UPDATE vyro_custom_packs SET enabled=?,updated_at=? WHERE id=? AND enabled<>?")
+        .bind(enabled, new Date().toISOString(), data.id, enabled),
+      logIfChanged(
+        db,
+        user.id,
+        data.enabled ? "pack-restored" : "pack-archived",
+        data.id,
+        data.enabled ? "Pack à nouveau attribuable" : "Pack retiré du sélecteur",
+      ),
+    ]);
+    if (!changed(result[0])) throw new ApiError(409, "Ce pack a déjà changé ou est introuvable.");
+  } else if (data.action === "grant-pack") {
+    const pack =
+      standardLicensePacks.find(({ id }) => id === data.packId) ??
+      (await db
+        .prepare(`SELECT ${customPackColumns} FROM vyro_custom_packs WHERE id=?`)
+        .bind(data.packId)
+        .first<LicensePack>());
+    if (!pack?.enabled || pack.updatedAt !== data.version)
+      throw new ApiError(409, "Ce pack a changé ou n’est plus disponible. Actualisez la liste.");
+    await requireLinkedActiveLicense(db, data.clientId);
+    const { key, hash } = await newLicenseKey();
+    const now = new Date().toISOString();
+    const result = await db.batch([
+      db
+        .prepare(licensePackUpsertSql)
+        .bind(
+          crypto.randomUUID(),
+          data.clientId,
+          key,
+          now,
+          pack.months,
+          pack.devices,
+          hash,
+          pack.id,
+          pack.name,
+          pack.updatedAt,
+        ),
+      logIfChanged(
+        db,
+        user.id,
+        "pack-granted",
+        data.clientId,
+        `${pack.name} · ${licensePackTerms(pack)} · ${data.note}`,
+      ),
+    ]);
+    if (!changed(result[0])) {
+      const current = await db
+        .prepare(
+          `SELECT l.expires_at,l.status,
+        (SELECT count(*) FROM bindings WHERE code_hash=l.beta_code_hash) AS linked
+        FROM licenses l JOIN clients c ON c.id=l.client_id WHERE l.client_id=? AND c.status='active'`,
+        )
+        .bind(data.clientId)
+        .first<{ expires_at: string; status: string; linked: number }>();
+      if (
+        pack.months !== null &&
+        current?.status === "active" &&
+        current.expires_at === NO_LICENSE_EXPIRY
+      )
+        throw new ApiError(
+          409,
+          "Ce client a déjà un accès sans échéance. Il faut le révoquer explicitement avant d’attribuer une durée limitée.",
+        );
+      if (current && current.linked > pack.devices)
+        throw new ApiError(
+          409,
+          `Ce compte a ${current.linked} appareils liés. Libérez des places avant d’attribuer un pack limité à ${pack.devices}.`,
+        );
+      throw new ApiError(
+        409,
+        "Vérifiez que le compte est confirmé et actif, puis actualisez la liste des packs.",
+      );
+    }
   } else if (data.action === "grant-license") {
     await requireLinkedActiveLicense(db, data.clientId);
     const result = await db.batch([
@@ -275,7 +404,7 @@ export const manageRequest = api(async (request) => {
     if (!changed(result[0]))
       throw new ApiError(
         409,
-        "Le compte doit être confirmé et actif, la licence modifiable et le quota suffisant pour les appareils déjà liés.",
+        "Le compte doit être confirmé et actif, la licence modifiable et le quota suffisant. Un accès sans échéance ne peut pas être converti en durée limitée ici.",
       );
   } else if (data.action === "client-admin-role") {
     if (user.adminRole !== "owner")
@@ -391,10 +520,15 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
       ? {
           planId: license.plan_id,
           planName:
-            license.manual_expiry === 1 ? "Durée personnalisée" : (plan?.name ?? license.plan_id),
+            license.pack_name ??
+            (license.manual_expiry === 1
+              ? "Durée personnalisée"
+              : license.expires_at === NO_LICENSE_EXPIRY
+                ? "Sans échéance"
+                : (plan?.name ?? license.plan_id)),
           status: active ? "active" : license.status === "revoked" ? "revoked" : "expired",
           startedAt: license.started_at,
-          expiresAt: license.expires_at,
+          expiresAt: license.expires_at === NO_LICENSE_EXPIRY ? null : license.expires_at,
           expiresOn,
           devicesUsed: devices.results.length,
           devicesAllowed: license.device_limit,

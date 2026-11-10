@@ -30,6 +30,28 @@ export const actionSchema = z.discriminatedUnion("action", [
     deviceLimit: z.number().int().min(1).max(10),
     note: z.string().trim().min(1).max(300),
   }),
+  z
+    .object({
+      action: z.literal("grant-pack"),
+      clientId: z.string().uuid(),
+      packId: z.string().min(1).max(36),
+      version: z.string().datetime().nullable(),
+      note: z.string().trim().min(1).max(300),
+    })
+    .strict(),
+  z.object({
+    action: z.literal("save-pack"),
+    id: z.string().uuid().optional(),
+    name: z.string().trim().min(2).max(80),
+    months: z.number().int().min(1).max(120).nullable(),
+    devices: z.number().int().min(1).max(10),
+    priceCents: z.number().int().min(0).max(999999).nullable(),
+  }),
+  z.object({
+    action: z.literal("pack-availability"),
+    id: z.string().uuid(),
+    enabled: z.boolean(),
+  }),
   z.object({
     action: z.literal("client-admin-role"),
     clientId: z.string().uuid(),

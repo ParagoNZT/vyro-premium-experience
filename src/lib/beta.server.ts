@@ -9,6 +9,7 @@ const accessOrigins = `
   WITH classified AS (
     SELECT c.id,c.code_hash,c.name,c.enabled,c.max_devices AS maxDevices,c.expires_at AS expiresAt,
       c.created_at AS createdAt,u.email AS clientEmail,r.enabled AS resellerEnabled,
+      l.pack_name AS packName,
       CASE WHEN l.id IS NOT NULL THEN 'direct'
         WHEN c.reseller_id IS NOT NULL THEN 'reseller:'||c.reseller_id
         WHEN a.id='show-plus' THEN 'show-plus'
@@ -52,20 +53,32 @@ export const betaRequest = api(async (request) => {
     }
     const linked = await db
       .prepare(
-        `SELECT c.status FROM clients c JOIN licenses l ON l.client_id=c.id
+        `SELECT c.status,l.pack_id,b.max_devices AS maxDevices,b.expires_at AS expiresAt
+      FROM clients c JOIN licenses l ON l.client_id=c.id
       JOIN codes b ON b.code_hash=l.beta_code_hash WHERE b.id=?`,
       )
       .bind(data.id)
-      .first<{ status: string }>();
+      .first<{
+        status: string;
+        pack_id: string | null;
+        maxDevices: number;
+        expiresAt: string | null;
+      }>();
     if (!linked) throw new ApiError(409, "Cet accès se gère dans VYRO Studio.");
     if (data.enabled && linked.status !== "active")
       throw new ApiError(409, "Réactivez d’abord la fiche client VYRO.");
+    if (linked.pack_id && (expiry !== linked.expiresAt || data.maxDevices !== linked.maxDevices))
+      throw new ApiError(
+        409,
+        "Pour changer l’échéance ou le quota d’un pack, passez par la licence du client.",
+      );
     const result = await db.batch([
       db
         .prepare(
           `UPDATE codes SET enabled=?,max_devices=?,expires_at=? WHERE id=?
         AND EXISTS(SELECT 1 FROM licenses l JOIN clients c ON c.id=l.client_id
-          WHERE l.beta_code_hash=codes.code_hash AND (?=0 OR c.status='active'))
+          WHERE l.beta_code_hash=codes.code_hash AND (?=0 OR c.status='active')
+          AND (l.pack_id IS NULL OR (codes.max_devices=? AND codes.expires_at IS ?)))
         AND (SELECT count(*) FROM bindings WHERE code_hash=codes.code_hash)<=?`,
         )
         .bind(
@@ -74,6 +87,8 @@ export const betaRequest = api(async (request) => {
           expiry,
           data.id,
           Number(data.enabled),
+          data.maxDevices,
+          expiry,
           data.maxDevices,
         ),
       logIfChanged(db, user.id, "beta-access-updated", data.id, data.note),
@@ -122,7 +137,7 @@ export const betaRequest = api(async (request) => {
     db
       .prepare(
         `${accessOrigins}
-      SELECT id,name,enabled,maxDevices,expiresAt,scopeKey,resellerName,clientEmail,hasRecoverableKey,managedOnSite,
+      SELECT id,name,enabled,maxDevices,expiresAt,scopeKey,resellerName,clientEmail,hasRecoverableKey,managedOnSite,packName,
       (SELECT count(*) FROM bindings b WHERE b.code_hash=o.code_hash) AS deviceCount,
       (SELECT max(last_seen) FROM device_profiles d WHERE d.code_hash=o.code_hash) AS lastSeen
       FROM origins o WHERE ${scopeSql} AND ${searchSql}

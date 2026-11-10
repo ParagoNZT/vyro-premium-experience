@@ -23,7 +23,7 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const subscription = user?.subscription;
   const expiry =
-    subscription && Number.isFinite(Date.parse(subscription.expiresAt))
+    subscription?.expiresAt && Number.isFinite(Date.parse(subscription.expiresAt))
       ? subscription.expiresOn
         ? formatLastLicenseDay(subscription.expiresAt)
         : formatDate.format(new Date(subscription.expiresAt))
@@ -80,6 +80,7 @@ function Dashboard() {
               <span className="account-status" data-active={isActive}>
                 {status}
               </span>
+              {isActive && subscription?.expiresAt === null && <span>Sans échéance</span>}
               {expiry && (
                 <span>
                   {isActive ? "Jusqu’au" : "Échéance :"} {expiry}

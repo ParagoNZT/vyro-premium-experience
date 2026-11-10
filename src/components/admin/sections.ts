@@ -28,6 +28,11 @@ export const adminSections = {
     description: "Vérifiez les échéances et les quotas d’appareils des licences VYRO.",
     Icon: KeyRound,
   },
+  packs: {
+    title: "Packs",
+    description: "Retrouvez les offres VYRO et créez vos propres packs de licences.",
+    Icon: Package,
+  },
   beta: {
     title: "Accès TV",
     description:

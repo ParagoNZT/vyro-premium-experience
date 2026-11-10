@@ -28,6 +28,7 @@ type Access = {
   clientEmail: string | null;
   hasRecoverableKey: number;
   managedOnSite: number;
+  packName: string | null;
 };
 export type BetaPage = {
   page: number;
@@ -531,12 +532,19 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
           )}
           {dialog?.kind === "edit" && (
             <>
+              {dialog.access.packName && (
+                <p>
+                  Pack {dialog.access.packName} : l’échéance et le quota se gèrent depuis la licence
+                  du client.
+                </p>
+              )}
               <AdminField
                 label="Fin de l’accès"
                 type="date"
                 value={expiry}
                 onChange={setExpiry}
-                hint="Laissez vide pour un accès sans expiration."
+                hint={dialog.access.packName ? "" : "Laissez vide pour un accès sans expiration."}
+                disabled={!!dialog.access.packName}
               />
               <AdminField
                 label="Nombre d’appareils autorisés"
@@ -546,6 +554,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
                 min={Math.max(1, dialog.access.deviceCount)}
                 max={10}
                 required
+                disabled={!!dialog.access.packName}
               />
               <label className="va-checkbox">
                 <input

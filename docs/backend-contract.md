@@ -32,6 +32,8 @@ The configured administrator is the console owner. Apply D1 migration `0014_admi
 
 The public catalogue shows three 12-month packs (Solo, Maison, Famille) and a five-device lifetime pack. The `/checkout` page currently only displays pack details. Keep `VYRO_STRIPE_ENABLED=false` until the checkout and fulfilment endpoints support the new pack IDs, their quotas and the lifetime term. Historical orders and existing licences keep their original terms.
 
+D1 migration `0015_admin_license_packs.sql` adds the admin-only catalogue and the pack ID/name recorded at assignment. `GET /api/manage?packs=1` lists standard and custom packs. The `grant-pack` action applies the stored quota and duration without a payment record, extends an active finite term from its current expiry, and never removes existing TV bindings. A lifetime pack uses the existing unlimited marker in `licenses` and a null expiry on the TV code and in the account response. Saving or archiving a custom pack only affects future assignments.
+
 ## Build and binding verification
 
 The current and older source declare Supabase project ID `jqudulynpebvnipwjyhu`. The older Nitro config used worker name `vyro-premium-experience` and bound `VYRO_DB` to `vyro-beta-access` (historical ID `62609516-d269-4ced-a3c5-1acc6d9d5d2a`). Treat these values as historical evidence; confirm the deployed resources independently.
