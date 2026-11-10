@@ -168,6 +168,13 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
 
   const { default: worker } = await import("../.output/server/index.mjs");
   const ctx = { waitUntil() {}, passThroughOnException() {} };
+  await t.test("the public pairing page cannot be framed", async () => {
+    const page = await worker.fetch(new Request(origin + "/associer"), env, ctx);
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get("content-type") ?? "", /^text\/html\b/);
+    assert.match(page.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+    assert.equal(page.headers.get("x-frame-options"), "DENY");
+  });
   async function call(path, { token, body, signature, native } = {}) {
     const headers = new Headers();
     if (token) headers.set("authorization", "Bearer " + token);
@@ -1541,7 +1548,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   assert.deepEqual((await tv(chambre, "poll")).json, { linked: false, command: null });
   assert.equal((await firstPage()).backups.length, 1);
 
-  await t.test("QR, encrypted playlists, layouts and private backups", async () => {
+  await t.test("QR, encrypted playlists, layouts and private backups", async (t) => {
     const endpoint = "/api/remote-workspace";
     const native = "/api/remote-device";
     const pairKey = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -1785,6 +1792,58 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     assert.deepEqual(file.json.profile, bundle);
     assert.equal((await call(endpoint + "?backup=" + capture.id, { token: "second" })).status, 404);
     assert.equal((await call(endpoint + "?backup=" + capture.id, { token: "admin" })).status, 404);
+    await t.test("suspension stops paired devices and remote workspace access", async () => {
+      const backup = (device) => ({ action: "backup", device, name: "Suspension", full: false });
+      assert.equal((await browser(backup(tvDevice.id))).status, 202);
+      assert.equal((await browser(backup(phone.id))).status, 202);
+      const delivered = (await phone.send({ action: "poll", catalog: manifest })).json.job;
+      assert.equal(delivered.kind, "backup");
+      const changeStatus = (status) =>
+        post(manage, "admin", {
+          action: "client-status",
+          clientId,
+          status,
+          note: "Vérification de la suspension",
+        });
+      assert.equal((await changeStatus("suspended")).status, 200);
+      try {
+        assert.equal((await call(portal, { token: "first" })).status, 403);
+        assert.equal((await call(endpoint, { token: "first" })).status, 403);
+        assert.equal(
+          (await call(endpoint + "?backup=" + capture.id, { token: "first" })).status,
+          403,
+        );
+        assert.equal((await browser(backup(tvDevice.id))).status, 403);
+        assert.deepEqual((await tvDevice.send({ action: "poll", catalog: manifest })).json, {
+          linked: false,
+        });
+        assert.equal(
+          (
+            await phone.send({
+              action: "complete",
+              jobId: delivered.id,
+              ok: true,
+              settings,
+            })
+          ).status,
+          403,
+        );
+        assert.equal((await other.send({ action: "poll", catalog: manifest })).json.linked, true);
+      } finally {
+        assert.equal((await changeStatus("active")).status, 200);
+      }
+      assert.equal((await call(endpoint, { token: "first" })).json.devices.length, 2);
+      const pending = (await tvDevice.send({ action: "poll", catalog: manifest })).json.job;
+      assert.equal(pending.kind, "backup");
+      assert.equal(
+        (await tvDevice.send({ action: "complete", jobId: pending.id, ok: false })).status,
+        200,
+      );
+      assert.equal(
+        (await phone.send({ action: "complete", jobId: delivered.id, ok: false })).status,
+        200,
+      );
+    });
     const imported = await browser({ action: "import", name: "Import JSON", file: file.json });
     assert.equal(imported.status, 200);
     await phone.send({ action: "poll", catalog: { ...manifest, active: "b".repeat(64) } });

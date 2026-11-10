@@ -44,18 +44,34 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function preventFraming(request: Request, response: Response): Response {
+  const origin = new URL(request.url).origin;
+  const siteOrigin = process.env["VYRO_SITE_ORIGIN"]?.trim() || "https://vyro-player.app";
+  const contentType = response.headers.get("content-type")?.toLowerCase();
+  if (origin !== siteOrigin || !contentType?.startsWith("text/html")) return response;
+
+  // Keep the editor's preview origins embeddable while protecting the public site.
+  const protectedResponse = new Response(response.body, response);
+  protectedResponse.headers.append("Content-Security-Policy", "frame-ancestors 'none'");
+  protectedResponse.headers.set("X-Frame-Options", "DENY");
+  return protectedResponse;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return preventFraming(request, await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return preventFraming(
+        request,
+        new Response(renderErrorPage(), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      );
     }
   },
 };

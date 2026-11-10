@@ -17,6 +17,7 @@ const digest = async (value: string) =>
   hex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))));
 const after = (ms: number) => new Date(Date.now() + ms).toISOString();
 const validId = z.string().uuid();
+const suspendedMessage = "Votre accès au site est suspendu. Contactez le support.";
 
 async function input(request: Request) {
   if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json")
@@ -45,6 +46,11 @@ export const webRemoteWorkspace = api(async (request) => {
   const user = await identity(request);
   const owner = user.id;
   const db = await database();
+  const suspended = await db
+    .prepare("SELECT 1 FROM clients WHERE auth_user_id=? AND status='suspended'")
+    .bind(owner)
+    .first();
+  if (suspended) throw new ApiError(403, suspendedMessage);
   const now = after(0);
   if (request.method === "GET") {
     const backup = new URL(request.url).searchParams.get("backup");
@@ -339,10 +345,18 @@ export const nativeRemoteWorkspace = api(async (request) => {
     return json({ proof, expires });
   }
   const device = await db
-    .prepare(`SELECT ${deviceColumns} FROM remote_devices WHERE id=? AND token_hash=?`)
+    .prepare(
+      `SELECT ${deviceColumns}, EXISTS(
+        SELECT 1 FROM clients WHERE auth_user_id=remote_devices.owner_id AND status='suspended'
+      ) AS suspended FROM remote_devices WHERE id=? AND token_hash=?`,
+    )
     .bind(action.id, token)
-    .first<Device>();
+    .first<Device & { suspended: number }>();
   if (!device?.owner_id) return json({ linked: false });
+  if (device.suspended) {
+    if (action.action === "poll") return json({ linked: false });
+    throw new ApiError(403, suspendedMessage);
+  }
   const owner = device.owner_id;
   if (action.action === "message-receipt") {
     if (device.edition !== "vyro") throw new ApiError(403, "Messagerie indisponible.");
@@ -373,6 +387,7 @@ export const nativeRemoteWorkspace = api(async (request) => {
         `UPDATE remote_jobs SET sent_at=coalesce(sent_at,?1) WHERE id=(
       SELECT j.id FROM remote_jobs j JOIN remote_devices d ON d.id=j.device_id AND d.owner_id=j.owner_id
       WHERE j.device_id=?2 AND j.owner_id=?3 AND d.token_hash=?4 AND j.result IS NULL AND j.expires_at>?1
+      AND NOT EXISTS(SELECT 1 FROM clients WHERE auth_user_id=j.owner_id AND status='suspended')
       ORDER BY j.created_at,j.id LIMIT 1)
       RETURNING id,kind,context,payload,name`,
       )
@@ -389,14 +404,18 @@ export const nativeRemoteWorkspace = api(async (request) => {
     if (job.kind === "restore") {
       const reference = z.object({ backup: validId }).parse(payload);
       const saved = await db
-        .prepare("SELECT file FROM remote_backups WHERE id=? AND owner_id=?")
+        .prepare(
+          `SELECT file FROM remote_backups b WHERE b.id=? AND b.owner_id=?
+          AND NOT EXISTS(SELECT 1 FROM clients WHERE auth_user_id=b.owner_id AND status='suspended')`,
+        )
         .bind(reference.backup, owner)
         .first<{ file: string }>();
       if (!saved) {
         await db
           .prepare(
             `UPDATE remote_jobs SET result='cancelled',payload=NULL,finished_at=?
-          WHERE id=? AND owner_id=? AND result IS NULL`,
+          WHERE id=? AND owner_id=? AND result IS NULL
+          AND NOT EXISTS(SELECT 1 FROM clients WHERE auth_user_id=remote_jobs.owner_id AND status='suspended')`,
           )
           .bind(now, job.id, owner)
           .run();
@@ -432,6 +451,7 @@ export const nativeRemoteWorkspace = api(async (request) => {
           `INSERT OR IGNORE INTO remote_backups(id,owner_id,name,source_name,file,created_at)
       SELECT j.id,j.owner_id,j.name,d.name,?1,?2 FROM remote_jobs j JOIN remote_devices d ON d.id=j.device_id AND d.owner_id=j.owner_id
       WHERE j.id=?3 AND j.device_id=?4 AND j.owner_id=?5 AND d.token_hash=?6 AND j.result IS NULL AND j.expires_at>?2
+      AND NOT EXISTS(SELECT 1 FROM clients WHERE auth_user_id=j.owner_id AND status='suspended')
       AND (SELECT count(*) FROM remote_backups WHERE owner_id=?5)<30`,
         )
         .bind(JSON.stringify(file), now, job.id, device.id, owner, token),
@@ -443,10 +463,18 @@ export const nativeRemoteWorkspace = api(async (request) => {
         `UPDATE remote_jobs SET result=CASE WHEN ?1=0 OR (kind='backup' AND NOT EXISTS(
     SELECT 1 FROM remote_backups WHERE id=remote_jobs.id AND owner_id=?5)) THEN 'failed' ELSE 'done' END,
     payload=NULL,finished_at=?2 WHERE id=?3 AND device_id=?4 AND owner_id=?5 AND result IS NULL AND expires_at>?2
+    AND NOT EXISTS(SELECT 1 FROM clients WHERE auth_user_id=remote_jobs.owner_id AND status='suspended')
     AND EXISTS(SELECT 1 FROM remote_devices WHERE id=?4 AND owner_id=?5 AND token_hash=?6)`,
       )
       .bind(ok ? 1 : 0, now, job.id, device.id, owner, token),
   );
-  await db.batch(commands);
+  const results = await db.batch(commands);
+  if (!changed(results.at(-1))) {
+    const suspended = await db
+      .prepare("SELECT 1 FROM clients WHERE auth_user_id=? AND status='suspended'")
+      .bind(owner)
+      .first();
+    if (suspended) throw new ApiError(403, suspendedMessage);
+  }
   return json({ ok: true });
 });
