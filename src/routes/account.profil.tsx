@@ -13,12 +13,12 @@ export const Route = createFileRoute("/account/profil")({
 
 function ProfilePage() {
   const { user, updateProfile } = useAuth();
-  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [username, setUsername] = useState(user?.firstName ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const nameChanged = firstName.trim() !== user?.firstName;
+  const nameChanged = username.trim() !== user?.firstName;
   const emailChanged = email.trim() !== user?.email;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -26,20 +26,20 @@ function ProfilePage() {
     if (busy || !user || (!nameChanged && !emailChanged)) return;
     setNotice("");
     setError("");
-    if (!firstName.trim()) {
-      setError("Renseignez votre prénom.");
+    if (!username.trim()) {
+      setError("Renseignez votre nom d’utilisateur.");
       return;
     }
     setBusy(true);
     try {
       await updateProfile({
-        ...(nameChanged ? { firstName: firstName.trim() } : {}),
+        ...(nameChanged ? { firstName: username.trim() } : {}),
         ...(emailChanged ? { email: email.trim() } : {}),
       });
       setNotice(
         emailChanged
           ? "Vérifiez votre boîte e-mail pour confirmer le changement d’adresse."
-          : "Votre prénom a été mis à jour.",
+          : "Votre nom d’utilisateur a été mis à jour.",
       );
     } catch (issue) {
       setError(
@@ -63,10 +63,10 @@ function ProfilePage() {
         aria-busy={busy}
       >
         <Field
-          label="Prénom"
-          value={firstName}
-          onChange={setFirstName}
-          autoComplete="given-name"
+          label="Nom d’utilisateur"
+          value={username}
+          onChange={setUsername}
+          autoComplete="nickname"
           required
           maxLength={80}
         />

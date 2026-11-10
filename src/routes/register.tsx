@@ -35,7 +35,7 @@ function RegisterPage() {
   const { ready, signUp } = useAuth();
   const navigate = useNavigate();
   const { redirect, plan } = Route.useSearch();
-  const [firstName, setFirstName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,13 +46,13 @@ function RegisterPage() {
     event.preventDefault();
     if (!ready || busy) return;
     setError("");
-    if (!firstName.trim()) {
-      setError("Renseignez votre prénom.");
+    if (!username.trim()) {
+      setError("Renseignez votre nom d’utilisateur.");
       return;
     }
     setBusy(true);
     try {
-      const created = await signUp(firstName.trim(), email.trim(), password);
+      const created = await signUp(username.trim(), email.trim(), password);
       setPassword("");
       if (!created) setAwaitingEmail(true);
       else if (redirect) await navigate({ to: redirect });
@@ -111,11 +111,12 @@ function RegisterPage() {
       ) : (
         <form method="post" onSubmit={onSubmit} className="screening-auth__form" aria-busy={busy}>
           <ScreeningField
-            label="Prénom"
-            name="firstName"
-            value={firstName}
-            onChange={setFirstName}
-            autoComplete="given-name"
+            label="Nom d’utilisateur"
+            name="username"
+            value={username}
+            onChange={setUsername}
+            autoComplete="nickname"
+            hint="Ce nom s’affiche dans votre espace client."
             maxLength={80}
             required
           />
