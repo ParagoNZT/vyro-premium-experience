@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { HardDrive, ListVideo, QrCode } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PortalHeading } from "@/components/site/AuthShell";
@@ -15,7 +16,10 @@ import type {
   RemoteWebAction,
 } from "@/lib/remote-contract";
 
-export const Route = createFileRoute("/account/gestion")({ component: RemotePage });
+export const Route = createFileRoute("/account/gestion")({
+  validateSearch: z.object({ appareil: z.string().uuid().optional().catch(undefined) }),
+  component: RemotePage,
+});
 const endpoint = "/api/remote-workspace" as const;
 const card = "min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6";
 const select = "min-h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
@@ -32,11 +36,12 @@ const status = {
 
 function RemotePage() {
   const { user } = useAuth();
-  return <RemotePanel key={user?.id} />;
+  const { appareil } = Route.useSearch();
+  return <RemotePanel key={`${user?.id}:${appareil}`} initialDevice={appareil} />;
 }
-function RemotePanel() {
+function RemotePanel({ initialDevice }: { initialDevice: string | undefined }) {
   const [data, setData] = useState<RemoteOverview>();
-  const [id, setId] = useState("");
+  const [id, setId] = useState(initialDevice ?? "");
   const [tab, setTab] = useState<"sources" | "backup" | "jobs">("sources");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -59,7 +64,7 @@ function RemotePanel() {
       controller.abort();
     };
   }, [refresh]);
-  const device = data?.devices.find((d) => d.id === id) ?? data?.devices[0];
+  const device = id ? data?.devices.find((d) => d.id === id) : data?.devices[0];
   async function send(action: RemoteWebAction, message: string) {
     setError("");
     setNotice("");
@@ -119,6 +124,16 @@ function RemotePanel() {
           Réglages → À propos → Gestion à distance et scannez le QR code avec votre téléphone.
         </p>
         {!data && !error && <p>Chargement…</p>}
+        {data && id && !device && (
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>Cet appareil n’est plus associé à ce compte.</p>
+            {data.devices.length > 0 && (
+              <Button variant="outline" onClick={() => setId("")}>
+                Voir les autres appareils
+              </Button>
+            )}
+          </div>
+        )}
         {device && (
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid min-w-56 gap-1 text-sm">

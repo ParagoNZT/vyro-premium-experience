@@ -26,6 +26,7 @@ import {
 import { stripeMode } from "./stripe-config.server";
 import { getPlan, formatPrice } from "@/config/site";
 import { database } from "./database.server";
+import type { RemoteDeviceSummary } from "./remote-contract";
 
 export { database } from "./database.server";
 
@@ -474,7 +475,7 @@ export const logIfChanged = (
     .bind(crypto.randomUUID(), actor, action, target, note, new Date().toISOString());
 
 export async function accountData(db: ManagementDB, client: ClientRow, user: VerifiedIdentity) {
-  const [license, devices, orders] = await Promise.all([
+  const [license, devices, remoteDevices, orders] = await Promise.all([
     db
       .prepare(
         `SELECT l.*,b.enabled AS tv_enabled,c.status AS client_status FROM licenses l
@@ -495,6 +496,13 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
       )
       .bind(client.id)
       .all(),
+    db
+      .prepare(
+        `SELECT id,edition,kind,name,last_seen AS lastSeen FROM remote_devices
+        WHERE owner_id=? ORDER BY paired_at DESC,id LIMIT 10`,
+      )
+      .bind(user.id)
+      .all<RemoteDeviceSummary>(),
     db
       .prepare(
         `SELECT id,paid_at,plan_id,amount_cents FROM payments
@@ -535,6 +543,7 @@ export async function accountData(db: ManagementDB, client: ClientRow, user: Ver
         }
       : null,
     devices: devices.results,
+    remoteDevices: remoteDevices.results,
     orders: orders.results.map((p) => ({
       id: p.id,
       date: p.paid_at,

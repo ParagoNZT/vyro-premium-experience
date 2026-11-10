@@ -133,6 +133,10 @@ export type RemoteDevice = {
   lastSeen: string | null;
   catalog: RemoteCatalog | null;
 };
+export type RemoteDeviceSummary = Pick<
+  RemoteDevice,
+  "id" | "edition" | "kind" | "name" | "lastSeen"
+>;
 export type RemoteOverview = {
   devices: RemoteDevice[];
   backups: { id: string; name: string; source: string; date: string; full: boolean }[];

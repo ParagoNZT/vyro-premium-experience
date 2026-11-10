@@ -11,6 +11,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "./auth-context";
 import { portalApi, PortalApiError } from "./portal-api";
+import type { RemoteDeviceSummary } from "./remote-contract";
 
 export type Subscription = {
   planId: string;
@@ -38,6 +39,7 @@ export type User = {
   licenseKey: string;
   subscription: Subscription | null;
   devices: Device[];
+  remoteDevices: RemoteDeviceSummary[];
   orders: Order[];
 };
 
@@ -72,6 +74,7 @@ function identityOnly({ user }: Session): User {
     licenseKey: "",
     subscription: null,
     devices: [],
+    remoteDevices: [],
     orders: [],
   };
 }

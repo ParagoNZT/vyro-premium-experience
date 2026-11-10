@@ -1501,6 +1501,27 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     await pair(tvDevice, "tv");
     await pair(phone, "mobile");
     await pair(other, "tv", "second", "show-plus");
+    const myDevices = (await call("/api/account", { token: "first" })).json;
+    assert.deepEqual(
+      myDevices.remoteDevices.map((d) => d.id).sort(),
+      [tvDevice.id, phone.id].sort(),
+    );
+    assert.deepEqual(Object.keys(myDevices.remoteDevices[0]).sort(), [
+      "edition",
+      "id",
+      "kind",
+      "lastSeen",
+      "name",
+    ]);
+    assert.equal(myDevices.subscription.devicesUsed, myDevices.devices.length);
+    assert.ok(
+      myDevices.devices.every((device) => device.id !== tvDevice.id && device.id !== phone.id),
+    );
+    const otherDevices = (await call("/api/account", { token: "second" })).json;
+    assert.deepEqual(
+      otherDevices.remoteDevices.map((d) => d.id),
+      [other.id],
+    );
     const playlist = bundle.playlist;
     const context = "a".repeat(64);
     const groups = bundle.groups;
@@ -1713,6 +1734,10 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     assert.equal((await browser({ action: "unlink", device: tvDevice.id }, "second")).status, 404);
     assert.equal((await browser({ action: "unlink", device: tvDevice.id })).status, 200);
     assert.equal((await tvDevice.send({ action: "poll", catalog: manifest })).json.linked, false);
+    assert.deepEqual(
+      (await call("/api/account", { token: "first" })).json.remoteDevices.map((d) => d.id),
+      [phone.id],
+    );
   });
 
   await t.test("white label order, separate coverage and admin deadlines", async () => {

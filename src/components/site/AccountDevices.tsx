@@ -8,8 +8,10 @@ import {
   Download,
   KeyRound,
   Monitor,
+  QrCode,
   RefreshCw,
   Search,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { PortalNotice } from "@/components/site/AuthShell";
@@ -24,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth, type Device } from "@/lib/auth";
+import type { RemoteDeviceSummary } from "@/lib/remote-contract";
 
 export function AccountHero({
   label,
@@ -68,6 +71,69 @@ const activityFormat = new Intl.DateTimeFormat("fr-FR", {
 
 function searchText(value: string) {
   return value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("fr");
+}
+
+function RemoteDeviceList({ devices }: { devices: RemoteDeviceSummary[] }) {
+  return (
+    <section
+      id="appareils-gestion"
+      className="account-card account-remote-list"
+      aria-labelledby="account-remote-heading"
+    >
+      <div className="account-list-toolbar">
+        <div className="account-list-title">
+          <QrCode size={18} aria-hidden />
+          <h3 id="account-remote-heading">Appareils associés par QR code</h3>
+          <span className="account-count">{devices.length}</span>
+        </div>
+        <p className="account-remote-note">
+          Pour gérer vos playlists et vos sauvegardes à distance. L’activation de la licence se fait
+          séparément avec votre clé.
+        </p>
+      </div>
+      {devices.length ? (
+        <ul className="account-device-items">
+          {devices.map((device) => {
+            const Icon = device.kind === "mobile" ? Smartphone : Monitor;
+            const platform =
+              device.kind === "mobile"
+                ? "Mobile"
+                : /^Amazon\s+AFT/i.test(device.name)
+                  ? "Fire TV"
+                  : "TV";
+            return (
+              <li key={device.id}>
+                <Link
+                  className="account-device-row"
+                  to="/account/gestion"
+                  search={{ appareil: device.id }}
+                  aria-label={`Gérer ${device.name} à distance`}
+                >
+                  <span className="account-icon">
+                    <Icon size={19} aria-hidden />
+                  </span>
+                  <span className="account-device-row-copy">
+                    <strong>{device.name}</strong>
+                    <small>
+                      {platform} · {device.edition === "vyro" ? "VYRO" : "SHOW+"}
+                    </small>
+                  </span>
+                  <ChevronRight size={16} aria-hidden />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="account-remote-note account-remote-empty">
+          Aucun appareil associé par QR code.{" "}
+          <Link to="/account/gestion" className="underline">
+            Voir comment associer un appareil
+          </Link>
+        </p>
+      )}
+    </section>
+  );
 }
 
 export function AccountDevices() {
@@ -148,11 +214,13 @@ export function AccountDevices() {
 
       {feedback && <PortalNotice error={feedback.error ?? false}>{feedback.text}</PortalNotice>}
 
+      <RemoteDeviceList devices={user?.remoteDevices ?? []} />
+
       <div className="account-device-grid">
         <div className="account-card account-device-list">
           <div className="account-list-toolbar">
             <div className="account-list-title">
-              <h3>Mes appareils</h3>
+              <h3>Appareils activés sur ma licence</h3>
               <span className="account-count">
                 <AccountDeviceCount
                   count={devices.length}
@@ -212,11 +280,11 @@ export function AccountDevices() {
                   <Monitor size={20} aria-hidden />
                 )}
               </span>
-              <p>{devices.length ? "Aucun résultat" : "Aucun appareil associé"}</p>
+              <p>{devices.length ? "Aucun résultat" : "Aucun appareil activé sur la licence"}</p>
               <small>
                 {devices.length
                   ? "Essayez un autre nom ou une autre plateforme."
-                  : "Votre téléviseur apparaîtra ici après l’activation de VYRO."}
+                  : "Votre téléviseur apparaîtra ici après l’activation avec votre clé VYRO."}
               </small>
               {query && (
                 <button
@@ -423,13 +491,20 @@ export function AccountActivation() {
           </span>
           <div>
             <p className="account-eyebrow">Activation sur la TV</p>
-            <h2 id="account-activation-heading">Associer un téléviseur</h2>
+            <h2 id="account-activation-heading">Activer un téléviseur avec ma clé</h2>
           </div>
         </div>
         <Link to="/account/guides" className="account-button">
           <BookOpen size={16} aria-hidden /> Guides de configuration
         </Link>
       </div>
+      <p className="account-remote-note">
+        Déjà associé avec le QR code ?{" "}
+        <a href="#appareils-gestion" className="underline">
+          Voir mes appareils pour la gestion à distance
+        </a>
+        .
+      </p>
       <ol className="account-activation-steps">
         <li>
           <span aria-hidden>01</span>

@@ -27,7 +27,7 @@ function DevicesPage() {
         title="Mes appareils"
         action={
           <a href="#activation-tv" className="account-button account-button-on-dark">
-            Associer un téléviseur <ArrowDown size={16} aria-hidden />
+            Activer avec une clé <ArrowDown size={16} aria-hidden />
           </a>
         }
         summary={
@@ -39,11 +39,11 @@ function DevicesPage() {
             <strong className="account-summary-number">
               <AccountDeviceCount count={count} limit={limit} />
             </strong>
-            <p className="account-summary-days">Appareils associés</p>
+            <p className="account-summary-days">Appareils activés sur la licence</p>
           </>
         }
       >
-        Retrouvez vos appareils et retirez ceux que vous n’utilisez plus.
+        Retrouvez vos appareils associés par QR code et ceux activés avec votre clé de licence.
       </AccountHero>
       <AccountDevices />
       <AccountActivation />

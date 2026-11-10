@@ -514,6 +514,20 @@
   font-weight: 650;
 }
 
+.account-remote-list {
+  scroll-margin-top: 5rem;
+}
+
+.account-remote-note {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.account-remote-empty {
+  padding: 0 1rem 1rem;
+}
+
 .account-count {
   padding: 0.13rem 0.55rem;
   color: #532b87;

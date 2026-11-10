@@ -20,7 +20,7 @@ export const Route = createFileRoute("/associer")({
 });
 
 function Pair() {
-  const { ready, user } = useAuth();
+  const { ready, user, refreshAccount } = useAuth();
   const [proof, setProof] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [device, setDevice] = useState<{ name: string; edition: string; kind: string } | null>(
@@ -63,6 +63,7 @@ function Pair() {
       });
       sessionStorage.removeItem(key);
       setDone(true);
+      void refreshAccount().catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "L’association a échoué.");
     } finally {
@@ -84,6 +85,15 @@ function Pair() {
             <Button asChild>
               <Link to="/account/gestion">Ouvrir la gestion à distance</Link>
             </Button>
+            <p>
+              <Link
+                to="/account/appareils"
+                hash="appareils-gestion"
+                className="text-sm text-primary underline"
+              >
+                Voir l’appareil dans Mes appareils
+              </Link>
+            </p>
           </>
         ) : !proof ? (
           <p>
