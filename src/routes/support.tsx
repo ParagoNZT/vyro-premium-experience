@@ -67,7 +67,7 @@ const ARTICLES = [
   {
     category: "Abonnement",
     title: "Renouveler ou prolonger l'accès",
-    body: "Rendez-vous dans votre espace client, section Mon abonnement, puis choisissez une nouvelle durée. Le temps restant est conservé et prolongé.",
+    body: "Consultez l’échéance de votre licence et les packs proposés dans la rubrique Mon abonnement. Les achats en ligne sont indisponibles pour le moment.",
   },
   {
     category: "Abonnement",

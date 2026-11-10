@@ -28,7 +28,9 @@ Browser writes send JSON with their same-origin `Origin`; private requests send 
 
 `useAuth()` retains its entry point and adds `accountError` and `refreshAccount()`. Signup returns `null` when confirmation is required. The login recovery screen must only enter reset mode for Supabase's recovery flow. After `/account?payment=processing`, refresh the account while waiting for the webhook. A successful test checkout does not grant access.
 
-The configured administrator is the console owner. Apply D1 migration `0014_admin_delegation_and_license_expiry.sql` before deploying code that reads delegated roles. `GET /api/admin` returns `role: "owner" | "admin"`. Only the owner may use the `client-admin-role` management action on another confirmed, linked client. The grant is checked on each admin request and removed independently of reseller memberships. Administrators can use `grant-license-until` for a date inclusive in Europe/Paris; it updates the linked TV access, preserves the key, and rejects a quota below the number of linked devices. Standard checkout terms and prices are unchanged.
+The configured administrator is the console owner. Apply D1 migration `0014_admin_delegation_and_license_expiry.sql` before deploying code that reads delegated roles. `GET /api/admin` returns `role: "owner" | "admin"`. Only the owner may use the `client-admin-role` management action on another confirmed, linked client. The grant is checked on each admin request and removed independently of reseller memberships. Administrators can use `grant-license-until` for a date inclusive in Europe/Paris; it updates the linked TV access, preserves the key, and rejects a quota below the number of linked devices.
+
+The public catalogue shows three 12-month packs (Solo, Maison, Famille) and a five-device lifetime pack. The `/checkout` page currently only displays pack details. Keep `VYRO_STRIPE_ENABLED=false` until the checkout and fulfilment endpoints support the new pack IDs, their quotas and the lifetime term. Historical orders and existing licences keep their original terms.
 
 ## Build and binding verification
 

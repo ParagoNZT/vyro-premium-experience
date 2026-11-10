@@ -9,13 +9,11 @@ export type Plan = {
   name: string;
   price: number; // TTC, en euros
   currency: string;
-  badge?: string;
-  highlight?: boolean;
-  cta: string;
 };
 
 export const CURRENCY = "EUR";
 
+// Historical terms used by existing licences, receipts and the admin grant form.
 export const PLANS: Plan[] = [
   {
     id: "3m",
@@ -23,7 +21,6 @@ export const PLANS: Plan[] = [
     name: "3 mois",
     price: 24.9,
     currency: CURRENCY,
-    cta: "Choisir 3 mois",
   },
   {
     id: "6m",
@@ -31,8 +28,6 @@ export const PLANS: Plan[] = [
     name: "6 mois",
     price: 44.9,
     currency: CURRENCY,
-    badge: "Le plus populaire",
-    cta: "Choisir 6 mois",
   },
   {
     id: "12m",
@@ -40,25 +35,43 @@ export const PLANS: Plan[] = [
     name: "12 mois",
     price: 79.9,
     currency: CURRENCY,
-    badge: "Meilleure offre",
-    highlight: true,
-    cta: "Choisir 12 mois",
   },
 ];
 
+export const PACK_IDS = ["solo", "maison", "famille", "a-vie"] as const;
+export type PackId = (typeof PACK_IDS)[number];
+export type Pack = {
+  id: PackId;
+  name: string;
+  price: number;
+  devices: 1 | 3 | 5;
+  term: "annual" | "lifetime";
+};
+
+// Public catalogue. These IDs are separate from the historical payment and licence terms.
+const packById: Record<PackId, Omit<Pack, "id">> = {
+  solo: { name: "Solo", price: 9.99, devices: 1, term: "annual" },
+  maison: { name: "Maison", price: 19.99, devices: 3, term: "annual" },
+  famille: { name: "Famille", price: 29.99, devices: 5, term: "annual" },
+  "a-vie": { name: "À vie", price: 49.99, devices: 5, term: "lifetime" },
+};
+export const getPack = (id: PackId): Pack => ({ id, ...packById[id] });
+export const PACKS = PACK_IDS.map(getPack);
+export const packDevices = (pack: Pack) =>
+  `${pack.devices} appareil${pack.devices === 1 ? "" : "s"}`;
+export const packBilling = (pack: Pack) => (pack.term === "annual" ? "par an" : "paiement unique");
+export const PACK_ORDER_NOTICE = "Les achats en ligne sont indisponibles pour le moment.";
+
 export const PLAN_INCLUDED = [
-  "VYRO Premium",
-  "Live TV",
-  "Films & séries",
-  "Guide TV",
+  "Lecteur TV et mobile Android",
+  "Direct et guide TV avec votre source",
+  "Films et séries de votre source",
+  "Gestion des playlists à distance",
+  "Sauvegarde et restauration",
+  "Synchronisation entre appareils compatibles",
   "Mises à jour",
   "Support",
-  "Compte VYRO",
-  "Compatible Android TV / Google TV / Fire TV",
 ];
-
-/** Nombre d'appareils autorisés par licence — défini côté backend. */
-export const LICENSE_DEVICE_LIMIT: number | null = null;
 
 export const formatPrice = (value: number, currency = CURRENCY) =>
   new Intl.NumberFormat("fr-FR", {
@@ -66,9 +79,6 @@ export const formatPrice = (value: number, currency = CURRENCY) =>
     currency,
     minimumFractionDigits: 2,
   }).format(value);
-
-export const monthlyEquivalent = (plan: Plan) =>
-  formatPrice(Math.round((plan.price / plan.months) * 100) / 100);
 
 export const getPlan = (id: string) => PLANS.find((p) => p.id === id);
 
@@ -151,7 +161,7 @@ export const FAQ = [
   },
   {
     q: "Puis-je installer VYRO sur plusieurs appareils ?",
-    a: "Le nombre d'appareils autorisés dépend des règles de licence appliquées à votre compte. Le détail exact est affiché dans votre espace client, section « Mes appareils ».",
+    a: "Les packs annuels couvrent 1, 3 ou 5 appareils. Le pack À vie couvre 5 appareils sur le même compte. Vous pouvez vérifier le quota de votre licence actuelle depuis l’espace client.",
   },
   {
     q: "Comment retrouver mes réglages sur un autre appareil ?",
@@ -159,7 +169,7 @@ export const FAQ = [
   },
   {
     q: "Comment installer VYRO Premium ?",
-    a: "Après l'achat, le fichier d'installation et les instructions correspondant à votre appareil sont disponibles dans votre espace client, section « Télécharger VYRO ».",
+    a: "Si vous avez une licence active, retrouvez les fichiers disponibles et les instructions correspondant à votre appareil dans votre espace client, section « Télécharger VYRO ».",
   },
   {
     q: "Comment connecter mon service ?",
@@ -174,8 +184,12 @@ export const FAQ = [
     a: "Oui. La progression de lecture est enregistrée sur votre profil VYRO. Si vous activez Trakt, elle est également synchronisée avec votre compte Trakt.",
   },
   {
-    q: "Comment renouveler mon abonnement ?",
-    a: "Depuis votre espace client, section « Mon abonnement ». Le renouvellement prolonge automatiquement la validité de votre licence.",
+    q: "Quelle est la différence entre les packs annuels et le pack À vie ?",
+    a: "Les packs annuels couvrent 12 mois, sans renouvellement automatique. Le pack À vie couvre 5 appareils sans échéance annuelle, avec un seul paiement.",
+  },
+  {
+    q: "Puis-je acheter un pack maintenant ?",
+    a: PACK_ORDER_NOTICE,
   },
 ];
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Receipt } from "lucide-react";
-import { PLANS, formatPrice } from "@/config/site";
+import { PACKS, PACK_ORDER_NOTICE, formatPrice, packBilling, packDevices } from "@/config/site";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/site/Button";
 import { PortalHeading } from "@/components/site/AuthShell";
@@ -53,19 +53,18 @@ function SubscriptionPage() {
         )}
       </div>
       <section className="mt-9">
-        <h2 className="font-display text-xl font-semibold">
-          {isActive ? "Prolonger votre accès" : "Choisir une offre"}
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Une durée fixe, sans renouvellement automatique.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div key={plan.id} className="portal-panel flex flex-col items-start p-5">
-              <p className="text-sm font-medium">{plan.name}</p>
-              <p className="mb-4 mt-2 font-display text-2xl">{formatPrice(plan.price)}</p>
-              <Button to="/checkout" search={{ plan: plan.id }} size="sm" variant="secondary">
-                Choisir {plan.name}
+        <h2 className="font-display text-xl font-semibold">Les packs VYRO</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{PACK_ORDER_NOTICE}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {PACKS.map((pack) => (
+            <div key={pack.id} className="portal-panel flex flex-col items-start p-5">
+              <h3 className="text-sm font-medium">
+                {pack.name} · {packDevices(pack)}
+              </h3>
+              <p className="mt-2 font-display text-2xl">{formatPrice(pack.price)}</p>
+              <p className="mb-4 text-xs text-muted-foreground">{packBilling(pack)}</p>
+              <Button to="/checkout" search={{ plan: pack.id }} size="sm" variant="secondary">
+                Voir le pack {pack.name}
               </Button>
             </div>
           ))}

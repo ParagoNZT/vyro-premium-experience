@@ -17,12 +17,12 @@ export const Route = createFileRoute("/tarifs")({
       {
         name: "description",
         content:
-          "Choisissez votre accès à l'application VYRO Premium : 3, 6 ou 12 mois. Un seul abonnement, toute l'expérience VYRO Premium.",
+          "Comparez les packs VYRO Premium : 1, 3 ou 5 appareils à partir de 9,99 € par an, ou 5 appareils à vie pour 49,99 €.",
       },
       { property: "og:title", content: "Tarifs – VYRO Premium" },
       {
         property: "og:description",
-        content: "3, 6 ou 12 mois d'accès à l'application VYRO Premium.",
+        content: "Packs annuels pour 1, 3 ou 5 appareils et pack À vie pour 5 appareils.",
       },
       { property: "og:url", content: "/tarifs" },
     ],
@@ -42,7 +42,8 @@ function PricingPage() {
             </p>
             <h1 className="vyro-display-title">Choisissez votre accès VYRO.</h1>
             <Lead className="mt-5">
-              Les mêmes fonctionnalités, avec 3, 6 ou 12 mois d’accès au lecteur.
+              Les mêmes fonctionnalités dans tous les packs. Choisissez le nombre d’appareils et un
+              accès annuel ou à vie.
             </Lead>
           </Reveal>
         </Section>

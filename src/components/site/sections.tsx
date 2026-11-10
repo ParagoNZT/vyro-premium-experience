@@ -6,10 +6,12 @@ import {
   DISCLAIMER,
   FAQ,
   INTEGRATIONS,
-  PLANS,
+  PACKS,
+  PACK_ORDER_NOTICE,
   PLAN_INCLUDED,
   formatPrice,
-  monthlyEquivalent,
+  packBilling,
+  packDevices,
 } from "@/config/site";
 
 export function Section({
@@ -222,56 +224,49 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
       {withHeading ? (
         <Reveal className="mx-auto max-w-2xl text-center">
           <Heading>Choisissez votre accès VYRO Premium.</Heading>
-          <Lead className="mt-5">Choisissez 3, 6 ou 12 mois d’accès au lecteur.</Lead>
+          <Lead className="mt-5">
+            Un accès annuel pour 1, 3 ou 5 appareils, ou à vie pour 5 appareils.
+          </Lead>
         </Reveal>
       ) : null}
 
-      <div className="mt-14 grid gap-4 lg:grid-cols-3">
-        {PLANS.map((plan, i) => (
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {PACKS.map((pack, i) => (
           <Reveal
-            key={plan.id}
-            delay={i * 80}
+            key={pack.id}
+            delay={i * 60}
             className={cn(
-              "vyro-price-card panel relative flex flex-col p-7",
-              plan.highlight && "border-primary/28 shadow-[var(--shadow-glow)]",
+              "vyro-price-card panel relative flex flex-col p-5 sm:p-6",
+              pack.term === "lifetime" && "border-primary/28 shadow-[var(--shadow-glow)]",
             )}
           >
-            {plan.highlight ? (
+            {pack.term === "lifetime" ? (
               <div aria-hidden className="halo -inset-16 -z-10 opacity-25" />
             ) : null}
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-display text-lg font-medium">{plan.name}</h3>
-              {plan.badge ? (
-                <span
-                  className={cn(
-                    "rounded-[6px] px-2 py-0.5 text-[11px] font-medium",
-                    plan.highlight
-                      ? "bg-primary/12 text-primary"
-                      : "bg-surface-2 text-muted-foreground",
-                  )}
-                >
-                  {plan.badge}
-                </span>
-              ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-display text-lg font-medium">{pack.name}</h3>
+              <span className="rounded-md bg-primary/12 px-2 py-0.5 text-xs font-medium text-primary">
+                {packDevices(pack)}
+              </span>
             </div>
-            <p className="mt-7 font-display text-4xl font-semibold tracking-tight">
-              {formatPrice(plan.price)}
+            <p className="mt-6 font-display text-4xl font-semibold tracking-tight">
+              {formatPrice(pack.price)}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              soit {monthlyEquivalent(plan)} / mois · accès {plan.months} mois
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{packBilling(pack)}</p>
             <Button
               to="/checkout"
-              search={{ plan: plan.id }}
-              variant={plan.highlight ? "primary" : "secondary"}
+              search={{ plan: pack.id }}
+              variant={pack.term === "lifetime" ? "primary" : "secondary"}
               size="md"
               className="mt-8 w-full"
             >
-              {plan.cta} <ArrowUpRight size={16} aria-hidden />
+              Voir le pack {pack.name} <ArrowUpRight size={16} aria-hidden />
             </Button>
           </Reveal>
         ))}
       </div>
+
+      <p className="my-4 text-center text-sm text-muted-foreground">{PACK_ORDER_NOTICE}</p>
 
       <Reveal className="panel mt-4 p-7">
         <p className="text-sm font-medium">Inclus dans chaque offre</p>
@@ -286,8 +281,8 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
       </Reveal>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        L'abonnement concerne l'accès à l'application VYRO Premium. Aucune chaîne, aucun film et
-        aucune série n'est vendu ni inclus.
+        Chaque pack donne accès au lecteur VYRO Premium. Aucune chaîne, aucun film ni aucune série
+        n’est inclus.
       </p>
     </Section>
   );

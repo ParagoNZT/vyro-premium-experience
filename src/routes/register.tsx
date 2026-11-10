@@ -4,6 +4,7 @@ import { ArrowRight, MailCheck } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/site/ScreeningAuth";
+import { PACK_IDS } from "@/config/site";
 
 const searchSchema = z.object({
   redirect: z
@@ -21,7 +22,7 @@ const searchSchema = z.object({
     ])
     .optional()
     .catch(undefined),
-  plan: z.enum(["3m", "6m", "12m"]).optional().catch(undefined),
+  plan: z.enum(PACK_IDS).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/register")({
