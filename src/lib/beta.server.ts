@@ -15,6 +15,7 @@ const accessOrigins = `
         WHEN a.id IS NOT NULL THEN 'partner:'||a.id
         WHEN ${showRegistration} THEN 'show-plus'
         WHEN ${showNeedsReview} THEN 'review'
+        WHEN upper(trim(c.name))='SHOW+' THEN 'show-plus'
         ELSE 'direct' END AS scopeKey,
       coalesce(r.name,a.name) AS assignedName,
       CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END AS managedOnSite,
@@ -98,9 +99,10 @@ export const betaRequest = api(async (request) => {
   const partnerId = partnerKind ? scope.slice(partnerKind.length + 1) : null;
   let scopeSql = "1=1";
   const scopeArgs: string[] = [];
-  if (scope === "resellers") scopeSql = "scopeKey LIKE 'reseller:%'";
+  const showAccess = "scopeKey IN ('show-plus','review')";
+  if (scope === "resellers") scopeSql = `(scopeKey LIKE 'reseller:%' OR ${showAccess})`;
   else if (scope === "partners") scopeSql = "scopeKey LIKE 'partner:%'";
-  else if (scope === "show-plus") scopeSql = "scopeKey IN ('show-plus','review')";
+  else if (scope === "show-plus") scopeSql = showAccess;
   else if (
     ["review", "direct"].includes(scope) ||
     (partnerId && z.string().uuid().safeParse(partnerId).success)

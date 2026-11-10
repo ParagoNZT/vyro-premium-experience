@@ -49,7 +49,7 @@ function inputDate(value: string | null) {
 }
 
 function origin(access: Access) {
-  if (access.scopeKey === "show-plus") return "SHOW+";
+  if (access.scopeKey === "show-plus") return "Revendeur · SHOW+";
   if (access.scopeKey === "review") return "SHOW+ · À vérifier";
   if (access.scopeKey.startsWith("reseller:"))
     return access.resellerName ? "Revendeur · " + access.resellerName : "Revendeur";
@@ -247,7 +247,7 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
           <div className="va-card-head">
             <div>
               <h2 id="va-access-list-title">Liste des accès TV</h2>
-              <p>Choisissez les clients directs, SHOW+ ou un revendeur précis.</p>
+              <p>Choisissez les clients directs ou un revendeur, dont SHOW+.</p>
             </div>
             <button
               className="va-button va-button-secondary va-refresh"
@@ -272,20 +272,18 @@ export function BetaPanel({ onAccessDenied }: { onAccessDenied: (status: 401 | 4
                   setNotice("");
                 }}
               >
-                <optgroup label="Accès directs et SHOW+">
+                <optgroup label="Clients directs">
                   <option value="direct">Clients directs VYRO</option>
-                  <option value="show-plus">Tous les accès SHOW+</option>
                 </optgroup>
-                {resellers.length > 0 && (
-                  <optgroup label="Revendeurs">
-                    <option value="resellers">Tous les revendeurs</option>
-                    {resellers.map((reseller) => (
-                      <option key={reseller.id} value={`reseller:${reseller.id}`}>
-                        {reseller.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
+                <optgroup label="Revendeurs">
+                  <option value="resellers">Tous les revendeurs</option>
+                  <option value="show-plus">SHOW+</option>
+                  {resellers.map((reseller) => (
+                    <option key={reseller.id} value={`reseller:${reseller.id}`}>
+                      {reseller.name}
+                    </option>
+                  ))}
+                </optgroup>
                 {partners.length > 0 && (
                   <optgroup label="Applications partenaires">
                     <option value="partners">Toutes les applications partenaires</option>

@@ -254,6 +254,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       const app = randomUUID();
       const assigned = randomUUID();
       const ambiguous = randomUUID();
+      const legacyShow = randomUUID();
       sqlite
         .prepare(
           "INSERT INTO resellers VALUES (?, 'Revendeur 2', 'second-hash', 'second-token', 1, ?)",
@@ -268,6 +269,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       );
       insertAccess.run(assigned, "assigned-fixture", "Application client", fixtureDate, null);
       insertAccess.run(ambiguous, "ambiguous-fixture", "SHOW+ - À examiner", fixtureDate, null);
+      insertAccess.run(legacyShow, "legacy-show-fixture", "SHOW+", fixtureDate, null);
       sqlite
         .prepare(
           "INSERT INTO show_installations VALUES ('conflict-device','conflict-token','ambiguous-fixture','partner-fixture',?)",
@@ -296,7 +298,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
         );
         assert.deepEqual(
           new Set((await list("show-plus")).map((c) => c.id)),
-          new Set([showFixture, reviewFixture, ambiguous]),
+          new Set([showFixture, reviewFixture, ambiguous, legacyShow]),
         );
         assert.deepEqual(
           (await list("review")).map((c) => c.id),
@@ -308,7 +310,14 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
         );
         assert.deepEqual(
           new Set((await list("resellers")).map((c) => c.id)),
-          new Set([partnerFixture, secondAccess]),
+          new Set([
+            showFixture,
+            reviewFixture,
+            ambiguous,
+            legacyShow,
+            partnerFixture,
+            secondAccess,
+          ]),
         );
         assert.deepEqual(
           (await list("partner:" + app)).map((c) => c.id),
@@ -320,7 +329,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
         );
       } finally {
         sqlite.exec(
-          "DELETE FROM codes WHERE code_hash IN ('reseller-two-fixture','assigned-fixture','ambiguous-fixture')",
+          "DELETE FROM codes WHERE code_hash IN ('reseller-two-fixture','assigned-fixture','ambiguous-fixture','legacy-show-fixture')",
         );
         sqlite.prepare("DELETE FROM partner_apps WHERE id=?").run(app);
         sqlite.prepare("DELETE FROM resellers WHERE id=?").run(secondReseller);
