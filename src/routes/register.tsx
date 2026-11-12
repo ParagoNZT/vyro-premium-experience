@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/site/ScreeningAuth";
 import { PACK_IDS } from "@/config/site";
+import { resellerOrderRoute, resellerPath } from "@/lib/reseller-navigation";
 
 const searchSchema = z.object({
   redirect: z
@@ -21,6 +22,7 @@ const searchSchema = z.object({
       "/account/guides",
       "/account/profil",
       "/account/support",
+      resellerPath,
     ])
     .optional()
     .catch(undefined),
@@ -68,6 +70,7 @@ function RegisterPage() {
       const created = await signUp(username.trim(), email.trim(), password);
       setPassword("");
       if (!created) setAwaitingEmail(true);
+      else if (redirect === resellerPath) await navigate(resellerOrderRoute);
       else if (redirect) await navigate({ to: redirect });
       else if (plan) await navigate({ to: "/checkout", search: { plan } });
       else await navigate({ to: "/account" });

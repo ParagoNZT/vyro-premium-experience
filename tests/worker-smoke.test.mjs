@@ -203,6 +203,31 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     assert.match(page.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
     assert.equal(page.headers.get("x-frame-options"), "DENY");
   });
+  await t.test("reseller pages send visitors to the order flow in both languages", async () => {
+    const render = async (path) => {
+      const page = await worker.fetch(
+        new Request(origin + path, { headers: { accept: "text/html" } }),
+        env,
+        ctx,
+      );
+      assert.equal(page.status, 200);
+      return page.text();
+    };
+    const [fr, en, login] = await Promise.all([
+      render("/revendeurs"),
+      render("/en/resellers"),
+      render("/en/login?redirect=%2Faccount%2Freseller"),
+    ]);
+    assert.match(fr, /Votre application Android,/);
+    assert.match(fr, /href="\/login\?redirect=%2Faccount%2Freseller"/i);
+    assert.match(fr, /hrefLang="en" href="https:\/\/vyro-player\.app\/en\/resellers"/i);
+    assert.match(en, /<html lang="en"/);
+    assert.match(en, /Request my app/);
+    assert.match(en, /€100/);
+    assert.match(en, /€20/);
+    assert.match(en, /href="\/en\/login\?redirect=%2Faccount%2Freseller"/i);
+    assert.match(login, /href="\/en\/register\?redirect=%2Faccount%2Freseller"/i);
+  });
   async function call(path, { token, body, signature, native } = {}) {
     const headers = new Headers();
     if (token) headers.set("authorization", "Bearer " + token);
@@ -1906,6 +1931,11 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
       updates: true,
     });
     assert.equal(ordered.status, 201, JSON.stringify(ordered));
+    const pending = (await call(partnerApi, { token: "second" })).json.orders.find(
+      (order) => order.id === ordered.json.id,
+    );
+    assert.equal(pending.status, "pending");
+    assert.equal(pending.cents, 10000);
     const adminPath = partnerApi + "?view=admin";
     const decide = (id) =>
       post(adminPath, "admin", { action: "decision", id, paid: true, receipt: "REG TEST" });

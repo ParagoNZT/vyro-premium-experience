@@ -11,6 +11,7 @@ import type {
 } from "@/lib/partner-control.server";
 import type { ShowDirectoryPage } from "@/lib/show-directory.server";
 import { ShowDirectory } from "./ShowDirectory";
+import { resellerCreationCents, resellerUpdatesCents } from "@/config/reseller-offer";
 
 type Device = ShowDirectoryPage["devices"][number];
 const textArea =
@@ -34,6 +35,9 @@ const euro = new Intl.NumberFormat("fr-FR", {
   currency: "EUR",
   maximumFractionDigits: 0,
 });
+const creationPrice = euro.format(resellerCreationCents / 100);
+const updatesPrice = euro.format(resellerUpdatesCents / 100);
+const firstYearPrice = euro.format((resellerCreationCents + resellerUpdatesCents) / 100);
 const shortDate = (value: string) => new Date(value).toLocaleDateString("fr-FR");
 const partnerViews = {
   devices: { label: "Appareils", Icon: Monitor },
@@ -47,11 +51,17 @@ const formValues = (event: FormEvent<HTMLFormElement>) => {
   return Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
 };
 
-export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
+export function PartnerWorkspace({
+  admin = false,
+  initialView = "devices",
+}: {
+  admin?: boolean;
+  initialView?: PartnerView;
+}) {
   const url = `/api/partner-control?view=${admin ? "admin" : "mine"}` as const;
   const [data, setData] = useState<PartnerOverview>();
   const [active, setActive] = useState("");
-  const [view, setView] = useState<PartnerView>("devices");
+  const [view, setView] = useState<PartnerView>(initialView);
   const [page, setPage] = useState(0);
   const [version, setVersion] = useState(0);
   const [notice, setNotice] = useState("");
@@ -315,8 +325,9 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
           </p>
           <h2 className="mt-1 font-display text-xl font-semibold">Commander votre application</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            <strong>100 €</strong> pour la création de votre application. En option,{" "}
-            <strong>20 €/an</strong> pour les mises à jour publiées pendant la période couverte.
+            <strong>{creationPrice}</strong> pour la création de votre application. En option,{" "}
+            <strong>{updatesPrice}/an</strong> pour les mises à jour publiées pendant la période
+            couverte.
           </p>
           <form
             className="mt-4 grid gap-3 sm:grid-cols-2"
@@ -402,14 +413,14 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
                 checked={wantUpdates}
                 onChange={(e) => setWantUpdates(e.target.checked)}
               />
-              Ajouter un an de mises à jour (+20 €, règlement séparé)
+              Ajouter un an de mises à jour (+{updatesPrice}, règlement séparé)
             </label>
             <p className="text-sm text-muted-foreground sm:col-span-2">
               Le paiement en ligne est désactivé. L’équipe VYRO confirme le règlement avant de
               préparer l’application.
             </p>
             <Button size="sm" className="justify-self-start" disabled={busy}>
-              Envoyer ma demande · {wantUpdates ? "120 €" : "100 €"}
+              Envoyer ma demande · {wantUpdates ? firstYearPrice : creationPrice}
             </Button>
           </form>
         </section>
@@ -438,7 +449,9 @@ export function PartnerWorkspace({ admin = false }: { admin?: boolean }) {
                     {item.email ? " · " + item.email : ""}
                   </p>
                   {item.wantsUpdates === 1 && (
-                    <p className="text-muted-foreground">Option annuelle demandée · 20 €</p>
+                    <p className="text-muted-foreground">
+                      Option annuelle demandée · {updatesPrice}
+                    </p>
                   )}
                   {admin && item.brief && (
                     <p className="max-w-prose whitespace-pre-wrap break-words">{item.brief}</p>
@@ -538,7 +551,11 @@ function AppSettings({
   app: PartnerApp;
   admin: boolean;
   busy: boolean;
-  save: (body: Record<string, unknown>, success: string, reset?: HTMLFormElement) => Promise<boolean>;
+  save: (
+    body: Record<string, unknown>,
+    success: string,
+    reset?: HTMLFormElement,
+  ) => Promise<boolean>;
   view: "server" | "release";
 }) {
   const initial = admin && app.id !== "show-plus" && !app.version;
@@ -626,7 +643,7 @@ function AppSettings({
                 )
               }
             >
-              Demander 1 an de mises à jour · 20 €
+              Demander 1 an de mises à jour · {updatesPrice}
             </Button>
           )}
           {app.canPublish || initial ? (

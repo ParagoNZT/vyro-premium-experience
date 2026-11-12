@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/site/ScreeningAuth";
 import { PACK_IDS } from "@/config/site";
 import { supabase } from "@/integrations/supabase/client";
+import { resellerOrderRoute, resellerPath } from "@/lib/reseller-navigation";
 import { useAuth } from "@/lib/auth";
 
 const searchSchema = z.object({
@@ -22,6 +23,7 @@ const searchSchema = z.object({
       "/account/guides",
       "/account/profil",
       "/account/support",
+      resellerPath,
     ])
     .optional()
     .catch(undefined),
@@ -46,7 +48,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const t = useCopy();
-  const { ready, signIn, signOut, requestPasswordReset, resetPassword } = useAuth();
+  const { ready, user, signIn, signOut, requestPasswordReset, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { redirect, plan, recovery } = Route.useSearch();
   const [mode, setMode] = useState<"login" | "forgot" | "reset">("login");
@@ -57,6 +59,12 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (ready && user && !busy && !recovery && mode === "login" && redirect === resellerPath) {
+      void navigate({ ...resellerOrderRoute, replace: true });
+    }
+  }, [ready, user, busy, recovery, mode, redirect, navigate]);
 
   useEffect(() => {
     if (!recovery) return;
@@ -127,7 +135,8 @@ function LoginPage() {
       } else {
         await signIn(email, password);
         setPassword("");
-        if (redirect) await navigate({ to: redirect });
+        if (redirect === resellerPath) await navigate(resellerOrderRoute);
+        else if (redirect) await navigate({ to: redirect });
         else if (plan) await navigate({ to: "/checkout", search: { plan } });
         else await navigate({ to: "/account" });
       }

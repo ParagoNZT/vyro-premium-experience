@@ -10,6 +10,7 @@ const englishPaths: Readonly<Record<string, string>> = {
   "/fonctionnalites": "/en/features",
   "/appareils": "/en/devices",
   "/tarifs": "/en/pricing",
+  "/revendeurs": "/en/resellers",
   "/download": "/en/download",
   "/support": "/en/support",
   "/faq": "/en/faq",

@@ -10,6 +10,7 @@ const groups = [
       ["/fonctionnalites", "L’application"],
       ["/appareils", "Appareils"],
       ["/tarifs", "Tarifs"],
+      ["/revendeurs", "Revendeurs"],
       ["/download", "Télécharger"],
     ],
   },

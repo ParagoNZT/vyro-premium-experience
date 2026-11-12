@@ -1,5 +1,10 @@
 // English copy for the public site. French text is the source and fallback.
 export const englishCopy: Readonly<Record<string, string>> = {
+  Revendeurs: "Resellers",
+  "Application Android en marque blanche – VYRO Revendeurs":
+    "White-label Android app – VYRO Resellers",
+  "Créez votre application Android avec VYRO : nom, logo, couleurs, serveur XC et gestion des appareils. Premier APK signé à 100 €, mises à jour en option.":
+    "Create a branded Android app with VYRO: your name, logo, colours, XC server and device management. First signed APK for €100, with optional updates.",
   "Association…": "Pairing…",
   Films: "Films",
   Lecteur: "Player",

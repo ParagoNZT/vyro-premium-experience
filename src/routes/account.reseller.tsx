@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Download,
@@ -21,6 +22,7 @@ import { PartnerWorkspace } from "@/components/account/PartnerWorkspace";
 import { resellerSchema, exportResellerConfig, type ResellerConfig } from "@/lib/reseller";
 
 export const Route = createFileRoute("/account/reseller")({
+  validateSearch: z.object({ view: z.literal("orders").optional().catch(undefined) }),
   head: () => ({
     meta: [
       { title: "Revendeur – VYRO Premium" },
@@ -43,6 +45,7 @@ export const Route = createFileRoute("/account/reseller")({
 });
 
 function ResellerPage() {
+  const { view } = Route.useSearch();
   const [config, setConfig] = useState<ResellerConfig>({
     name: "",
     package_name: "",
@@ -336,7 +339,12 @@ function ResellerPage() {
           </>
         )}
       </section>
-      {identity && <PartnerWorkspace key={identity.id + ":" + identity.email} />}
+      {identity && (
+        <PartnerWorkspace
+          key={identity.id + ":" + identity.email + ":" + (view ?? "devices")}
+          initialView={view ?? "devices"}
+        />
+      )}
       {error && (
         <p role="alert" className="mt-4 text-sm text-destructive">
           {error}

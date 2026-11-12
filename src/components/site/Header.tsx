@@ -10,6 +10,7 @@ const nav = [
   { to: "/fonctionnalites", label: "L’application" },
   { to: "/appareils", label: "Appareils" },
   { to: "/tarifs", label: "Tarifs" },
+  { to: "/revendeurs", label: "Revendeurs" },
   { to: "/support", label: "Assistance" },
 ] as const;
 

@@ -20,6 +20,7 @@ import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FonctionnalitesRouteImport } from './routes/fonctionnalites'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RevendeursRouteImport } from './routes/revendeurs'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TarifsRouteImport } from './routes/tarifs'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
@@ -111,6 +112,11 @@ const LoginRoute = LoginRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevendeursRoute = RevendeursRouteImport.update({
+  id: '/revendeurs',
+  path: '/revendeurs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/fonctionnalites': typeof FonctionnalitesRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/revendeurs': typeof RevendeursRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/fonctionnalites': typeof FonctionnalitesRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/revendeurs': typeof RevendeursRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
@@ -411,6 +419,7 @@ export interface FileRoutesById {
   '/fonctionnalites': typeof FonctionnalitesRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/revendeurs': typeof RevendeursRoute
   '/support': typeof SupportRoute
   '/tarifs': typeof TarifsRoute
   '/account/abonnement': typeof AccountAbonnementRoute
@@ -463,6 +472,7 @@ export interface FileRouteTypes {
     | '/fonctionnalites'
     | '/login'
     | '/register'
+    | '/revendeurs'
     | '/support'
     | '/tarifs'
     | '/account/abonnement'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/fonctionnalites'
     | '/login'
     | '/register'
+    | '/revendeurs'
     | '/support'
     | '/tarifs'
     | '/account/abonnement'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/fonctionnalites'
     | '/login'
     | '/register'
+    | '/revendeurs'
     | '/support'
     | '/tarifs'
     | '/account/abonnement'
@@ -613,6 +625,7 @@ export interface RootRouteChildren {
   FonctionnalitesRoute: typeof FonctionnalitesRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  RevendeursRoute: typeof RevendeursRoute
   SupportRoute: typeof SupportRoute
   TarifsRoute: typeof TarifsRoute
   ApiAccountRoute: typeof ApiAccountRoute
@@ -719,6 +732,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revendeurs': {
+      id: '/revendeurs'
+      path: '/revendeurs'
+      fullPath: '/revendeurs'
+      preLoaderRoute: typeof RevendeursRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -1024,6 +1044,7 @@ const rootRouteChildren: RootRouteChildren = {
   FonctionnalitesRoute: FonctionnalitesRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  RevendeursRoute: RevendeursRoute,
   SupportRoute: SupportRoute,
   TarifsRoute: TarifsRoute,
   ApiAccountRoute: ApiAccountRoute,

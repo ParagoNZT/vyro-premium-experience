@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resellerCreationCents, resellerUpdatesCents } from "@/config/reseller-offer";
 import { api, ApiError, body, identity, json } from "./access.server";
 import { database } from "./management.server";
 import { appScope } from "./partner-scope";
@@ -215,7 +216,7 @@ export const partnerControlRequest = api(async (request) => {
       .prepare(
         `INSERT OR IGNORE INTO partner_orders
       (id,owner_id,email,kind,name,package_name,cents,created_at,brief,accent,wants_updates)
-      SELECT ?,?,?,'app',?,?,10000,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
+      SELECT ?,?,?,'app',?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
       AND (SELECT count(*) FROM partner_orders WHERE owner_id=? AND kind='app' AND status='pending')<3`,
       )
       .bind(
@@ -224,6 +225,7 @@ export const partnerControlRequest = api(async (request) => {
         user.email,
         value.name,
         value.packageName,
+        resellerCreationCents,
         now,
         value.brief || null,
         value.accent ?? null,
@@ -281,11 +283,11 @@ export const partnerControlRequest = api(async (request) => {
             db
               .prepare(
                 `INSERT OR IGNORE INTO partner_orders(id,owner_id,email,kind,app_id,cents,created_at)
-              SELECT ?,o.owner_id,o.email,'updates',o.app_id,2000,? FROM partner_orders o
+              SELECT ?,o.owner_id,o.email,'updates',o.app_id,?,? FROM partner_orders o
               WHERE o.id=? AND o.kind='app' AND o.status='paid' AND o.app_id=?
                 AND o.wants_updates=1 AND o.paid_at=?`,
               )
-              .bind(crypto.randomUUID(), now, value.id, id, now),
+              .bind(crypto.randomUUID(), resellerUpdatesCents, now, value.id, id, now),
           ]
         : [update],
     );
@@ -300,9 +302,9 @@ export const partnerControlRequest = api(async (request) => {
     const written = await db
       .prepare(
         `INSERT OR IGNORE INTO partner_orders (id,owner_id,email,kind,app_id,cents,created_at)
-      SELECT ?,owner_id,?,'updates',id,2000,? FROM partner_apps WHERE id=? AND owner_id=?`,
+      SELECT ?,owner_id,?,'updates',id,?,? FROM partner_apps WHERE id=? AND owner_id=?`,
       )
-      .bind(id, user.email, now, value.app, user.id)
+      .bind(id, user.email, resellerUpdatesCents, now, value.app, user.id)
       .run();
     if (!written.meta.changes)
       throw new ApiError(409, "Une demande de mises à jour est déjà en cours.");
