@@ -73,8 +73,8 @@ export const PLAN_INCLUDED = [
   "Support",
 ];
 
-export const formatPrice = (value: number, currency = CURRENCY) =>
-  new Intl.NumberFormat("fr-FR", {
+export const formatPrice = (value: number, currency = CURRENCY, locale = "fr-FR") =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

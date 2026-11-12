@@ -168,6 +168,34 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
 
   const { default: worker } = await import("../.output/server/index.mjs");
   const ctx = { waitUntil() {}, passThroughOnException() {} };
+  await t.test("French and English pages have reciprocal crawlable URLs", async () => {
+    const render = (path) =>
+      worker.fetch(new Request(origin + path, { headers: { accept: "text/html" } }), env, ctx);
+    const [fr, en, signIn, unknown] = await Promise.all([
+      render("/"),
+      render("/en/pricing"),
+      render("/en/login"),
+      render("/en/api/account"),
+    ]);
+    assert.equal(fr.status, 200);
+    assert.equal(en.status, 200);
+    assert.equal(signIn.status, 200);
+    assert.equal(unknown.status, 404);
+    const [frenchPage, englishPage, signInPage] = await Promise.all([
+      fr.text(),
+      en.text(),
+      signIn.text(),
+    ]);
+    assert.match(frenchPage, /<html lang="fr"/);
+    assert.match(frenchPage, /href="\/vyro-icon\.png"/);
+    assert.match(frenchPage, /hrefLang="en" href="https:\/\/vyro-player\.app\/en"/i);
+    assert.match(englishPage, /<html lang="en"/);
+    assert.match(englishPage, /Choose your VYRO plan/);
+    assert.match(englishPage, /hrefLang="fr" href="https:\/\/vyro-player\.app\/tarifs"/i);
+    assert.match(englishPage, /rel="canonical" href="https:\/\/vyro-player\.app\/en\/pricing"/);
+    assert.match(signInPage, /<h1[^>]*>Sign in<\/h1>/);
+    assert.match(signInPage, /href="\/en\/register"/);
+  });
   await t.test("the public pairing page cannot be framed", async () => {
     const page = await worker.fetch(new Request(origin + "/associer"), env, ctx);
     assert.equal(page.status, 200);

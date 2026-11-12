@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { Logo } from "./Logo";
 import "./screening-auth.css";
 
@@ -59,17 +61,21 @@ export function ScreeningAuth({
   admin?: boolean;
   children: ReactNode;
 }) {
+  const t = useCopy();
   const formTitleId = useId();
   const infoTitleId = useId();
 
   return (
     <div className="screening-auth">
       <div className="screening-auth__layout">
-        <Logo className="screening-auth__brand" />
+        <div className="screening-auth__navigation">
+          <Logo className="screening-auth__brand" />
+          <LanguageSwitch />
+        </div>
         <div className="screening-auth__card">
           <section className="screening-auth__paper" aria-labelledby={formTitleId}>
             <header className="screening-auth__heading">
-              <p className="screening-auth__eyebrow">{label}</p>
+              <p className="screening-auth__eyebrow">{t(label)}</p>
               <h1 id={formTitleId}>{title}</h1>
               <p className="screening-auth__intro">{subtitle}</p>
             </header>
@@ -78,10 +84,10 @@ export function ScreeningAuth({
           <aside className="screening-auth__info" aria-labelledby={infoTitleId}>
             <div>
               <p className="screening-auth__eyebrow">
-                {admin ? "Console VYRO" : "Votre compte VYRO"}
+                {admin ? t("Console VYRO") : t("Votre compte VYRO")}
               </p>
               <h2 id={infoTitleId}>
-                {admin ? "Pilotez les accès VYRO." : "Votre accès, à portée de main."}
+                {admin ? t("Pilotez les accès VYRO.") : t("Votre accès, à portée de main.")}
               </h2>
             </div>
             <ul className="screening-auth__benefits" role="list">
@@ -91,8 +97,8 @@ export function ScreeningAuth({
                     <Icon size={17} strokeWidth={1.7} aria-hidden />
                   </span>
                   <div>
-                    <p className="screening-auth__benefit-title">{title}</p>
-                    <p className="screening-auth__benefit-detail">{description}</p>
+                    <p className="screening-auth__benefit-title">{t(title)}</p>
+                    <p className="screening-auth__benefit-detail">{t(description)}</p>
                   </div>
                 </li>
               ))}
@@ -102,7 +108,7 @@ export function ScreeningAuth({
         </div>
         <Link to="/" className="screening-auth__back">
           <ArrowLeft size={15} aria-hidden />
-          Retour au site
+          {t("Retour au site")}
         </Link>
       </div>
     </div>
@@ -126,6 +132,7 @@ export function ScreeningField({
   "aria-describedby": describedBy,
   ...props
 }: FieldProps) {
+  const t = useCopy();
   const generatedId = useId();
   const id = providedId ?? generatedId;
   const [visible, setVisible] = useState(false);
@@ -152,7 +159,7 @@ export function ScreeningField({
             type="button"
             className="screening-auth__reveal"
             aria-controls={id}
-            aria-label={`${visible ? "Masquer" : "Afficher"} : ${label.toLowerCase()}`}
+            aria-label={`${visible ? t("Masquer") : t("Afficher")} : ${label.toLowerCase()}`}
             onClick={() => setVisible((previous) => !previous)}
           >
             {visible ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}

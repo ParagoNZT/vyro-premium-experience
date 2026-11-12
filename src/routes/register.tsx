@@ -1,3 +1,5 @@
+import { useCopy } from "@/lib/site-language";
+import { publicPageHead } from "@/lib/site-seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, MailCheck } from "lucide-react";
@@ -27,13 +29,22 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/register")({
   validateSearch: searchSchema,
-  head: () => ({
-    meta: [{ title: "Créer un compte – VYRO Premium" }, { name: "robots", content: "noindex" }],
-  }),
+  head: ({ match }) => {
+    const head = publicPageHead(
+      "/register",
+      match.context.language,
+      "Créer un compte – VYRO Premium",
+    );
+    return {
+      ...head,
+      meta: [...head.meta, { name: "robots", content: "noindex" }],
+    };
+  },
   component: RegisterPage,
 });
 
 function RegisterPage() {
+  const t = useCopy();
   const { ready, signUp } = useAuth();
   const navigate = useNavigate();
   const { redirect, plan } = Route.useSearch();
@@ -49,7 +60,7 @@ function RegisterPage() {
     if (!ready || busy) return;
     setError("");
     if (!username.trim()) {
-      setError("Renseignez votre nom d’utilisateur.");
+      setError(t("Renseignez votre nom d’utilisateur."));
       return;
     }
     setBusy(true);
@@ -63,8 +74,8 @@ function RegisterPage() {
     } catch (issue) {
       setError(
         issue instanceof Error && !(issue instanceof TypeError)
-          ? issue.message
-          : "Création impossible. Réessayez.",
+          ? t(issue.message)
+          : t("Création impossible. Réessayez."),
       );
     } finally {
       setBusy(false);
@@ -73,19 +84,19 @@ function RegisterPage() {
 
   return (
     <ScreeningAuth
-      label="Nouveau compte"
-      title={awaitingEmail ? "Confirmez votre adresse" : "Créer un compte"}
+      label={t("Nouveau compte")}
+      title={awaitingEmail ? t("Confirmez votre adresse") : t("Créer un compte")}
       subtitle={
         awaitingEmail
-          ? "La confirmation de votre adresse est nécessaire avant de vous connecter."
-          : "Retrouvez votre licence et les appareils qui y sont associés."
+          ? t("La confirmation de votre adresse est nécessaire avant de vous connecter.")
+          : t("Retrouvez votre licence et les appareils qui y sont associés.")
       }
       action={
         !awaitingEmail && (
           <>
-            <p>Déjà un compte ?</p>
+            <p>{t("Déjà un compte ?")}</p>
             <Link to="/login" search={{ redirect, plan }} className="screening-auth__cta">
-              Se connecter <ArrowRight size={16} aria-hidden />
+              {t("Se connecter")} <ArrowRight size={16} aria-hidden />
             </Link>
           </>
         )
@@ -95,35 +106,37 @@ function RegisterPage() {
         <div className="screening-auth__confirmation">
           <MailCheck size={28} aria-hidden />
           <ScreeningNotice>
-            Si cette adresse peut être utilisée, un lien vous sera envoyé à{" "}
-            <strong>{email.trim()}</strong>. Pensez à vérifier les courriers indésirables. Si vous
-            avez déjà un compte, connectez-vous.
+            {t("Si cette adresse peut être utilisée, un lien vous sera envoyé à")}{" "}
+            <strong>{email.trim()}</strong>
+            {t(
+              ". Pensez à vérifier les courriers indésirables. Si vous avez déjà un compte, connectez-vous.",
+            )}
           </ScreeningNotice>
           <Link to="/login" search={{ redirect, plan }} className="screening-auth__submit">
-            Aller à la connexion
+            {t("Aller à la connexion")}
           </Link>
           <button
             type="button"
             onClick={() => setAwaitingEmail(false)}
             className="screening-auth__text-button"
           >
-            Corriger mon adresse
+            {t("Corriger mon adresse")}
           </button>
         </div>
       ) : (
         <form method="post" onSubmit={onSubmit} className="screening-auth__form" aria-busy={busy}>
           <ScreeningField
-            label="Nom d’utilisateur"
+            label={t("Nom d’utilisateur")}
             name="username"
             value={username}
             onChange={setUsername}
             autoComplete="nickname"
-            hint="Ce nom s’affiche dans votre espace client."
+            hint={t("Ce nom s’affiche dans votre espace client.")}
             maxLength={80}
             required
           />
           <ScreeningField
-            label="Adresse e-mail"
+            label={t("Adresse e-mail")}
             name="email"
             type="email"
             value={email}
@@ -133,7 +146,7 @@ function RegisterPage() {
             required
           />
           <ScreeningField
-            label="Mot de passe"
+            label={t("Mot de passe")}
             name="password"
             type="password"
             value={password}
@@ -141,16 +154,17 @@ function RegisterPage() {
             autoComplete="new-password"
             minLength={12}
             maxLength={256}
-            hint="12 caractères minimum."
+            hint={t("12 caractères minimum.")}
             required
           />
           {error && <ScreeningNotice error>{error}</ScreeningNotice>}
           <button type="submit" disabled={!ready || busy} className="screening-auth__submit">
-            {busy ? "Création…" : "Créer mon compte"}
+            {busy ? t("Création…") : t("Créer mon compte")}
           </button>
           <p className="screening-auth__fine-print">
-            Consultez les <Link to="/legal/conditions">conditions d’utilisation</Link> et la{" "}
-            <Link to="/legal/confidentialite">politique de confidentialité</Link>.
+            {t("Consultez les")} <Link to="/legal/conditions">{t("conditions d’utilisation")}</Link>{" "}
+            {t("et la")}{" "}
+            <Link to="/legal/confidentialite">{t("politique de confidentialité")}</Link>.
           </p>
         </form>
       )}

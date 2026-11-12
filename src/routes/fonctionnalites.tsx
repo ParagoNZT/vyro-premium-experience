@@ -1,3 +1,5 @@
+import { useCopy } from "@/lib/site-language";
+import { publicPageHead } from "@/lib/site-seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { FeatureRow, FinalCta, IntegrationsSection } from "@/components/site/sections";
@@ -8,18 +10,13 @@ import { SportsSpotlight } from "@/components/site/SportsSpotlight";
 import { captureCaption, homeCapture, scenes } from "@/components/site/captures";
 
 export const Route = createFileRoute("/fonctionnalites")({
-  head: () => ({
-    meta: [
-      { title: "L’application – VYRO Premium" },
-      {
-        name: "description",
-        content:
-          "Explorez Sports, les réglages d’image et de son, la synchronisation entre appareils et la gestion des playlists et sauvegardes avec VYRO.",
-      },
-      { property: "og:url", content: "https://vyro-player.app/fonctionnalites" },
-    ],
-    links: [{ rel: "canonical", href: "https://vyro-player.app/fonctionnalites" }],
-  }),
+  head: ({ match }) =>
+    publicPageHead(
+      "/fonctionnalites",
+      match.context.language,
+      "L’application – VYRO Premium",
+      "Explorez Sports, les réglages d’image et de son, la synchronisation entre appareils et la gestion des playlists et sauvegardes avec VYRO.",
+    ),
   component: FeaturesPage,
 });
 
@@ -61,32 +58,34 @@ const content = [
 ];
 
 function FeaturesPage() {
+  const t = useCopy();
   return (
     <>
       <section className="vyro-subhero screening-feature-intro">
         <div className="vyro-wrap vyro-block screening-inner-grid">
           <div>
             <p className="vyro-kicker">
-              <i /> L’APPLICATION
+              <i /> {t("L’APPLICATION")}
             </p>
-            <h1 className="vyro-display-title">Dans l’écran de VYRO.</h1>
+            <h1 className="vyro-display-title">{t("Dans l’écran de VYRO.")}</h1>
             <p className="vyro-subhero-lead">
-              Explorez les vrais écrans du lecteur et découvrez comment retrouver vos réglages d’un
-              appareil à l’autre.
+              {t(
+                "Explorez les vrais écrans du lecteur et découvrez comment retrouver vos réglages d’un appareil à l’autre.",
+              )}
             </p>
-            <nav aria-label="Écrans à découvrir" className="vyro-section-links">
+            <nav aria-label={t("Écrans à découvrir")} className="vyro-section-links">
               <a href="#espace-client">
-                Gestion à distance <ArrowUpRight size={15} aria-hidden />
+                {t("Gestion à distance")} <ArrowUpRight size={15} aria-hidden />
               </a>
               <a href="#sports">
                 Sports <ArrowUpRight size={15} aria-hidden />
               </a>
               <a href="#reglages-lecture">
-                Image et son <ArrowUpRight size={15} aria-hidden />
+                {t("Image et son")} <ArrowUpRight size={15} aria-hidden />
               </a>
               {scenes.map(({ id, label }) => (
                 <a key={id} href={"#" + id}>
-                  {label} <ArrowUpRight size={15} aria-hidden />
+                  {t(label)} <ArrowUpRight size={15} aria-hidden />
                 </a>
               ))}
             </nav>
@@ -94,13 +93,13 @@ function FeaturesPage() {
           <figure>
             <img
               src={homeCapture}
-              alt="Écran d’accueil de VYRO sur téléviseur"
+              alt={t("Écran d’accueil de VYRO sur téléviseur")}
               width={1600}
               height={900}
               fetchPriority="high"
               decoding="async"
             />
-            <figcaption>{captureCaption}</figcaption>
+            <figcaption>{t(captureCaption)}</figcaption>
           </figure>
         </div>
       </section>
@@ -113,30 +112,33 @@ function FeaturesPage() {
           return (
             <section id={id} className="vyro-detail-scene" key={id}>
               <FeatureRow
-                eyebrow={"0" + (index + 1) + " / " + label}
-                {...details}
+                eyebrow={"0" + (index + 1) + " / " + t(label)}
+                title={t(details.title)}
+                description={t(details.description)}
+                points={details.points.map(t)}
                 image={image}
-                alt={alt}
+                alt={t(alt)}
                 reversed={index % 2 === 1}
               />
             </section>
           );
         })}
-        <p className="vyro-capture-note">{captureCaption}</p>
+        <p className="vyro-capture-note">{t(captureCaption)}</p>
       </div>
       <section className="vyro-steps">
         <div className="vyro-wrap vyro-block vyro-profile-feature">
           <Reveal>
             <p className="vyro-kicker">
-              <i /> PROFILS
+              <i /> {t("PROFILS")}
             </p>
-            <h2 className="vyro-display-title">Chacun son écran d’accueil.</h2>
+            <h2 className="vyro-display-title">{t("Chacun son écran d’accueil.")}</h2>
             <p className="vyro-subhero-lead">
-              Chaque profil retrouve ses favoris et son historique. Trakt peut synchroniser votre
-              progression lorsque vous le connectez.
+              {t(
+                "Chaque profil retrouve ses favoris et son historique. Trakt peut synchroniser votre progression lorsque vous le connectez.",
+              )}
             </p>
             <Link to="/appareils" className="vyro-inline-link">
-              Vérifier mon appareil <ArrowUpRight size={16} aria-hidden />
+              {t("Vérifier mon appareil")} <ArrowUpRight size={16} aria-hidden />
             </Link>
           </Reveal>
           <figure className="vyro-feature-image">
@@ -144,7 +146,9 @@ function FeaturesPage() {
               src={homeCapture}
               width={1600}
               height={900}
-              alt="Écran d’accueil de l’application avec menu, bibliothèque et accès à Mon profil"
+              alt={t(
+                "Écran d’accueil de l’application avec menu, bibliothèque et accès à Mon profil",
+              )}
               loading="lazy"
               decoding="async"
             />

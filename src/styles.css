@@ -374,6 +374,25 @@
   border-color: var(--primary);
 }
 
+.vyro-language-switch {
+  display: inline-grid;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--vyro-line);
+  border-radius: 0.5rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.vyro-language-switch:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .vyro-hero {
   position: relative;
   isolation: isolate;

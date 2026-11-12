@@ -1,3 +1,5 @@
+import { useCopy } from "@/lib/site-language";
+import { publicPageHead } from "@/lib/site-seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
@@ -11,25 +13,22 @@ import {
 } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/support")({
-  head: () => ({
-    meta: [
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { title: "Centre d'aide – VYRO Premium" },
-      {
-        name: "description",
-        content:
-          "Guides d'installation, connexion Xtream Codes ou M3U, problèmes de lecture, gestion du compte et de l'abonnement : le centre d'aide VYRO Premium.",
-      },
-      { property: "og:title", content: "Centre d'aide – VYRO Premium" },
-      {
-        property: "og:description",
-        content: "Guides d'installation, de connexion et de dépannage pour VYRO Premium.",
-      },
-      { property: "og:url", content: "/support" },
-    ],
-    links: [{ rel: "canonical", href: "/support" }],
-  }),
+  head: ({ match }) => {
+    const head = publicPageHead(
+      "/support",
+      match.context.language,
+      "Centre d'aide – VYRO Premium",
+      "Guides d'installation, connexion Xtream Codes ou M3U, problèmes de lecture, gestion du compte et de l'abonnement : le centre d'aide VYRO Premium.",
+    );
+    return {
+      ...head,
+      meta: [
+        ...head.meta,
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+    };
+  },
   component: SupportPage,
 });
 
@@ -82,13 +81,16 @@ const ARTICLES = [
 ];
 
 function SupportPage() {
+  const t = useCopy();
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return ARTICLES;
-    return ARTICLES.filter((a) => `${a.category} ${a.title} ${a.body}`.toLowerCase().includes(q));
-  }, [query]);
+    return ARTICLES.filter((a) =>
+      `${t(a.category)} ${t(a.title)} ${t(a.body)}`.toLowerCase().includes(q),
+    );
+  }, [query, t]);
 
   const categories = useMemo(() => Array.from(new Set(results.map((a) => a.category))), [results]);
 
@@ -96,11 +98,11 @@ function SupportPage() {
     <Section className="pt-20 md:pt-28">
       <Reveal className="max-w-2xl">
         <p className="vyro-kicker">
-          <i /> ASSISTANCE
+          <i /> {t("ASSISTANCE")}
         </p>
-        <h1 className="vyro-display-title">Centre d’aide.</h1>
+        <h1 className="vyro-display-title">{t("Centre d’aide.")}</h1>
         <Lead className="mt-5">
-          Installation, connexion de votre source, lecture, compte et abonnement.
+          {t("Installation, connexion de votre source, lecture, compte et abonnement.")}
         </Lead>
       </Reveal>
 
@@ -111,8 +113,8 @@ function SupportPage() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher dans la documentation"
-            aria-label="Rechercher dans la documentation"
+            placeholder={t("Rechercher dans la documentation")}
+            aria-label={t("Rechercher dans la documentation")}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -120,22 +122,22 @@ function SupportPage() {
 
       <div className="mt-12 space-y-12">
         {categories.map((category) => (
-          <div key={category}>
-            <h2 className="font-display text-lg font-medium">{category}</h2>
+          <div key={t(category)}>
+            <h2 className="font-display text-lg font-medium">{t(category)}</h2>
             <Accordion type="single" collapsible className="mt-3 w-full">
               {results
                 .filter((a) => a.category === category)
                 .map((article) => (
                   <AccordionItem
-                    key={article.title}
-                    value={article.title}
+                    key={t(article.title)}
+                    value={t(article.title)}
                     className="border-border"
                   >
                     <AccordionTrigger className="py-4 text-left text-[15px] font-normal hover:no-underline">
-                      {article.title}
+                      {t(article.title)}
                     </AccordionTrigger>
                     <AccordionContent className="pb-5 text-[14.5px] leading-relaxed text-muted-foreground">
-                      {article.body}
+                      {t(article.body)}
                     </AccordionContent>
                   </AccordionItem>
                 ))}
@@ -144,9 +146,9 @@ function SupportPage() {
         ))}
         {results.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Aucun résultat.{" "}
+            {t("Aucun résultat.")}{" "}
             <a className="underline" href="mailto:support@vyro-premium.app">
-              Écrivez à l’assistance
+              {t("Écrivez à l’assistance")}
             </a>
             .
           </p>

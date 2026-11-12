@@ -18,22 +18,31 @@ import { AuthProvider } from "@/lib/auth";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  languageFromHref,
+  siteOrigin,
+  translate,
+  useCopy,
+  useSiteLanguage,
+} from "@/lib/site-language";
+import { homeDescription, homeTitle } from "@/lib/site-seo";
 
 function NotFoundComponent() {
+  const t = useCopy();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="font-display text-7xl font-semibold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-medium text-foreground">Page introuvable</h2>
+        <h2 className="mt-4 text-xl font-medium text-foreground">{t("Page introuvable")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Cette page n'existe pas ou a été déplacée.
+          {t("Cette page n'existe pas ou a été déplacée.")}
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115"
           >
-            Retour à l'accueil
+            {t("Retour à l'accueil")}
           </Link>
         </div>
       </div>
@@ -42,6 +51,8 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
+  const t = useCopy();
+  const language = useSiteLanguage();
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -54,10 +65,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Cette page n'a pas pu être chargée
+          {t("Cette page n'a pas pu être chargée")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Une erreur est survenue. Vous pouvez réessayer ou revenir à l'accueil.
+          {t("Une erreur est survenue. Vous pouvez réessayer ou revenir à l'accueil.")}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -67,13 +78,13 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             }}
             className="inline-flex items-center justify-center rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-200 hover:brightness-115"
           >
-            Réessayer
+            {t("Réessayer")}
           </button>
           <a
-            href="/"
+            href={language === "en" ? "/en" : "/"}
             className="inline-flex items-center justify-center rounded-[10px] border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Accueil
+            {t("Accueil")}
           </a>
         </div>
       </div>
@@ -82,19 +93,19 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  beforeLoad: ({ location }) => ({ language: languageFromHref(location.publicHref) }),
+  head: ({ match }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "VYRO Premium – L'expérience IPTV pensée pour votre TV" },
+      { title: translate(match.context.language, homeTitle) },
       {
         name: "description",
-        content:
-          "Découvrez VYRO Premium, une application IPTV moderne conçue pour Android TV, Google TV et Fire TV. Une interface rapide, élégante et entièrement pensée pour la télévision.",
+        content: translate(match.context.language, homeDescription),
       },
       { property: "og:site_name", content: "VYRO Premium" },
       { property: "og:type", content: "website" },
-      { property: "og:locale", content: "fr_FR" },
+      { property: "og:locale", content: match.context.language === "en" ? "en_US" : "fr_FR" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#100e17" },
     ],
@@ -107,7 +118,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap",
       },
-      { rel: "icon", href: "/vyro-mark.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/vyro-icon.png", type: "image/png", sizes: "192x192" },
+      { rel: "apple-touch-icon", href: "/vyro-icon.png", sizes: "192x192" },
     ],
     scripts: [
       {
@@ -118,8 +130,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           name: "VYRO Premium",
           applicationCategory: "MultimediaApplication",
           operatingSystem: "Android TV, Google TV, Amazon Fire TV",
-          description:
-            "Lecteur et gestionnaire multimédia pour téléviseurs : Live TV, films, séries et guide TV depuis votre propre source compatible.",
+          image: siteOrigin + "/vyro-icon.png",
+          description: translate(match.context.language, homeDescription),
         }),
       },
     ],
@@ -131,8 +143,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const language = useSiteLanguage();
   return (
-    <html lang="fr" className="dark">
+    <html lang={language} className="dark">
       <head>
         <HeadContent />
       </head>
@@ -145,6 +158,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
+  const t = useCopy();
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const bare = pathname.startsWith("/account") || pathname.startsWith("/admin");
@@ -154,7 +168,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <a className="vyro-skip" href="#main">
-          Aller au contenu
+          {t("Aller au contenu")}
         </a>
         {bare || authPage ? null : <Header />}
         <main

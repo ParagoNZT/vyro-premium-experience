@@ -1,3 +1,5 @@
+import { siteOrigin, useCopy } from "@/lib/site-language";
+import { homeDescription, homeTitle, publicPageHead } from "@/lib/site-seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -17,26 +19,21 @@ import { WorkspaceSpotlight } from "@/components/site/WorkspaceSpotlight";
 import { SportsSpotlight } from "@/components/site/SportsSpotlight";
 import { scenes } from "@/components/site/captures";
 
-const title = "VYRO Premium — La soirée est à vous";
-
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title },
+  head: ({ match }) => ({
+    ...publicPageHead("/", match.context.language, homeTitle, homeDescription),
+    scripts: [
       {
-        name: "description",
-        content:
-          "Regardez vos contenus sur TV et mobile avec VYRO. Gérez vos playlists, sauvegardez vos configurations et transférez vos réglages entre appareils.",
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "VYRO Premium",
+          alternateName: "VYRO",
+          url: siteOrigin + "/",
+        }),
       },
-      { property: "og:title", content: title },
-      {
-        property: "og:description",
-        content:
-          "Découvrez le lecteur VYRO et la gestion à distance des playlists et des sauvegardes.",
-      },
-      { property: "og:url", content: "https://vyro-player.app/" },
     ],
-    links: [{ rel: "canonical", href: "https://vyro-player.app/" }],
   }),
   component: Home,
 });
@@ -90,6 +87,7 @@ const steps = [
 ] as const;
 
 function Home() {
+  const t = useCopy();
   return (
     <div className="screening-home">
       <section className="screening-hero" aria-labelledby="screening-title">
@@ -97,42 +95,43 @@ function Home() {
         <div className="screening-hero-inner">
           <div className="screening-intro">
             <p className="screening-edition">
-              <i aria-hidden /> SUR TV, TÉLÉPHONE ET TABLETTE
+              <i aria-hidden /> {t("SUR TV, TÉLÉPHONE ET TABLETTE")}
             </p>
             <h1 id="screening-title">
-              La soirée <span>est à vous.</span>
+              {t("La soirée")} <span>{t("est à vous.")}</span>
             </h1>
             <p className="screening-lead">
-              Votre direct, vos films et vos séries sur le grand écran, votre téléphone et votre
-              tablette Android.
+              {t(
+                "Votre direct, vos films et vos séries sur le grand écran, votre téléphone et votre tablette Android.",
+              )}
             </p>
             <div className="screening-actions">
               <a className="screening-button screening-button-primary" href="#projection">
-                <Play size={16} fill="currentColor" aria-hidden /> Voir VYRO en action
+                <Play size={16} fill="currentColor" aria-hidden /> {t("Voir VYRO en action")}
               </a>
               <Link className="screening-button screening-button-ghost" to="/tarifs">
-                Choisir mon accès <ArrowUpRight size={17} aria-hidden />
+                {t("Choisir mon accès")} <ArrowUpRight size={17} aria-hidden />
               </Link>
             </div>
             <a href="#espace-client" className="screening-text-link">
-              Synchronisation et gestion à distance <ArrowDown size={16} aria-hidden />
+              {t("Synchronisation et gestion à distance")} <ArrowDown size={16} aria-hidden />
             </a>
           </div>
           <ScreeningRoom />
         </div>
       </section>
-      <section className="screening-devices" aria-label="Appareils compatibles">
+      <section className="screening-devices" aria-label={t("Appareils compatibles")}>
         <div className="screening-wrap">
-          <p className="screening-kicker">SUR VOS APPAREILS</p>
+          <p className="screening-kicker">{t("SUR VOS APPAREILS")}</p>
           <ul>
             {platforms.map(({ label, icon: Icon }) => (
-              <li key={label}>
-                <Icon size={22} aria-hidden /> {label}
+              <li key={t(label)}>
+                <Icon size={22} aria-hidden /> {t(label)}
               </li>
             ))}
           </ul>
           <Link className="screening-text-link" to="/appareils">
-            Vérifier mon appareil <ArrowUpRight size={16} aria-hidden />
+            {t("Vérifier mon appareil")} <ArrowUpRight size={16} aria-hidden />
           </Link>
         </div>
       </section>
@@ -146,16 +145,17 @@ function Home() {
         <Reveal className="screening-section-head">
           <div>
             <p className="screening-kicker">
-              <span>01</span> / DANS LE LECTEUR
+              <span>01</span> {t("/ DANS LE LECTEUR")}
             </p>
             <h2 id="screening-experience">
-              De la grille
-              <br /> au <em>plein écran.</em>
+              {t("De la grille")}
+              <br /> {t("au")} <em>{t("plein écran.")}</em>
             </h2>
           </div>
           <p>
-            Retrouvez ce qui passe, parcourez vos titres et lancez la lecture depuis la même
-            interface.
+            {t(
+              "Retrouvez ce qui passe, parcourez vos titres et lancez la lecture depuis la même interface.",
+            )}
           </p>
         </Reveal>
         <div className="screening-features">
@@ -164,10 +164,10 @@ function Home() {
               <Link to="/fonctionnalites" hash={scene.id}>
                 <div className="screening-feature-copy">
                   <p className="screening-kicker">
-                    <scene.icon size={15} aria-hidden /> {scene.label}
+                    <scene.icon size={15} aria-hidden /> {t(scene.label)}
                   </p>
-                  <h3>{featureTitle}</h3>
-                  <p>{description}</p>
+                  <h3>{t(featureTitle)}</h3>
+                  <p>{t(description)}</p>
                   <span className="screening-feature-arrow" aria-hidden>
                     <ArrowUpRight size={19} />
                   </span>
@@ -177,7 +177,7 @@ function Home() {
                     src={scene.image}
                     width={1600}
                     height={900}
-                    alt={scene.alt}
+                    alt={t(scene.alt)}
                     loading="lazy"
                     decoding="async"
                   />
@@ -192,13 +192,14 @@ function Home() {
           <Reveal className="screening-section-head">
             <div>
               <p className="screening-kicker">
-                <span>02</span> / PREMIERS PAS
+                <span>02</span> {t("/ PREMIERS PAS")}
               </p>
-              <h2 id="screening-start">VYRO sur votre télé.</h2>
+              <h2 id="screening-start">{t("VYRO sur votre télé.")}</h2>
             </div>
             <p>
-              Vous apportez votre source compatible. VYRO s’occupe de la lecture et de la
-              navigation.
+              {t(
+                "Vous apportez votre source compatible. VYRO s’occupe de la lecture et de la navigation.",
+              )}
             </p>
           </Reveal>
           <ol className="screening-steps">
@@ -208,8 +209,8 @@ function Home() {
                   <span className="screening-step-top">
                     <Icon size={23} aria-hidden /> <span aria-hidden>0{index + 1}</span>
                   </span>
-                  <h3>{label}</h3>
-                  <p>{description}</p>
+                  <h3>{t(label)}</h3>
+                  <p>{t(description)}</p>
                   <ArrowUpRight size={18} aria-hidden />
                 </Link>
               </Reveal>
@@ -219,31 +220,31 @@ function Home() {
       </section>
       <div className="screening-pricing">
         <p className="screening-kicker screening-center-kicker">
-          <span>03</span> / LES OFFRES
+          <span>03</span> {t("/ LES OFFRES")}
         </p>
         <PricingSection />
       </div>
       <div className="screening-help">
         <p className="screening-kicker screening-center-kicker">
-          <span>04</span> / AIDE
+          <span>04</span> {t("/ AIDE")}
         </p>
         <FaqSection compact />
         <Link className="screening-text-link screening-help-link" to="/support">
-          Consulter le centre d’aide <ArrowRight size={16} aria-hidden />
+          {t("Consulter le centre d’aide")} <ArrowRight size={16} aria-hidden />
         </Link>
       </div>
       <section className="screening-wrap screening-end" aria-labelledby="screening-end-title">
         <Reveal className="screening-end-card">
           <div>
-            <p className="screening-kicker">DÉJÀ CLIENT ?</p>
-            <h2 id="screening-end-title">Votre accès, vos appareils.</h2>
+            <p className="screening-kicker">{t("DÉJÀ CLIENT ?")}</p>
+            <h2 id="screening-end-title">{t("Votre accès, vos appareils.")}</h2>
           </div>
           <Link className="screening-button screening-button-primary" to="/account">
-            Ouvrir mon espace <ArrowUpRight size={17} aria-hidden />
+            {t("Ouvrir mon espace")} <ArrowUpRight size={17} aria-hidden />
           </Link>
         </Reveal>
         <a className="screening-to-top screening-text-link" href="#main">
-          Retour en haut <ArrowDown size={15} aria-hidden />
+          {t("Retour en haut")} <ArrowDown size={15} aria-hidden />
         </a>
       </section>
     </div>

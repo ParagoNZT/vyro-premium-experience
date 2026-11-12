@@ -1,7 +1,9 @@
+import { useCopy } from "@/lib/site-language";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Menu, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { Logo } from "./Logo";
 
 const nav = [
@@ -12,6 +14,7 @@ const nav = [
 ] as const;
 
 export function Header() {
+  const t = useCopy();
   const { user } = useAuth();
   const path = useRouterState({ select: (state) => state.location.pathname });
   const [openedAt, setOpenedAt] = useState<string | null>(null);
@@ -32,20 +35,21 @@ export function Header() {
     <header className="vyro-header screening-header">
       <div className="vyro-wrap vyro-header-inner">
         <Logo />
-        <nav aria-label="Navigation principale" className="vyro-main-nav">
+        <nav aria-label={t("Navigation principale")} className="vyro-main-nav">
           {nav.map(({ to, label }) => (
             <Link key={to} to={to} activeOptions={{ exact: true }}>
-              {label}
+              {t(label)}
             </Link>
           ))}
         </nav>
         <div className="vyro-header-actions">
+          <LanguageSwitch />
           <Link className="vyro-account-link" to={user ? "/account" : "/login"}>
             <UserRound size={17} aria-hidden />
-            <span>Espace client</span>
+            <span>{t("Espace client")}</span>
           </Link>
           <Link to="/tarifs" className="vyro-cta vyro-cta-compact">
-            Obtenir VYRO <ArrowUpRight size={16} aria-hidden />
+            {t("Obtenir VYRO")} <ArrowUpRight size={16} aria-hidden />
           </Link>
           <button
             ref={toggle}
@@ -53,7 +57,7 @@ export function Header() {
             className="vyro-menu-toggle"
             aria-expanded={open}
             aria-controls="vyro-mobile-nav"
-            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-label={open ? t("Fermer le menu") : t("Ouvrir le menu")}
             onClick={() => setOpenedAt(open ? null : path)}
           >
             {open ? <X size={23} aria-hidden /> : <Menu size={23} aria-hidden />}
@@ -63,17 +67,17 @@ export function Header() {
       <nav
         id="vyro-mobile-nav"
         className="vyro-mobile-nav"
-        aria-label="Navigation mobile"
+        aria-label={t("Navigation mobile")}
         hidden={!open}
       >
         {nav.map(({ to, label }) => (
           <Link key={to} to={to} onClick={() => setOpenedAt(null)}>
-            {label}
+            {t(label)}
             <ArrowUpRight size={16} aria-hidden />
           </Link>
         ))}
         <Link to={user ? "/account" : "/login"} onClick={() => setOpenedAt(null)}>
-          Espace client
+          {t("Espace client")}
           <ArrowUpRight size={16} aria-hidden />
         </Link>
       </nav>

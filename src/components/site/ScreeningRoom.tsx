@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUpRight, Expand, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -24,6 +25,7 @@ const captures = {
 type Format = (typeof formats)[number]["key"];
 
 export function ScreeningRoom() {
+  const t = useCopy();
   const id = useId();
   const [format, setFormat] = useState<Format>("tv");
   const [active, setActive] = useState(0);
@@ -54,12 +56,12 @@ export function ScreeningRoom() {
   }
 
   return (
-    <figure className="screening-room" id="projection" aria-label="Captures de VYRO">
+    <figure className="screening-room" id="projection" aria-label={t("Captures de VYRO")}>
       <div className="screening-room-label">
         <span>
-          <i aria-hidden /> {title}
+          <i aria-hidden /> {t(title)}
         </span>
-        <div className="screening-formats" role="group" aria-label="Appareil présenté">
+        <div className="screening-formats" role="group" aria-label={t("Appareil présenté")}>
           {formats
             .filter(({ key }) => captures[key].length)
             .map(({ key, label }) => (
@@ -73,7 +75,7 @@ export function ScreeningRoom() {
                   setActive(0);
                 }}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
         </div>
@@ -90,7 +92,7 @@ export function ScreeningRoom() {
             >
               <img
                 src={image}
-                alt={alt}
+                alt={t(alt)}
                 width={format === "tv" ? 1600 : undefined}
                 height={format === "tv" ? 900 : undefined}
                 decoding="async"
@@ -102,7 +104,11 @@ export function ScreeningRoom() {
           ))}
           <Dialog.Root>
             <Dialog.Trigger asChild>
-              <button className="screening-expand" type="button" aria-label="Agrandir la capture">
+              <button
+                className="screening-expand"
+                type="button"
+                aria-label={t("Agrandir la capture")}
+              >
                 <Expand size={16} aria-hidden />
               </button>
             </Dialog.Trigger>
@@ -111,23 +117,23 @@ export function ScreeningRoom() {
               <Dialog.Content className="screening-lightbox" data-format={format}>
                 <div>
                   <Dialog.Title>
-                    {title} · {scene.label}
+                    {t(title)} · {t(scene.label)}
                   </Dialog.Title>
-                  <Dialog.Close type="button" aria-label="Fermer la capture">
+                  <Dialog.Close type="button" aria-label={t("Fermer la capture")}>
                     <X size={21} aria-hidden />
                   </Dialog.Close>
                 </div>
-                <img src={scene.image} alt={scene.alt} decoding="async" />
-                <Dialog.Description>{caption}</Dialog.Description>
+                <img src={scene.image} alt={t(scene.alt)} decoding="async" />
+                <Dialog.Description>{t(caption)}</Dialog.Description>
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
         </div>
         <div className="screening-selector">
           <p className="screening-selector-title">
-            Explorer le lecteur <ArrowUpRight size={14} aria-hidden />
+            {t("Explorer le lecteur")} <ArrowUpRight size={14} aria-hidden />
           </p>
-          <div className="screening-tabs" role="tablist" aria-label="Écrans de l’application">
+          <div className="screening-tabs" role="tablist" aria-label={t("Écrans de l’application")}>
             {frames.map(({ id: key, label, icon: Icon, note }, index) => (
               <button
                 key={key}
@@ -145,8 +151,8 @@ export function ScreeningRoom() {
               >
                 <Icon size={18} aria-hidden />
                 <span>
-                  <strong>{label}</strong>
-                  <small>{note}</small>
+                  <strong>{t(label)}</strong>
+                  <small>{note && t(note)}</small>
                 </span>
                 <span aria-hidden className="screening-tab-number">
                   {number(index)}
@@ -159,7 +165,7 @@ export function ScreeningRoom() {
           </p>
         </div>
       </div>
-      <figcaption>{caption}</figcaption>
+      <figcaption>{t(caption)}</figcaption>
     </figure>
   );
 }

@@ -1,7 +1,9 @@
+import { useCopy } from "@/lib/site-language";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { captureCaption, scenes } from "./captures";
 
 export function Showcase() {
+  const t = useCopy();
   const id = useId();
   const [active, setActive] = useState(0);
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -27,9 +29,9 @@ export function Showcase() {
       <div className="vyro-viewfinder">
         <div className="vyro-viewfinder-top">
           <span>
-            <i /> VYRO SUR TV
+            <i /> {t("VYRO SUR TV")}
           </span>
-          <span>APERÇU · 16:9</span>
+          <span>{t("APERÇU · 16:9")}</span>
         </div>
         <div className="vyro-display">
           {scenes.map((scene, index) => (
@@ -43,7 +45,7 @@ export function Showcase() {
               {active === index && (
                 <img
                   src={scene.image}
-                  alt={scene.alt}
+                  alt={t(scene.alt)}
                   width={1600}
                   height={900}
                   decoding="async"
@@ -55,7 +57,7 @@ export function Showcase() {
           ))}
         </div>
         <div className="vyro-viewfinder-bottom">
-          <div role="tablist" aria-label="Écrans de l’application" className="vyro-scene-tabs">
+          <div role="tablist" aria-label={t("Écrans de l’application")} className="vyro-scene-tabs">
             {scenes.map(({ id: sceneId, label, icon: Icon }, index) => (
               <button
                 key={sceneId}
@@ -72,7 +74,7 @@ export function Showcase() {
                 onKeyDown={handleKeys}
               >
                 <Icon size={14} aria-hidden />
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -81,7 +83,7 @@ export function Showcase() {
           </span>
         </div>
       </div>
-      <figcaption>{captureCaption}</figcaption>
+      <figcaption>{t(captureCaption)}</figcaption>
     </figure>
   );
 }

@@ -1,3 +1,4 @@
+import { useCopy, useSiteLanguage } from "@/lib/site-language";
 import { ArrowUpRight, Check, Tv, MonitorPlay, Flame, Plus } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { Button } from "./Button";
@@ -149,17 +150,21 @@ const PLATFORMS = [
 ];
 
 export function DevicesSection() {
+  const t = useCopy();
   return (
     <Section id="appareils">
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <Reveal className="min-w-0">
-          <Eyebrow>Compatibilité</Eyebrow>
-          <Heading className="mt-4 text-[28px] md:text-4xl">Pensé pour le grand écran.</Heading>
+          <Eyebrow>{t("Compatibilité")}</Eyebrow>
+          <Heading className="mt-4 text-[28px] md:text-4xl">
+            {t("Pensé pour le grand écran.")}
+          </Heading>
         </Reveal>
         <Reveal delay={60} className="min-w-0">
           <Lead>
-            Une interface conçue pour être utilisée à la télécommande, pas une application mobile
-            simplement agrandie sur votre téléviseur.
+            {t(
+              "Une interface conçue pour être utilisée à la télécommande, pas une application mobile simplement agrandie sur votre téléviseur.",
+            )}
           </Lead>
           <div className="mt-9 grid gap-3 sm:grid-cols-3">
             {PLATFORMS.map(({ name, icon: Icon }) => (
@@ -170,8 +175,9 @@ export function DevicesSection() {
             ))}
           </div>
           <p className="mt-6 text-sm text-muted-foreground">
-            Installez VYRO Premium, connectez votre source compatible et profitez immédiatement de
-            votre bibliothèque.
+            {t(
+              "Installez VYRO Premium, connectez votre source compatible et profitez immédiatement de votre bibliothèque.",
+            )}
           </p>
         </Reveal>
       </div>
@@ -180,14 +186,16 @@ export function DevicesSection() {
 }
 
 export function IntegrationsSection() {
+  const t = useCopy();
   return (
     <Section id="integrations">
       <Reveal className="max-w-2xl">
-        <Eyebrow>Intégrations</Eyebrow>
-        <Heading className="mt-4">Les intégrations de VYRO.</Heading>
+        <Eyebrow>{t("Intégrations")}</Eyebrow>
+        <Heading className="mt-4">{t("Les intégrations de VYRO.")}</Heading>
         <Lead className="mt-5">
-          Consultez les services disponibles pour enrichir votre bibliothèque et suivre votre
-          lecture.
+          {t(
+            "Consultez les services disponibles pour enrichir votre bibliothèque et suivre votre lecture.",
+          )}
         </Lead>
       </Reveal>
       <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -204,13 +212,13 @@ export function IntegrationsSection() {
                 )}
               >
                 {item.status === "available"
-                  ? "Disponible"
+                  ? t("Disponible")
                   : item.status === "soon"
-                    ? "Prochainement"
-                    : "Non intégré"}
+                    ? t("Prochainement")
+                    : t("Non intégré")}
               </span>
             </div>
-            <p className="mt-2.5 text-sm text-muted-foreground">{item.description}</p>
+            <p className="mt-2.5 text-sm text-muted-foreground">{t(item.description)}</p>
           </Reveal>
         ))}
       </ul>
@@ -219,13 +227,15 @@ export function IntegrationsSection() {
 }
 
 export function PricingSection({ withHeading = true }: { withHeading?: boolean }) {
+  const t = useCopy();
+  const locale = useSiteLanguage() === "en" ? "en-GB" : "fr-FR";
   return (
     <Section id="tarifs">
       {withHeading ? (
         <Reveal className="mx-auto max-w-2xl text-center">
-          <Heading>Choisissez votre accès VYRO Premium.</Heading>
+          <Heading>{t("Choisissez votre accès VYRO Premium.")}</Heading>
           <Lead className="mt-5">
-            Un accès annuel pour 1, 3 ou 5 appareils, ou à vie pour 5 appareils.
+            {t("Un accès annuel pour 1, 3 ou 5 appareils, ou à vie pour 5 appareils.")}
           </Lead>
         </Reveal>
       ) : null}
@@ -244,15 +254,15 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
               <div aria-hidden className="halo -inset-16 -z-10 opacity-25" />
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-display text-lg font-medium">{pack.name}</h3>
+              <h3 className="font-display text-lg font-medium">{t(pack.name)}</h3>
               <span className="rounded-md bg-primary/12 px-2 py-0.5 text-xs font-medium text-primary">
-                {packDevices(pack)}
+                {t(packDevices(pack))}
               </span>
             </div>
             <p className="mt-6 font-display text-4xl font-semibold tracking-tight">
-              {formatPrice(pack.price)}
+              {formatPrice(pack.price, undefined, locale)}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">{packBilling(pack)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t(packBilling(pack))}</p>
             <Button
               to="/checkout"
               search={{ plan: pack.id }}
@@ -260,45 +270,48 @@ export function PricingSection({ withHeading = true }: { withHeading?: boolean }
               size="md"
               className="mt-8 w-full"
             >
-              Voir le pack {pack.name} <ArrowUpRight size={16} aria-hidden />
+              {t("Voir le pack")} {t(pack.name)} <ArrowUpRight size={16} aria-hidden />
             </Button>
           </Reveal>
         ))}
       </div>
 
-      <p className="my-4 text-center text-sm text-muted-foreground">{PACK_ORDER_NOTICE}</p>
+      <p className="my-4 text-center text-sm text-muted-foreground">{t(PACK_ORDER_NOTICE)}</p>
 
       <Reveal className="panel mt-4 p-7">
-        <p className="text-sm font-medium">Inclus dans chaque offre</p>
+        <p className="text-sm font-medium">{t("Inclus dans chaque offre")}</p>
         <ul className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {PLAN_INCLUDED.map((item) => (
             <li key={item} className="flex items-start gap-2.5 text-sm text-muted-foreground">
               <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>{item}</span>
+              <span>{t(item)}</span>
             </li>
           ))}
         </ul>
       </Reveal>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        Chaque pack donne accès au lecteur VYRO Premium. Aucune chaîne, aucun film ni aucune série
-        n’est inclus.
+        {t(
+          "Chaque pack donne accès au lecteur VYRO Premium. Aucune chaîne, aucun film ni aucune série n’est inclus.",
+        )}
       </p>
     </Section>
   );
 }
 
 export function DisclaimerSection() {
+  const t = useCopy();
   return (
     <Section>
       <Reveal className="panel mx-auto max-w-4xl p-8 md:p-12">
         <h2 className="text-balance font-display text-xl font-medium md:text-2xl">
-          VYRO Premium est un lecteur, pas un fournisseur de contenu.
+          {t("VYRO Premium est un lecteur, pas un fournisseur de contenu.")}
         </h2>
-        <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
+        <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground">{t(DISCLAIMER)}</p>
         <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-          Le paiement concerne uniquement la licence et l'accès aux fonctionnalités de l'application
-          VYRO Premium.
+          {t(
+            "Le paiement concerne uniquement la licence et l'accès aux fonctionnalités de l'application VYRO Premium.",
+          )}
         </p>
       </Reveal>
     </Section>
@@ -306,6 +319,7 @@ export function DisclaimerSection() {
 }
 
 export function FinalCta() {
+  const t = useCopy();
   return (
     <section className="relative overflow-hidden border-t border-border">
       <div
@@ -314,17 +328,18 @@ export function FinalCta() {
       />
       <div className="relative mx-auto max-w-3xl px-5 py-28 text-center md:px-8 md:py-36">
         <Reveal>
-          <Heading>Votre expérience TV commence ici.</Heading>
+          <Heading>{t("Votre expérience TV commence ici.")}</Heading>
           <Lead className="mx-auto mt-6 max-w-xl">
-            Installez VYRO Premium et profitez d'une interface pensée jusque dans les moindres
-            détails pour votre télévision.
+            {t(
+              "Installez VYRO Premium et profitez d'une interface pensée jusque dans les moindres détails pour votre télévision.",
+            )}
           </Lead>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button to="/tarifs" variant="primary" size="md" className="w-full sm:w-auto">
-              Obtenir VYRO Premium
+              {t("Obtenir VYRO Premium")}
             </Button>
             <Button to="/appareils" variant="ghost" size="md" className="w-full sm:w-auto">
-              Voir les appareils compatibles
+              {t("Voir les appareils compatibles")}
             </Button>
           </div>
         </Reveal>
@@ -334,20 +349,21 @@ export function FinalCta() {
 }
 
 export function FaqSection({ compact = false }: { compact?: boolean }) {
+  const t = useCopy();
   return (
     <Section id="faq">
       <Reveal className="mx-auto max-w-2xl text-center">
-        <Heading>Questions fréquentes.</Heading>
+        <Heading>{t("Questions fréquentes.")}</Heading>
       </Reveal>
       <Reveal delay={60} className="mx-auto mt-12 max-w-3xl">
         <div className="vyro-faq">
           {(compact ? FAQ.slice(0, 6) : FAQ).map((item) => (
-            <details key={item.q}>
+            <details key={t(item.q)}>
               <summary>
-                {item.q}
+                {t(item.q)}
                 <Plus size={19} aria-hidden />
               </summary>
-              <p>{item.a}</p>
+              <p>{t(item.a)}</p>
             </details>
           ))}
         </div>

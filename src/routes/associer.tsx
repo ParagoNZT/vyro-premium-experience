@@ -1,3 +1,5 @@
+import { useCopy } from "@/lib/site-language";
+import { publicPageHead } from "@/lib/site-seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { QrCode } from "lucide-react";
@@ -9,17 +11,22 @@ import "@/components/site/account-workspace.css";
 
 const key = "vyro:qr-association";
 export const Route = createFileRoute("/associer")({
-  head: () => ({
-    meta: [
-      { title: "Associer un appareil – VYRO" },
-      { name: "robots", content: "noindex" },
-      { name: "referrer", content: "no-referrer" },
-    ],
-  }),
+  head: ({ match }) => {
+    const head = publicPageHead("/associer", match.context.language, "Associer un appareil – VYRO");
+    return {
+      ...head,
+      meta: [
+        ...head.meta,
+        { name: "robots", content: "noindex" },
+        { name: "referrer", content: "no-referrer" },
+      ],
+    };
+  },
   component: Pair,
 });
 
 function Pair() {
+  const t = useCopy();
   const { ready, user, refreshAccount } = useAuth();
   const [proof, setProof] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -50,10 +57,10 @@ function Pair() {
     })
       .then(setDevice)
       .catch((err: Error) => {
-        if (!controller.signal.aborted) setError(err.message);
+        if (!controller.signal.aborted) setError(t(err.message));
       });
     return () => controller.abort();
-  }, [ready, userId, proof, done]);
+  }, [ready, userId, proof, done, t]);
   async function confirm() {
     setBusy(true);
     try {
@@ -65,7 +72,7 @@ function Pair() {
       setDone(true);
       void refreshAccount().catch(() => undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "L’association a échoué.");
+      setError(err instanceof Error ? t(err.message) : t("L’association a échoué."));
     } finally {
       setBusy(false);
     }
@@ -74,16 +81,18 @@ function Pair() {
     <main className="min-h-screen bg-background px-4 py-16 text-foreground">
       <section className="mx-auto max-w-lg space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-8">
         <QrCode className="text-primary" aria-hidden />
-        <h1 className="font-display text-2xl font-bold">Associer un appareil</h1>
+        <h1 className="font-display text-2xl font-bold">{t("Associer un appareil")}</h1>
         {!loaded || !ready ? (
-          <p>Vérification…</p>
+          <p>{t("Vérification…")}</p>
         ) : done ? (
           <>
             <p role="status">
-              Appareil associé. Laissez l’application ouverte pour que ses playlists apparaissent.
+              {t(
+                "Appareil associé. Laissez l’application ouverte pour que ses playlists apparaissent.",
+              )}
             </p>
             <Button asChild>
-              <Link to="/account/gestion">Ouvrir la gestion à distance</Link>
+              <Link to="/account/gestion">{t("Ouvrir la gestion à distance")}</Link>
             </Button>
             <p>
               <Link
@@ -91,21 +100,21 @@ function Pair() {
                 hash="appareils-gestion"
                 className="text-sm text-primary underline"
               >
-                Voir l’appareil dans Mes appareils
+                {t("Voir l’appareil dans Mes appareils")}
               </Link>
             </p>
           </>
         ) : !proof ? (
           <p>
-            Ouvrez <strong>Réglages → À propos → Gestion à distance</strong> dans l’application et
-            scannez le QR code de votre appareil.
+            {t("Ouvrez")} <strong>{t("Réglages → À propos → Gestion à distance")}</strong>{" "}
+            {t("dans l’application et scannez le QR code de votre appareil.")}
           </p>
         ) : !user ? (
           <>
-            <p>Connectez-vous à VYRO pour choisir le compte qui gérera cet appareil.</p>
+            <p>{t("Connectez-vous à VYRO pour choisir le compte qui gérera cet appareil.")}</p>
             <Button asChild>
               <Link to="/login" search={{ redirect: "/associer" }}>
-                Se connecter
+                {t("Se connecter")}
               </Link>
             </Button>
           </>
@@ -115,18 +124,20 @@ function Pair() {
               <>
                 <p>
                   <strong>{device.name}</strong> · {device.edition === "vyro" ? "VYRO" : "SHOW+"} ·{" "}
-                  {device.kind === "tv" ? "TV" : "Mobile"}
+                  {device.kind === "tv" ? "TV" : t("Mobile")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Associer cet appareil à {user.email} ? Ce compte pourra gérer les playlists et
-                  demander des sauvegardes du profil Android qui affiche le QR code.
+                  {t("Associer cet appareil à")} {user.email}{" "}
+                  {t(
+                    "? Ce compte pourra gérer les playlists et demander des sauvegardes du profil Android qui affiche le QR code.",
+                  )}
                 </p>
                 <Button onClick={() => void confirm()} disabled={busy || !!error}>
-                  {busy ? "Association…" : "Confirmer l’association"}
+                  {busy ? t("Association…") : t("Confirmer l’association")}
                 </Button>
               </>
             )}
-            {!device && !error && <p>Recherche de l’appareil…</p>}
+            {!device && !error && <p>{t("Recherche de l’appareil…")}</p>}
             {error && (
               <p className="text-destructive" role="alert">
                 {error}

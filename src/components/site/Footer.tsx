@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { Logo } from "./Logo";
@@ -33,20 +34,21 @@ const groups = [
 ] as const;
 
 export function Footer() {
+  const t = useCopy();
   return (
     <footer className="vyro-footer screening-footer">
       <div className="vyro-wrap">
         <div className="vyro-footer-grid">
           <div>
             <Logo />
-            <p>Votre lecteur multimédia pour Android TV, Google TV et Fire TV.</p>
+            <p>{t("Votre lecteur multimédia pour Android TV, Google TV et Fire TV.")}</p>
           </div>
           {groups.map((group) => (
-            <nav key={group.label} aria-label={group.label}>
-              <h2>{group.label}</h2>
+            <nav key={t(group.label)} aria-label={t(group.label)}>
+              <h2>{t(group.label)}</h2>
               {group.links.map(([to, label]) => (
                 <Link key={to} to={to}>
-                  {label}
+                  {t(label)}
                   <ArrowUpRight size={12} aria-hidden />
                 </Link>
               ))}
@@ -55,7 +57,7 @@ export function Footer() {
         </div>
         <div className="vyro-footer-end">
           <span>© 2026 VYRO Premium</span>
-          <span>Aucun contenu audiovisuel fourni ou hébergé.</span>
+          <span>{t("Aucun contenu audiovisuel fourni ou hébergé.")}</span>
         </div>
       </div>
     </footer>

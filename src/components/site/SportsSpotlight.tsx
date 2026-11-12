@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import broadcasts from "@/assets/showplus-fire-tv-sports.png";
@@ -18,6 +19,7 @@ const captures = [
 ];
 
 export function SportsSpotlight({ detailed = false }: { detailed?: boolean }) {
+  const t = useCopy();
   return (
     <section
       id="sports"
@@ -26,37 +28,45 @@ export function SportsSpotlight({ detailed = false }: { detailed?: boolean }) {
     >
       <div className={detailed ? undefined : "sports-spotlight__teaser"}>
         <Reveal className="workspace-spotlight__intro">
-          <p className="workspace-spotlight__kicker">Sports · Sur TV</p>
+          <p className="workspace-spotlight__kicker">{t("Sports · Sur TV")}</p>
           <h2 id="sports-title">
-            Le sport, <em>au programme.</em>
+            {t("Le sport,")} <em>{t("au programme.")}</em>
           </h2>
           <p>
-            Repérez les diffusions sportives dans le guide TV de votre playlist. Parcourez aussi les
-            compétitions, les résultats et les prochaines rencontres lorsque ces données sont
-            disponibles.
+            {t(
+              "Repérez les diffusions sportives dans le guide TV de votre playlist. Parcourez aussi les compétitions, les résultats et les prochaines rencontres lorsque ces données sont disponibles.",
+            )}
           </p>
         </Reveal>
         <div className="sports-spotlight__captures">
           {(detailed ? captures : captures.slice(0, 1)).map(({ src, alt, caption }) => (
             <figure className="sports-spotlight__capture" key={src}>
-              <img src={src} alt={alt} width={1920} height={1080} loading="lazy" decoding="async" />
-              <figcaption>{caption}</figcaption>
+              <img
+                src={src}
+                alt={t(alt)}
+                width={1920}
+                height={1080}
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>{t(caption)}</figcaption>
             </figure>
           ))}
         </div>
       </div>
       <div className="workspace-spotlight__foot">
         <p>
-          Captures de SHOW+ sur Fire TV Stick. Les chaînes affichées dépendent de la playlist
-          utilisée. VYRO ne fournit aucun flux.
+          {t(
+            "Captures de SHOW+ sur Fire TV Stick. Les chaînes affichées dépendent de la playlist utilisée. VYRO ne fournit aucun flux.",
+          )}
         </p>
         {!detailed && (
           <div className="workspace-spotlight__actions">
             <Link to="/fonctionnalites" hash="sports" className="screening-text-link">
-              Découvrir l’écran Sports <ArrowUpRight size={16} aria-hidden />
+              {t("Découvrir l’écran Sports")} <ArrowUpRight size={16} aria-hidden />
             </Link>
             <Link to="/fonctionnalites" hash="reglages-lecture" className="screening-text-link">
-              Réglages image et son <ArrowUpRight size={16} aria-hidden />
+              {t("Réglages image et son")} <ArrowUpRight size={16} aria-hidden />
             </Link>
           </div>
         )}

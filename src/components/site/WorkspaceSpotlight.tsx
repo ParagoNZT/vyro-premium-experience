@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, HardDrive, ListVideo, MonitorSmartphone } from "lucide-react";
 import { Reveal } from "./Reveal";
@@ -24,6 +25,7 @@ const capabilities = [
 ] as const;
 
 export function WorkspaceSpotlight({ detailed = false }: { detailed?: boolean }) {
+  const t = useCopy();
   return (
     <section
       id="espace-client"
@@ -32,71 +34,80 @@ export function WorkspaceSpotlight({ detailed = false }: { detailed?: boolean })
     >
       <div className="screening-wrap screening-section">
         <Reveal className="workspace-spotlight__intro">
-          <p className="workspace-spotlight__kicker">L’espace client</p>
+          <p className="workspace-spotlight__kicker">{t("L’espace client")}</p>
           <h2 id="workspace-spotlight-title">
-            Vos réglages, <em>d’un écran à l’autre.</em>
+            {t("Vos réglages,")} <em>{t("d’un écran à l’autre.")}</em>
           </h2>
           <p>
-            Retrouvez la configuration de votre TV sur un téléphone, une tablette ou une autre TV.
-            Depuis votre navigateur, gérez les playlists et les sauvegardes de vos appareils
-            associés.
+            {t(
+              "Retrouvez la configuration de votre TV sur un téléphone, une tablette ou une autre TV. Depuis votre navigateur, gérez les playlists et les sauvegardes de vos appareils associés.",
+            )}
           </p>
         </Reveal>
         <ul className="workspace-spotlight__features">
           {capabilities.map(({ icon: Icon, title, description }, index) => (
-            <Reveal as="li" className="workspace-spotlight__feature" key={title} delay={index * 60}>
+            <Reveal
+              as="li"
+              className="workspace-spotlight__feature"
+              key={t(title)}
+              delay={index * 60}
+            >
               <span className="workspace-spotlight__icon">
                 <Icon size={23} aria-hidden />
               </span>
-              <h3>{title}</h3>
-              <p>{description}</p>
+              <h3>{t(title)}</h3>
+              <p>{t(description)}</p>
             </Reveal>
           ))}
         </ul>
         {detailed && (
           <ol
             className="workspace-spotlight__steps"
-            aria-label="Comment transférer une configuration"
+            aria-label={t("Comment transférer une configuration")}
           >
             <li>
-              <strong>Associez vos appareils</strong>
+              <strong>{t("Associez vos appareils")}</strong>
               <span>
-                Dans Réglages → À propos, affichez le QR code de gestion à distance et confirmez
-                l’association dans votre compte.
+                {t(
+                  "Dans Réglages → À propos, affichez le QR code de gestion à distance et confirmez l’association dans votre compte.",
+                )}
               </span>
             </li>
             <li>
-              <strong>Sauvegardez la source</strong>
+              <strong>{t("Sauvegardez la source")}</strong>
               <span>
-                Dans Gestion à distance, sélectionnez l’appareil source et choisissez les réglages
-                seuls ou la sauvegarde complète.
+                {t(
+                  "Dans Gestion à distance, sélectionnez l’appareil source et choisissez les réglages seuls ou la sauvegarde complète.",
+                )}
               </span>
             </li>
             <li>
-              <strong>Restaurez sur la destination</strong>
+              <strong>{t("Restaurez sur la destination")}</strong>
               <span>
-                Sélectionnez le second appareil, ouvrez la même playlist pour une restauration
-                complète, puis lancez la restauration.
+                {t(
+                  "Sélectionnez le second appareil, ouvrez la même playlist pour une restauration complète, puis lancez la restauration.",
+                )}
               </span>
             </li>
           </ol>
         )}
         <div className="workspace-spotlight__foot">
           <p>
-            Ces fonctions nécessitent une version compatible de VYRO. Pour transférer les favoris et
-            l’historique, la même playlist doit être configurée sur les deux appareils.
+            {t(
+              "Ces fonctions nécessitent une version compatible de VYRO. Pour transférer les favoris et l’historique, la même playlist doit être configurée sur les deux appareils.",
+            )}
           </p>
           <div className="workspace-spotlight__actions">
             <Link to="/account/gestion" className="screening-button screening-button-primary">
-              Ouvrir la gestion à distance <ArrowUpRight size={17} aria-hidden />
+              {t("Ouvrir la gestion à distance")} <ArrowUpRight size={17} aria-hidden />
             </Link>
             {detailed ? (
               <Link to="/account/guides" className="screening-text-link">
-                Consulter les guides <ArrowUpRight size={16} aria-hidden />
+                {t("Consulter les guides")} <ArrowUpRight size={16} aria-hidden />
               </Link>
             ) : (
               <Link to="/fonctionnalites" hash="espace-client" className="screening-text-link">
-                Voir comment ça marche <ArrowUpRight size={16} aria-hidden />
+                {t("Voir comment ça marche")} <ArrowUpRight size={16} aria-hidden />
               </Link>
             )}
           </div>

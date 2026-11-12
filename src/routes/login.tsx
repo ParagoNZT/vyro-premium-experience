@@ -1,3 +1,5 @@
+import { useCopy } from "@/lib/site-language";
+import { publicPageHead } from "@/lib/site-seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
@@ -32,13 +34,18 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/login")({
   validateSearch: searchSchema,
-  head: () => ({
-    meta: [{ title: "Connexion – VYRO Premium" }, { name: "robots", content: "noindex" }],
-  }),
+  head: ({ match }) => {
+    const head = publicPageHead("/login", match.context.language, "Connexion – VYRO Premium");
+    return {
+      ...head,
+      meta: [...head.meta, { name: "robots", content: "noindex" }],
+    };
+  },
   component: LoginPage,
 });
 
 function LoginPage() {
+  const t = useCopy();
   const { ready, signIn, signOut, requestPasswordReset, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { redirect, plan, recovery } = Route.useSearch();
@@ -68,7 +75,9 @@ function LoginPage() {
       if (active && !received) {
         setRecoveryPending(false);
         setMode("forgot");
-        setError("Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien.");
+        setError(
+          t("Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien."),
+        );
       }
     }, 4000);
     return () => {
@@ -76,7 +85,7 @@ function LoginPage() {
       window.clearTimeout(timer);
       data.subscription.unsubscribe();
     };
-  }, [recovery]);
+  }, [recovery, t]);
 
   function switchMode(next: "login" | "forgot") {
     if (recovery) void navigate({ to: "/login", search: { redirect, plan }, replace: true });
@@ -97,22 +106,24 @@ function LoginPage() {
       if (mode === "forgot") {
         await requestPasswordReset(email.trim());
         setNotice(
-          "Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation.",
+          t("Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation."),
         );
       } else if (mode === "reset") {
         if (password !== confirmation)
-          throw new Error("Les deux mots de passe doivent être identiques.");
+          throw new Error(t("Les deux mots de passe doivent être identiques."));
         await resetPassword(password);
         switchMode("login");
         try {
           await signOut();
         } catch {
           setError(
-            "Mot de passe modifié. La session n’a pas pu être fermée ; déconnectez-vous depuis votre compte.",
+            t(
+              "Mot de passe modifié. La session n’a pas pu être fermée ; déconnectez-vous depuis votre compte.",
+            ),
           );
           return;
         }
-        setNotice("Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.");
+        setNotice(t("Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe."));
       } else {
         await signIn(email, password);
         setPassword("");
@@ -123,8 +134,8 @@ function LoginPage() {
     } catch (issue) {
       setError(
         issue instanceof Error && !(issue instanceof TypeError)
-          ? issue.message
-          : "La demande n’a pas abouti. Réessayez.",
+          ? t(issue.message)
+          : t("La demande n’a pas abouti. Réessayez."),
       );
     } finally {
       setBusy(false);
@@ -134,41 +145,41 @@ function LoginPage() {
   return (
     <ScreeningAuth
       admin={redirect === "/admin"}
-      label={redirect === "/admin" ? "Administration" : "Espace client"}
+      label={redirect === "/admin" ? "Administration" : t("Espace client")}
       title={
         mode === "forgot"
-          ? "Mot de passe oublié"
+          ? t("Mot de passe oublié")
           : mode === "reset"
-            ? "Nouveau mot de passe"
-            : "Connexion"
+            ? t("Nouveau mot de passe")
+            : t("Connexion")
       }
       subtitle={
         mode === "forgot"
-          ? "Nous vous enverrons un lien pour choisir un nouveau mot de passe."
+          ? t("Nous vous enverrons un lien pour choisir un nouveau mot de passe.")
           : mode === "reset"
-            ? "Choisissez un mot de passe que vous n’utilisez sur aucun autre site."
+            ? t("Choisissez un mot de passe que vous n’utilisez sur aucun autre site.")
             : redirect === "/admin"
-              ? "Connectez-vous avec le compte autorisé à administrer VYRO."
-              : "Connectez-vous pour accéder à votre espace VYRO."
+              ? t("Connectez-vous avec le compte autorisé à administrer VYRO.")
+              : t("Connectez-vous pour accéder à votre espace VYRO.")
       }
       action={
         mode === "login" && !recoveryPending && redirect !== "/admin" ? (
           <>
-            <p>Pas encore de compte ?</p>
+            <p>{t("Pas encore de compte ?")}</p>
             <Link to="/register" search={{ redirect, plan }} className="screening-auth__cta">
-              Créer un compte <ArrowRight size={16} aria-hidden />
+              {t("Créer un compte")} <ArrowRight size={16} aria-hidden />
             </Link>
           </>
         ) : undefined
       }
     >
       {recoveryPending ? (
-        <ScreeningNotice>Vérification du lien de réinitialisation…</ScreeningNotice>
+        <ScreeningNotice>{t("Vérification du lien de réinitialisation…")}</ScreeningNotice>
       ) : (
         <form method="post" onSubmit={onSubmit} className="screening-auth__form" aria-busy={busy}>
           {mode !== "reset" && (
             <ScreeningField
-              label="Adresse e-mail"
+              label={t("Adresse e-mail")}
               name="email"
               type="email"
               value={email}
@@ -181,7 +192,7 @@ function LoginPage() {
           {mode !== "forgot" && (
             <ScreeningField
               key={mode}
-              label={mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+              label={mode === "reset" ? t("Nouveau mot de passe") : t("Mot de passe")}
               name="password"
               type="password"
               value={password}
@@ -189,13 +200,13 @@ function LoginPage() {
               autoComplete={mode === "reset" ? "new-password" : "current-password"}
               minLength={mode === "reset" ? 12 : undefined}
               maxLength={256}
-              hint={mode === "reset" ? "12 caractères minimum." : undefined}
+              hint={mode === "reset" ? t("12 caractères minimum.") : undefined}
               required
             />
           )}
           {mode === "reset" && (
             <ScreeningField
-              label="Confirmer le mot de passe"
+              label={t("Confirmer le mot de passe")}
               name="confirmation"
               type="password"
               value={confirmation}
@@ -210,12 +221,12 @@ function LoginPage() {
           {notice && <ScreeningNotice>{notice}</ScreeningNotice>}
           <button type="submit" disabled={!ready || busy} className="screening-auth__submit">
             {busy
-              ? "Veuillez patienter…"
+              ? t("Veuillez patienter…")
               : mode === "login"
-                ? "Se connecter"
+                ? t("Se connecter")
                 : mode === "forgot"
-                  ? "Demander un lien"
-                  : "Enregistrer le mot de passe"}
+                  ? t("Demander un lien")
+                  : t("Enregistrer le mot de passe")}
           </button>
           {mode !== "reset" && (
             <button
@@ -224,7 +235,7 @@ function LoginPage() {
               className="screening-auth__text-button"
               onClick={() => switchMode(mode === "login" ? "forgot" : "login")}
             >
-              {mode === "login" ? "Mot de passe oublié ?" : "Revenir à la connexion"}
+              {mode === "login" ? t("Mot de passe oublié ?") : t("Revenir à la connexion")}
             </button>
           )}
         </form>

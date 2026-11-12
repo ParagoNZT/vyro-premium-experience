@@ -1,3 +1,4 @@
+import { useCopy } from "@/lib/site-language";
 import { AudioLines, Cable, Monitor, Repeat2 } from "lucide-react";
 import { Reveal } from "./Reveal";
 
@@ -29,6 +30,7 @@ const settings = [
 ] as const;
 
 export function PlaybackSpotlight() {
+  const t = useCopy();
   return (
     <section
       id="reglages-lecture"
@@ -36,23 +38,29 @@ export function PlaybackSpotlight() {
       aria-labelledby="playback-options-title"
     >
       <Reveal className="workspace-spotlight__intro">
-        <p className="workspace-spotlight__kicker">Réglages de lecture sur TV</p>
+        <p className="workspace-spotlight__kicker">{t("Réglages de lecture sur TV")}</p>
         <h2 id="playback-options-title">
-          L’image et le son <em>à votre façon.</em>
+          {t("L’image et le son")} <em>{t("à votre façon.")}</em>
         </h2>
         <p>
-          Ouvrez Réglages → Lecture sur un appareil TV compatible pour adapter VYRO à votre écran et
-          à votre installation audio.
+          {t(
+            "Ouvrez Réglages → Lecture sur un appareil TV compatible pour adapter VYRO à votre écran et à votre installation audio.",
+          )}
         </p>
       </Reveal>
       <ul className="workspace-spotlight__features workspace-playback__features">
         {settings.map(({ icon: Icon, title, description }, index) => (
-          <Reveal as="li" className="workspace-spotlight__feature" key={title} delay={index * 55}>
+          <Reveal
+            as="li"
+            className="workspace-spotlight__feature"
+            key={t(title)}
+            delay={index * 55}
+          >
             <span className="workspace-spotlight__icon">
               <Icon size={23} aria-hidden />
             </span>
-            <h3>{title}</h3>
-            <p>{description}</p>
+            <h3>{t(title)}</h3>
+            <p>{t(description)}</p>
           </Reveal>
         ))}
       </ul>
