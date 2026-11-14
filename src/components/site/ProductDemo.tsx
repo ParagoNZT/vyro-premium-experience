@@ -4,7 +4,7 @@ import enVideo from "@/assets/product-demo/vyro-demo-en.mp4";
 import frPoster from "@/assets/product-demo/vyro-demo-fr.jpg";
 import enPoster from "@/assets/product-demo/vyro-demo-en.jpg";
 import { ArrowDown, ArrowUpRight, Play, X } from "lucide-react";
-import { useId, useRef, useState, type MouseEvent } from "react";
+import { useId, useRef, useState, type MouseEvent, type SyntheticEvent } from "react";
 
 const media = {
   fr: { src: frVideo, poster: frPoster },
@@ -19,6 +19,12 @@ const copy = {
     gallery: "Voir la galerie de captures",
     transcript: "Lire la transcription de la démo (20 s)",
     error: "La vidéo n’a pas pu être lue. Retrouvez les quatre scènes dans la transcription.",
+    captions: [
+      "Vos chaînes et le guide TV.",
+      "Compétitions, résultats et prochaines rencontres.",
+      "Synchronisez vos favoris avec la même playlist sur la TV et le téléphone.",
+      "Gérez vos playlists et restaurez une sauvegarde depuis l’espace client.",
+    ],
     chapters: [
       ["Le direct", "La grille des chaînes affiche un aperçu du direct et le programme en cours."],
       [
@@ -27,7 +33,7 @@ const copy = {
       ],
       [
         "De la TV au téléphone",
-        "Le même titre est visible sur les deux appareils. Sauvegardez le profil de la TV puis restaurez-le sur le téléphone. Utilisez la même playlist sur les deux appareils pour retrouver vos favoris, vos groupes et votre historique.",
+        "Le même titre apparaît sur les deux écrans. Avec la même playlist ouverte sur les deux appareils, la TV principale synchronise ses favoris, ses groupes et son historique vers le téléphone. Ouvrez l’application sur le téléphone pour recevoir les changements.",
       ],
       [
         "L’espace client",
@@ -44,6 +50,12 @@ const copy = {
     gallery: "View the screenshot gallery",
     transcript: "Read the demo transcript (20 sec)",
     error: "The video couldn’t play. All four scenes are in the transcript.",
+    captions: [
+      "Your channels and TV guide.",
+      "Competitions, results and upcoming fixtures.",
+      "Sync your favourites using the same playlist on your TV and phone.",
+      "Manage your playlists and restore a backup from your customer area.",
+    ],
     chapters: [
       ["Live TV", "The channel grid shows a live preview and what’s on now."],
       [
@@ -52,7 +64,7 @@ const copy = {
       ],
       [
         "From TV to phone",
-        "The same title appears on both devices. Back up your TV profile, then restore it to your phone. Use the same playlist on both devices to keep your favourites, groups and watch history.",
+        "The same title appears on both screens. With the same playlist open on both devices, the primary TV syncs its favourites, groups and watch history to the phone. Open the app on the phone to receive changes.",
       ],
       [
         "Customer area",
@@ -104,6 +116,7 @@ export function ProductDemo() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
+  const [chapter, setChapter] = useState(0);
 
   function openDemo(event: MouseEvent<HTMLAnchorElement>) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
@@ -116,6 +129,7 @@ export function ProductDemo() {
     dialog.showModal();
     event.preventDefault();
     setFailed(false);
+    setChapter(0);
     video.poster = media[language].poster;
     video.src = media[language].src;
     // Call play during the user gesture. Native controls remain available if playback is blocked.
@@ -129,6 +143,10 @@ export function ProductDemo() {
     video.removeAttribute("src");
     video.removeAttribute("poster");
     video.load();
+  }
+
+  function updateChapter(event: SyntheticEvent<HTMLVideoElement>) {
+    setChapter(Math.min(3, Math.floor(event.currentTarget.currentTime / 5)));
   }
 
   return (
@@ -170,7 +188,15 @@ export function ProductDemo() {
           preload="none"
           hidden={failed}
           onError={() => setFailed(true)}
+          onTimeUpdate={updateChapter}
         />
+        {!failed && (
+          <p className="vyro-demo-mobile-caption">
+            <span className="vyro-demo-time">0{chapter + 1} / 04</span>
+            <strong>{content.chapters[chapter]?.[0]}</strong>
+            {content.captions[chapter]}
+          </p>
+        )}
         {failed && (
           <p className="vyro-demo-error" role="status">
             {content.error}
