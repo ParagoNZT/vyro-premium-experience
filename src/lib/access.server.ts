@@ -143,7 +143,7 @@ export async function limitedBody(
   return data;
 }
 
-export async function body(request: Request) {
+export async function body(request: Request, limit = 16384) {
   if (request.headers.get("origin") !== expectedOrigin(request))
     throw new ApiError(403, "Origine refusée.");
   if (
@@ -151,7 +151,7 @@ export async function body(request: Request) {
   ) {
     throw new ApiError(415, "Format de requête invalide.");
   }
-  const raw = await limitedBody(request, 16384);
+  const raw = await limitedBody(request, limit);
   try {
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw)) as unknown;
   } catch {

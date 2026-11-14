@@ -12,6 +12,12 @@ import type {
 import type { ShowDirectoryPage } from "@/lib/show-directory.server";
 import { ShowDirectory } from "./ShowDirectory";
 import { resellerCreationCents, resellerUpdatesCents } from "@/config/reseller-offer";
+import {
+  clearBrandDraft,
+  orderBrandColor,
+  orderLogoSrc,
+  resumeBrandDraft,
+} from "@/lib/reseller-brand-draft";
 
 type Device = ShowDirectoryPage["devices"][number];
 const textArea =
@@ -54,9 +60,11 @@ const formValues = (event: FormEvent<HTMLFormElement>) => {
 export function PartnerWorkspace({
   admin = false,
   initialView = "devices",
+  draftOwner,
 }: {
   admin?: boolean;
   initialView?: PartnerView;
+  draftOwner?: string;
 }) {
   const url = `/api/partner-control?view=${admin ? "admin" : "mine"}` as const;
   const [data, setData] = useState<PartnerOverview>();
@@ -69,13 +77,23 @@ export function PartnerWorkspace({
   const [busy, setBusy] = useState(false);
   const [wantUpdates, setWantUpdates] = useState(false);
   const [brandName, setBrandName] = useState("");
-  const [accent, setAccent] = useState("#8163db");
+  const [accent, setAccent] = useState(orderBrandColor);
+  const [logo, setLogo] = useState<string | null>(null);
+  const [downloadingLogo, setDownloadingLogo] = useState<string | null>(null);
   const [order, setOrder] = useState<PartnerOrder>();
   const [device, setDevice] = useState<Device>();
   const [activity, setActivity] = useState<PartnerActivity>();
   const devicePanel = useRef<HTMLElement>(null);
   const app = data?.apps.find((item) => item.id === active) ?? data?.apps[0];
   const visibleView = app ? view : "orders";
+  useEffect(() => {
+    if (admin || initialView !== "orders" || !draftOwner) return;
+    const draft = resumeBrandDraft(draftOwner);
+    if (!draft) return;
+    setBrandName(draft.name);
+    setAccent(draft.accent);
+    setLogo(draft.logo);
+  }, [admin, draftOwner, initialView]);
   useEffect(() => {
     const controller = new AbortController();
     void portalApi<PartnerOverview>(`${url}&page=${page}`, { signal: controller.signal })
@@ -130,6 +148,24 @@ export function PartnerWorkspace({
     setNotice("");
     setError("");
     requestAnimationFrame(() => devicePanel.current?.focus());
+  }
+
+  async function downloadOrderLogo(id: string) {
+    setDownloadingLogo(id);
+    setError("");
+    try {
+      const { logoPng } = await portalApi<{ logoPng: string }>(
+        `${url}&orderLogo=${encodeURIComponent(id)}`,
+      );
+      const anchor = document.createElement("a");
+      anchor.href = orderLogoSrc(logoPng);
+      anchor.download = `vyro-logo-${id}.png`;
+      anchor.click();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de télécharger le logo.");
+    } finally {
+      setDownloadingLogo(null);
+    }
   }
   return (
     <div className="mt-6 space-y-5">
@@ -342,6 +378,7 @@ export function PartnerWorkspace({
                   brief: values["brief"],
                   accent,
                   updates: wantUpdates,
+                  ...(logo ? { logoPng: logo } : {}),
                 },
                 "Demande enregistrée. Aucun paiement n’a été prélevé.",
                 targetForm,
@@ -349,7 +386,9 @@ export function PartnerWorkspace({
                 if (saved) {
                   setBrandName("");
                   setWantUpdates(false);
-                  setAccent("#8163db");
+                  setAccent(orderBrandColor);
+                  setLogo(null);
+                  clearBrandDraft();
                 }
               });
             }}
@@ -385,15 +424,39 @@ export function PartnerWorkspace({
               />
             </label>
             <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-              <span
-                className="size-7 shrink-0 rounded-md"
-                style={{ backgroundColor: accent }}
-                aria-hidden
-              />
+              {logo ? (
+                <img
+                  src={orderLogoSrc(logo)}
+                  alt=""
+                  className="size-8 shrink-0 rounded-md object-contain"
+                />
+              ) : (
+                <span
+                  className="size-7 shrink-0 rounded-md"
+                  style={{ backgroundColor: accent }}
+                  aria-hidden
+                />
+              )}
               <span className="break-all font-medium">
                 {brandName.trim() || "Votre application"}
               </span>
             </div>
+            {logo && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm sm:col-span-2">
+                <span>Le logo de votre aperçu sera joint à la demande.</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setLogo(null);
+                    clearBrandDraft();
+                  }}
+                >
+                  Retirer le logo de la demande
+                </Button>
+              </div>
+            )}
             <label className="grid gap-1 text-sm sm:col-span-2">
               Consignes de personnalisation
               <textarea
@@ -404,7 +467,9 @@ export function PartnerWorkspace({
                 placeholder="Ex. reprendre le logo enregistré dans mon espace, préparer une version TV et mobile…"
               />
               <span className="text-muted-foreground">
-                Vous pouvez enregistrer votre logo dans « Identité de l’application » ci-dessous.
+                {logo
+                  ? "Indiquez ici les autres éléments à personnaliser."
+                  : "Vous pouvez enregistrer votre logo dans « Identité de l’application » ci-dessous."}
               </span>
             </label>
             <label className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm sm:col-span-2">
@@ -460,6 +525,17 @@ export function PartnerWorkspace({
                     <p className="text-muted-foreground">Couleur : {item.accent}</p>
                   )}
                 </div>
+                {item.hasLogo === 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={downloadingLogo !== null}
+                    onClick={() => void downloadOrderLogo(item.id)}
+                  >
+                    <Download /> Télécharger le logo
+                  </Button>
+                )}
                 {!admin &&
                   item.stage === "delivered" &&
                   data.apps.find((a) => a.packageName === item.packageName)?.apkUrl && (

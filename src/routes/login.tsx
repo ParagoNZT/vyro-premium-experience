@@ -8,6 +8,7 @@ import { ScreeningAuth, ScreeningField, ScreeningNotice } from "@/components/sit
 import { PACK_IDS } from "@/config/site";
 import { supabase } from "@/integrations/supabase/client";
 import { resellerOrderRoute, resellerPath } from "@/lib/reseller-navigation";
+import { readBrandDraft } from "@/lib/reseller-brand-draft";
 import { useAuth } from "@/lib/auth";
 
 const searchSchema = z.object({
@@ -61,10 +62,17 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (ready && user && !busy && !recovery && mode === "login" && redirect === resellerPath) {
+    if (
+      ready &&
+      user &&
+      !busy &&
+      !recovery &&
+      mode === "login" &&
+      (redirect === resellerPath || (!redirect && !plan && readBrandDraft(user.id)))
+    ) {
       void navigate({ ...resellerOrderRoute, replace: true });
     }
-  }, [ready, user, busy, recovery, mode, redirect, navigate]);
+  }, [ready, user, busy, recovery, mode, redirect, plan, navigate]);
 
   useEffect(() => {
     if (!recovery) return;
@@ -133,9 +141,10 @@ function LoginPage() {
         }
         setNotice(t("Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe."));
       } else {
-        await signIn(email, password);
+        const signedIn = await signIn(email, password);
         setPassword("");
-        if (redirect === resellerPath) await navigate(resellerOrderRoute);
+        if (redirect === resellerPath || (!redirect && !plan && readBrandDraft(signedIn.id)))
+          await navigate(resellerOrderRoute);
         else if (redirect) await navigate({ to: redirect });
         else if (plan) await navigate({ to: "/checkout", search: { plan } });
         else await navigate({ to: "/account" });

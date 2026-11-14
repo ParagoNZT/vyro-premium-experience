@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resellerCreationCents, resellerUpdatesCents } from "@/config/reseller-offer";
+import { logoMaxBase64Length, validOrderLogo } from "./reseller-brand-draft";
 import { api, ApiError, body, identity, json } from "./access.server";
 import { database } from "./management.server";
 import { appScope } from "./partner-scope";
@@ -24,6 +25,7 @@ const schema = z.discriminatedUnion("action", [
       .regex(/^#[0-9a-f]{6}$/i)
       .optional(),
     updates: z.boolean().optional(),
+    logoPng: z.string().max(logoMaxBase64Length).refine(validOrderLogo).optional(),
   }),
   z.object({ action: z.literal("renew"), app: appId }),
   z.object({
@@ -84,6 +86,7 @@ export type PartnerOrder = {
   brief: string | null;
   accent: string | null;
   wantsUpdates: number;
+  hasLogo: number;
   stage: "pending" | "preparing" | "delivered" | "covered" | "cancelled";
   deliveredAt: string | null;
 };
@@ -140,6 +143,19 @@ export const partnerControlRequest = api(async (request) => {
   const db = await database();
   const now = new Date().toISOString();
   if (request.method === "GET") {
+    if (params.has("orderLogo")) {
+      const orderId = accessId.safeParse(params.get("orderLogo"));
+      if (!orderId.success) throw new ApiError(404, "Logo introuvable.");
+      const order = await db
+        .prepare(
+          `SELECT logo_png AS logoPng FROM partner_orders WHERE id=?
+          AND logo_png IS NOT NULL${admin ? "" : " AND owner_id=?"}`,
+        )
+        .bind(orderId.data, ...(admin ? [] : [user.id]))
+        .first<{ logoPng: string }>();
+      if (!order || !validOrderLogo(order.logoPng)) throw new ApiError(404, "Logo introuvable.");
+      return json(order);
+    }
     const app = params.get("app");
     if (app) {
       await assertPartnerAccess(db, user, app, admin);
@@ -188,7 +204,7 @@ export const partnerControlRequest = api(async (request) => {
         .prepare(
           `SELECT o.id,${admin ? "o.email," : ""}o.kind,coalesce(o.name,a.name) AS name,
         coalesce(o.package_name,a.package_name) AS packageName,o.cents,o.status,o.created_at AS createdAt,
-        o.brief,o.accent,o.wants_updates AS wantsUpdates,
+        o.brief,o.accent,o.wants_updates AS wantsUpdates,(o.logo_png IS NOT NULL) AS hasLogo,
         (SELECT min(r.published_at) FROM partner_releases r WHERE r.app_id=o.app_id AND r.initial=1) AS deliveredAt,
         CASE WHEN o.status<>'paid' THEN o.status WHEN o.kind='updates' THEN 'covered'
           WHEN EXISTS(SELECT 1 FROM partner_releases r WHERE r.app_id=o.app_id AND r.initial=1) THEN 'delivered'
@@ -205,7 +221,7 @@ export const partnerControlRequest = api(async (request) => {
       hasMore: orders.results.length > 25,
     });
   }
-  const parsed = schema.safeParse(await body(request));
+  const parsed = schema.safeParse(await body(request, logoMaxBase64Length + 16384));
   if (!parsed.success) throw new ApiError(400, "Vérifiez les informations saisies.");
   const value = parsed.data;
   if (value.action === "order") {
@@ -215,8 +231,8 @@ export const partnerControlRequest = api(async (request) => {
     const written = await db
       .prepare(
         `INSERT OR IGNORE INTO partner_orders
-      (id,owner_id,email,kind,name,package_name,cents,created_at,brief,accent,wants_updates)
-      SELECT ?,?,?,'app',?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
+      (id,owner_id,email,kind,name,package_name,cents,created_at,brief,accent,wants_updates,logo_png)
+      SELECT ?,?,?,'app',?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM partner_apps WHERE package_name=?)
       AND (SELECT count(*) FROM partner_orders WHERE owner_id=? AND kind='app' AND status='pending')<3`,
       )
       .bind(
@@ -230,6 +246,7 @@ export const partnerControlRequest = api(async (request) => {
         value.brief || null,
         value.accent ?? null,
         value.updates ? 1 : 0,
+        value.logoPng ?? null,
         value.packageName,
         user.id,
       )

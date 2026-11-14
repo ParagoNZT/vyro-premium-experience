@@ -70,6 +70,7 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     "../migrations/d1/0013_vyro_private_messages.sql",
     "../migrations/d1/0014_admin_delegation_and_license_expiry.sql",
     "../migrations/d1/0015_admin_license_packs.sql",
+    "../migrations/d1/0017_partner_order_logos.sql",
   ])
     sqlite.exec(readFileSync(new URL(fixture, import.meta.url), "utf8"));
   sqlite.exec("PRAGMA recursive_triggers=ON");
@@ -1922,12 +1923,26 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
   });
 
   await t.test("white label order, separate coverage and admin deadlines", async () => {
+    const logoPng =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1sAAAAASUVORK5CYII=";
+    assert.equal(
+      (
+        await post(partnerApi, "second", {
+          action: "order",
+          name: "Bad logo",
+          packageName: "fr.studio.badlogo",
+          logoPng: "not-base64",
+        })
+      ).status,
+      400,
+    );
     const ordered = await post(partnerApi, "second", {
       action: "order",
       name: "Studio Démo",
       packageName: "fr.studio.demo",
       accent: "#4455aa",
       brief: "Version TV et téléphone",
+      logoPng,
       updates: true,
     });
     assert.equal(ordered.status, 201, JSON.stringify(ordered));
@@ -1936,6 +1951,13 @@ test("compiled Worker: real API handlers with synthetic Supabase, D1 and Stripe"
     );
     assert.equal(pending.status, "pending");
     assert.equal(pending.cents, 10000);
+    assert.equal(pending.hasLogo, 1);
+    assert.equal(pending.logoPng, undefined);
+    const logoPath = partnerApi + "?orderLogo=" + ordered.json.id;
+    assert.equal((await call(logoPath, { token: "first" })).status, 404);
+    assert.equal((await call(logoPath + "&view=admin", { token: "first" })).status, 403);
+    assert.deepEqual((await call(logoPath, { token: "second" })).json, { logoPng });
+    assert.deepEqual((await call(logoPath + "&view=admin", { token: "admin" })).json, { logoPng });
     const adminPath = partnerApi + "?view=admin";
     const decide = (id) =>
       post(adminPath, "admin", { action: "decision", id, paid: true, receipt: "REG TEST" });

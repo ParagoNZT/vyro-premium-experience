@@ -343,6 +343,7 @@ function ResellerPage() {
         <PartnerWorkspace
           key={identity.id + ":" + identity.email + ":" + (view ?? "devices")}
           initialView={view ?? "devices"}
+          draftOwner={identity.id}
         />
       )}
       {error && (

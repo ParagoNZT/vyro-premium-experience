@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { FaqSection, PricingSection } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
+import { ProductDemo, ProductDemoTranscript } from "@/components/site/ProductDemo";
+import demoStyles from "@/components/site/product-demo.css?url";
 import { ScreeningRoom } from "@/components/site/ScreeningRoom";
 import { DeviceHandoff } from "@/components/site/DeviceHandoff";
 import handoffStyles from "@/components/site/device-handoff.css?url";
@@ -26,7 +28,11 @@ export const Route = createFileRoute("/")({
     const head = publicPageHead("/", match.context.language, homeTitle, homeDescription);
     return {
       ...head,
-      links: [...head.links, { rel: "stylesheet", href: handoffStyles }],
+      links: [
+        ...head.links,
+        { rel: "stylesheet", href: handoffStyles },
+        { rel: "stylesheet", href: demoStyles },
+      ],
       scripts: [
         {
           type: "application/ld+json",
@@ -112,9 +118,7 @@ function Home() {
               )}
             </p>
             <div className="screening-actions">
-              <a className="screening-button screening-button-primary" href="#projection">
-                <Play size={16} fill="currentColor" aria-hidden /> {t("Voir VYRO en action")}
-              </a>
+              <ProductDemo />
               <Link className="screening-button screening-button-ghost" to="/tarifs">
                 {t("Choisir mon accès")} <ArrowUpRight size={17} aria-hidden />
               </Link>
@@ -124,6 +128,7 @@ function Home() {
             </a>
           </div>
           <ScreeningRoom />
+          <ProductDemoTranscript />
         </div>
       </section>
       <section className="screening-devices" aria-label={t("Appareils compatibles")}>

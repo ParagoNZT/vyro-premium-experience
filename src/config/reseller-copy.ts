@@ -7,12 +7,12 @@ export const resellerCopy = {
     request: "Demander mon application",
     pricingLink: "Voir les tarifs et la livraison",
     account: "J’ai déjà un espace revendeur",
-    preview: "Aperçu illustratif · Marque fictive",
+    preview: "Aperçu de votre marque · Catalogue fictif",
     previewPicker: "Choisir la marque de l’aperçu",
     previewAltTv: "Capture du lecteur sur un téléviseur",
     previewAltPhone: "Capture du lecteur sur un téléphone Android",
     previewCaption:
-      "Comparez VYRO et Nova Player : le nom, le logo et la couleur changent sur les deux écrans.",
+      "Comparez VYRO et Nova Player ou essayez votre propre identité sur les deux écrans.",
     identityTitle: "Personnalisez ce que vos clients voient.",
     identity: [
       [
@@ -155,12 +155,11 @@ export const resellerCopy = {
     request: "Request my app",
     pricingLink: "See pricing and delivery",
     account: "I already have a reseller account",
-    preview: "Illustrative preview · Fictional brand",
+    preview: "Brand preview · Fictional catalogue",
     previewPicker: "Choose the preview brand",
     previewAltTv: "Screenshot of the player on a TV",
     previewAltPhone: "Screenshot of the player on an Android phone",
-    previewCaption:
-      "Compare VYRO and Nova Player: the name, logo and colour change on both screens.",
+    previewCaption: "Compare VYRO and Nova Player or try your own brand on both screens.",
     identityTitle: "Customise what your customers see.",
     identity: [
       ["App name", "Choose the name your customers see on their devices, such as Nova Player."],
