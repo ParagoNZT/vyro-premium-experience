@@ -1,39 +1,99 @@
 import { useCopy } from "@/lib/site-language";
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUpRight, Expand, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { captureCaption, scenes } from "./captures";
-import { handheldCaption, handheldCaptures } from "./handheld-captures";
-
-const sceneNotes = [
-  "Films et séries",
-  "Chaînes et programme",
-  "Synopsis et épisodes",
-  "Commandes à l’écran",
-];
+import {
+  formats,
+  getGallery,
+  selectShot,
+  type Format,
+  type GalleryShot,
+} from "./screening-gallery";
 
 const number = (index: number) => String(index + 1).padStart(2, "0");
-const formats = [
-  { key: "tv", label: "TV", title: "VYRO sur TV" },
-  { key: "telephone", label: "Téléphone", title: "VYRO sur téléphone" },
-  { key: "tablette", label: "Tablette", title: "VYRO sur tablette" },
-] as const;
-const captures = {
-  tv: scenes.map((scene, index) => ({ ...scene, note: sceneNotes[index] })),
-  ...handheldCaptures,
-};
-type Format = (typeof formats)[number]["key"];
+
+function ShotTransition({ shot, previous }: { shot: GalleryShot; previous: GalleryShot }) {
+  const overlay = useRef<HTMLImageElement>(null);
+  const visible = useRef<HTMLImageElement>(null);
+  const t = useCopy();
+
+  useEffect(() => {
+    const frame = visible.current;
+    const cover = overlay.current;
+    if (!frame || !cover) return;
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (preference.matches) return;
+    let live = true;
+    let cancelMotion: (() => void) | undefined;
+    const hide = () => {
+      window.clearTimeout(timer);
+      cover.removeAttribute("data-visible");
+    };
+    const interrupt = () => {
+      live = false;
+      cancelMotion?.();
+      hide();
+    };
+    preference.addEventListener("change", interrupt);
+    cover.setAttribute("data-visible", "true");
+    const timer = window.setTimeout(interrupt, 750);
+    void Promise.all([frame.decode(), import("motion/mini")])
+      .then(([, { animate }]) => {
+        if (!live) return;
+        const animation = animate(cover, { opacity: [1, 0] }, { duration: 0.18, ease: "easeOut" });
+        cancelMotion = () => animation.cancel();
+        void animation.then(hide);
+      })
+      .catch(hide);
+    return () => {
+      preference.removeEventListener("change", interrupt);
+      interrupt();
+    };
+  }, [shot.image]);
+
+  return (
+    <>
+      <img
+        ref={visible}
+        src={shot.image}
+        alt={t(shot.alt)}
+        width={shot.width}
+        height={shot.height}
+        decoding="async"
+        className="screening-film-frame"
+      />
+      <img
+        ref={overlay}
+        src={previous.image}
+        alt=""
+        aria-hidden
+        width={previous.width}
+        height={previous.height}
+        className="screening-film-transition"
+      />
+    </>
+  );
+}
 
 export function ScreeningRoom() {
   const t = useCopy();
   const id = useId();
   const [format, setFormat] = useState<Format>("tv");
-  const [active, setActive] = useState(0);
+  const [topic, setTopic] = useState("bibliotheque");
+  const [previous, setPrevious] = useState<GalleryShot>();
+  const [announcement, setAnnouncement] = useState(false);
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
-  const frames = captures[format];
-  const scene = frames[active]!;
+  const { frames, caption } = getGallery(format);
+  const scene = selectShot(frames, topic);
+  const active = frames.indexOf(scene);
   const title = formats.find((entry) => entry.key === format)!.title;
-  const caption = format === "tv" ? captureCaption : handheldCaption;
+
+  function goToShot(index: number) {
+    const next = frames[index];
+    if (!next || next === scene) return;
+    setPrevious(scene);
+    setTopic(next.id);
+  }
 
   function onTabKey(event: KeyboardEvent<HTMLButtonElement>) {
     const offset =
@@ -51,7 +111,7 @@ export function ScreeningRoom() {
           : null;
     if (next === null) return;
     event.preventDefault();
-    setActive(next);
+    goToShot(next);
     tabs.current[next]?.focus({ preventScroll: true });
   }
 
@@ -63,7 +123,7 @@ export function ScreeningRoom() {
         </span>
         <div className="screening-formats" role="group" aria-label={t("Appareil présenté")}>
           {formats
-            .filter(({ key }) => captures[key].length)
+            .filter(({ key }) => getGallery(key).frames.length)
             .map(({ key, label }) => (
               <button
                 key={key}
@@ -71,8 +131,9 @@ export function ScreeningRoom() {
                 aria-pressed={format === key}
                 onClick={() => {
                   if (format === key) return;
+                  setPrevious(scene);
+                  setAnnouncement(true);
                   setFormat(key);
-                  setActive(0);
                 }}
               >
                 {t(label)}
@@ -82,24 +143,28 @@ export function ScreeningRoom() {
       </div>
       <div className="screening-deck">
         <div className="screening-film" data-format={format}>
-          {frames.map(({ id: key, image, alt }, index) => (
+          {frames.map((shot, index) => (
             <div
-              key={format + "-" + key}
+              key={format + "-" + shot.id}
               role="tabpanel"
               aria-labelledby={id + "-tab-" + index}
               id={id + "-panel-" + index}
               hidden={index !== active}
             >
-              <img
-                src={image}
-                alt={t(alt)}
-                width={format === "tv" ? 1600 : undefined}
-                height={format === "tv" ? 900 : undefined}
-                decoding="async"
-                fetchPriority={format === "tv" && index === 0 ? "high" : "auto"}
-                loading={index === active ? "eager" : "lazy"}
-                className="screening-film-frame"
-              />
+              {index === active && previous ? (
+                <ShotTransition key={shot.image} shot={shot} previous={previous} />
+              ) : (
+                <img
+                  src={shot.image}
+                  alt={t(shot.alt)}
+                  width={shot.width}
+                  height={shot.height}
+                  decoding="async"
+                  fetchPriority={format === "tv" && index === 0 ? "high" : "auto"}
+                  loading={index === active ? "eager" : "lazy"}
+                  className="screening-film-frame"
+                />
+              )}
             </div>
           ))}
           <Dialog.Root>
@@ -146,7 +211,7 @@ export function ScreeningRoom() {
                 tabIndex={index === active ? 0 : -1}
                 role="tab"
                 type="button"
-                onClick={() => setActive(index)}
+                onClick={() => goToShot(index)}
                 onKeyDown={onTabKey}
               >
                 <Icon size={18} aria-hidden />
@@ -165,6 +230,9 @@ export function ScreeningRoom() {
           </p>
         </div>
       </div>
+      <span className="sr-only" role="status">
+        {announcement && `${t(title)} · ${t(scene.label)}`}
+      </span>
       <figcaption>{t(caption)}</figcaption>
     </figure>
   );

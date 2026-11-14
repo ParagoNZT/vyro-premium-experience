@@ -353,6 +353,22 @@
   height: auto;
   display: block;
 }
+.screening-film-transition {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  background: #08060d;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .screening-film-transition[data-visible="true"] {
+    display: block;
+  }
+}
 .screening-film > [hidden] {
   display: none;
 }
@@ -391,6 +407,7 @@
 }
 .screening-expand {
   position: absolute;
+  z-index: 1;
   right: 0.65rem;
   bottom: 0.65rem;
 }
@@ -1004,9 +1021,6 @@
   .screening-beams {
     animation: screening-light 1100ms ease-out both;
   }
-  .screening-film > :not([hidden]) .screening-film-frame {
-    animation: screening-frame 165ms var(--screen-ease) both;
-  }
   @keyframes screening-arrive {
     from {
       opacity: 0.55;
@@ -1020,14 +1034,6 @@
   @keyframes screening-light {
     from {
       opacity: 0.14;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes screening-frame {
-    from {
-      opacity: 0.72;
     }
     to {
       opacity: 1;
