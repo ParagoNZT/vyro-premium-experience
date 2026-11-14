@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useId } from "react";
 import {
   ArrowDown,
   ArrowUpRight,
@@ -22,16 +23,18 @@ import { useAuth } from "@/lib/auth";
 import { resellerOrderRoute, resellerPath } from "@/lib/reseller-navigation";
 import { useSiteLanguage } from "@/lib/site-language";
 import { publicPageHead } from "@/lib/site-seo";
-import "@/components/site/resellers.css";
+import resellerStyles from "@/components/site/resellers.css?url";
 
 export const Route = createFileRoute("/revendeurs")({
-  head: ({ match }) =>
-    publicPageHead(
+  head: ({ match }) => {
+    const head = publicPageHead(
       "/revendeurs",
       match.context.language,
       "Application Android en marque blanche – VYRO Revendeurs",
       "Créez votre application Android avec VYRO : nom, logo, couleurs, serveur XC et gestion des appareils. Premier APK signé à 100 €, mises à jour en option.",
-    ),
+    );
+    return { ...head, links: [...head.links, { rel: "stylesheet", href: resellerStyles }] };
+  },
   component: ResellersPage,
 });
 
@@ -60,6 +63,7 @@ function ResellersPage() {
   const language = useSiteLanguage();
   const { user } = useAuth();
   const copy = resellerCopy[language];
+  const brandPicker = useId();
   const currency = new Intl.NumberFormat(language === "fr" ? "fr-FR" : "en-GB", {
     style: "currency",
     currency: "EUR",
@@ -88,11 +92,24 @@ function ResellersPage() {
           </div>
           <figure className="reseller-showcase">
             <p className="reseller-preview-label">{copy.preview}</p>
+            <fieldset className="reseller-brand-picker">
+              <legend className="sr-only">{copy.previewPicker}</legend>
+              <label>
+                <input type="radio" name={brandPicker} value="vyro" defaultChecked />
+                <span>
+                  <img src="/vyro-mark.svg" alt="" width={14} height={14} /> VYRO
+                </span>
+              </label>
+              <label>
+                <input type="radio" name={brandPicker} value="nova" />
+                <span>
+                  <Sparkles size={14} aria-hidden /> Nova Player
+                </span>
+              </label>
+            </fieldset>
             <div className="reseller-devices">
               <div className="reseller-tv">
-                <div className="reseller-brand">
-                  <Sparkles size={17} aria-hidden /> Nova Player
-                </div>
+                <BrandStrip />
                 <img
                   src={homeCapture}
                   width={1600}
@@ -102,10 +119,14 @@ function ResellersPage() {
                 />
               </div>
               <div className="reseller-phone">
-                <div className="reseller-brand">
-                  <Sparkles size={12} aria-hidden /> Nova Player
-                </div>
-                <img src={phoneCapture} alt={copy.previewAltPhone} decoding="async" />
+                <BrandStrip />
+                <img
+                  src={phoneCapture}
+                  width={1000}
+                  height={2226}
+                  alt={copy.previewAltPhone}
+                  decoding="async"
+                />
               </div>
             </div>
             <figcaption>{copy.previewCaption}</figcaption>
@@ -246,6 +267,19 @@ function ResellersPage() {
           </div>
         </Reveal>
       </section>
+    </div>
+  );
+}
+
+function BrandStrip() {
+  return (
+    <div className="reseller-brand" aria-hidden>
+      <span className="reseller-brand-vyro">
+        <img src="/vyro-mark.svg" alt="" width={16} height={16} /> VYRO
+      </span>
+      <span className="reseller-brand-nova">
+        <Sparkles /> Nova Player
+      </span>
     </div>
   );
 }

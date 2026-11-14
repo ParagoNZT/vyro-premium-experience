@@ -48,6 +48,10 @@
 }
 
 .reseller-showcase {
+  --preview-brand-bg: #4a2b74;
+  --preview-brand-ink: #f1e3ff;
+  --preview-brand-line: #ba99e562;
+  --preview-brand-glow: #975ce538;
   min-width: 0;
   margin: 0;
   padding: clamp(1rem, 2.6vw, 1.75rem);
@@ -63,7 +67,7 @@
 }
 
 .reseller-preview-label {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.7rem;
 }
 
 .reseller-showcase figcaption {
@@ -77,12 +81,72 @@
   min-width: 0;
 }
 
+.reseller-showcase:has(input[value="nova"]:checked) {
+  --preview-brand-bg: #164737;
+  --preview-brand-ink: #d6ffea;
+  --preview-brand-line: #87dbb68c;
+  --preview-brand-glow: #6ddea74d;
+}
+
+.reseller-brand-picker {
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  padding: 0.2rem;
+  gap: 0.18rem;
+  margin: 0 0 1.15rem;
+  border: 1px solid #d6b8ff3a;
+  border-radius: 0.95rem;
+  background: #100b1a;
+}
+
+.reseller-brand-picker label {
+  position: relative;
+  cursor: pointer;
+}
+
+.reseller-brand-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.reseller-brand-picker span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.68rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  color: #d4c5e4;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.reseller-brand-picker input:checked + span {
+  color: var(--preview-brand-ink);
+  background: var(--preview-brand-bg);
+  border-color: var(--preview-brand-line);
+}
+
+.reseller-brand-picker input:focus-visible + span {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
 .reseller-tv,
 .reseller-phone {
   overflow: hidden;
-  border: 1px solid #ba99e562;
+  border: 1px solid var(--preview-brand-line);
   background: #140e20;
-  box-shadow: 0 0.7rem 2.5rem #07030eb8;
+  box-shadow:
+    0 0.7rem 2.5rem #07030eb8,
+    0 0 1rem var(--preview-brand-glow);
 }
 
 .reseller-tv {
@@ -92,7 +156,7 @@
 
 .reseller-phone {
   position: relative;
-  border: 2px solid #d2baef88;
+  border-width: 2px;
   border-radius: 0.75rem;
 }
 
@@ -103,23 +167,86 @@
 }
 
 .reseller-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  display: grid;
   padding: 0.42rem 0.55rem;
-  color: #e6fff5;
-  background: #164737;
+  color: var(--preview-brand-ink);
+  background: var(--preview-brand-bg);
   font: 650 clamp(0.65rem, 1.2vw, 0.9rem) var(--font-display);
 }
 
-.reseller-brand svg {
+.reseller-brand > span {
+  display: flex;
+  align-items: center;
+  grid-area: 1 / 1;
+  gap: 0.3rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.reseller-brand svg,
+.reseller-brand img {
   flex: none;
-  color: #b3ffd9;
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.reseller-brand .reseller-brand-nova,
+.reseller-showcase:has(input[value="nova"]:checked) .reseller-brand-vyro {
+  opacity: 0;
+}
+
+.reseller-showcase:has(input[value="nova"]:checked) .reseller-brand-nova {
+  opacity: 1;
 }
 
 .reseller-phone .reseller-brand {
   font-size: clamp(0.43rem, 0.72vw, 0.65rem);
   padding-inline: 0.26rem;
+}
+
+.reseller-phone .reseller-brand > span {
+  gap: 0.16rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reseller-brand-picker span {
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .reseller-tv,
+  .reseller-phone {
+    transition:
+      border-color 260ms var(--screen-ease),
+      box-shadow 260ms var(--screen-ease);
+  }
+
+  .reseller-brand {
+    transition:
+      background-color 300ms var(--screen-ease),
+      color 240ms var(--screen-ease);
+  }
+
+  .reseller-brand > span {
+    transform: translateY(0);
+    transition:
+      opacity 125ms ease-out,
+      transform 220ms var(--screen-ease);
+  }
+
+  .reseller-brand .reseller-brand-nova {
+    transform: translateY(0.2rem);
+  }
+
+  .reseller-showcase:has(input[value="nova"]:checked) .reseller-brand-vyro {
+    transform: translateY(-0.2rem);
+  }
+
+  .reseller-showcase:has(input[value="nova"]:checked) .reseller-brand-nova {
+    transform: translateY(0);
+  }
 }
 
 .reseller-section {

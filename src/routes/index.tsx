@@ -15,26 +15,32 @@ import {
 import { FaqSection, PricingSection } from "@/components/site/sections";
 import { Reveal } from "@/components/site/Reveal";
 import { ScreeningRoom } from "@/components/site/ScreeningRoom";
+import { DeviceHandoff } from "@/components/site/DeviceHandoff";
+import handoffStyles from "@/components/site/device-handoff.css?url";
 import { WorkspaceSpotlight } from "@/components/site/WorkspaceSpotlight";
 import { SportsSpotlight } from "@/components/site/SportsSpotlight";
 import { scenes } from "@/components/site/captures";
 
 export const Route = createFileRoute("/")({
-  head: ({ match }) => ({
-    ...publicPageHead("/", match.context.language, homeTitle, homeDescription),
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "VYRO Premium",
-          alternateName: "VYRO",
-          url: siteOrigin + "/",
-        }),
-      },
-    ],
-  }),
+  head: ({ match }) => {
+    const head = publicPageHead("/", match.context.language, homeTitle, homeDescription);
+    return {
+      ...head,
+      links: [...head.links, { rel: "stylesheet", href: handoffStyles }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "VYRO Premium",
+            alternateName: "VYRO",
+            url: siteOrigin + "/",
+          }),
+        },
+      ],
+    };
+  },
   component: Home,
 });
 
@@ -113,7 +119,7 @@ function Home() {
                 {t("Choisir mon accès")} <ArrowUpRight size={17} aria-hidden />
               </Link>
             </div>
-            <a href="#espace-client" className="screening-text-link">
+            <a href="#synchronisation" className="screening-text-link">
               {t("Synchronisation et gestion à distance")} <ArrowDown size={16} aria-hidden />
             </a>
           </div>
@@ -135,6 +141,7 @@ function Home() {
           </Link>
         </div>
       </section>
+      <DeviceHandoff />
       <WorkspaceSpotlight />
       <SportsSpotlight />
       <section

@@ -986,6 +986,18 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .screening-button {
+    transition:
+      background 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 140ms ease-out;
+  }
+
+  .screening-button:active {
+    transform: scale(0.977);
+  }
+
   .screening-deck {
     animation: screening-arrive 650ms var(--screen-ease) both;
   }
@@ -993,7 +1005,7 @@
     animation: screening-light 1100ms ease-out both;
   }
   .screening-film > :not([hidden]) .screening-film-frame {
-    animation: screening-frame 280ms var(--screen-ease) both;
+    animation: screening-frame 165ms var(--screen-ease) both;
   }
   @keyframes screening-arrive {
     from {
@@ -1015,12 +1027,10 @@
   }
   @keyframes screening-frame {
     from {
-      opacity: 0.5;
-      transform: scale(1.012);
+      opacity: 0.72;
     }
     to {
       opacity: 1;
-      transform: none;
     }
   }
 }
